@@ -1,7 +1,9 @@
 /**
  * user-api-key-service.js（TransForDiscord 精簡版）
- * 從環境變數讀取 Gemini API Key，無資料庫依賴
+ * 優先使用用戶個人 Key，再回退到環境變數 Key
  */
+
+const { getKey } = require('./user-api-key-storage.js');
 
 let instance = null;
 
@@ -21,6 +23,12 @@ class UserApiKeyService {
     }
 
     async getApiKey(userId, service = 'gemini') {
+        // 優先使用用戶個人 Key
+        if (userId) {
+            const userKey = getKey(userId);
+            if (userKey) return userKey;
+        }
+        // 回退到環境變數 Key（輪流使用）
         if (this.geminiKeys.length === 0) return null;
         const key = this.geminiKeys[this._keyIndex % this.geminiKeys.length];
         this._keyIndex++;

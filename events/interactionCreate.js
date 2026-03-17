@@ -45,6 +45,26 @@ async function execute(interaction, client) {
             return;
         }
 
+        // ── Modal 提交 ──
+        if (interaction.isModalSubmit()) {
+            if (interaction.customId === 'apikey_set_modal') {
+                const apiKey = interaction.fields.getTextInputValue('gemini_api_key').trim();
+                if (!apiKey.startsWith('AIzaSy')) {
+                    return interaction.reply({
+                        content: '❌ API Key 格式不正確，應以 `AIzaSy` 開頭，請確認後重新設定。',
+                        ephemeral: true
+                    });
+                }
+                const { saveKey } = require('../utils/user-api-key-storage.js');
+                saveKey(interaction.user.id, apiKey);
+                return interaction.reply({
+                    content: '✅ 已儲存你的個人 Gemini API Key。\n翻譯功能將優先使用你的 Key，不會與他人共用。',
+                    ephemeral: true
+                });
+            }
+            return;
+        }
+
         if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
 
         const customId = interaction.customId;
