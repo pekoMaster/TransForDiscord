@@ -1,0 +1,104 @@
+{
+  "socialMedia": {
+    "twitter": {
+      "enabled": true,
+      "domains": ["twitter.com", "x.com", "mobile.twitter.com"],
+      "name": "Twitter/X",
+      "description": "Twitter social media platform"
+    },
+    "instagram": {
+      "enabled": true,
+      "domains": ["instagram.com", "www.instagram.com"],
+      "name": "Instagram",
+      "description": "Instagram photo sharing platform"
+    },
+    "tiktok": {
+      "enabled": true,
+      "domains": ["tiktok.com", "www.tiktok.com", "vm.tiktok.com"],
+      "name": "TikTok",
+      "description": "TikTok video platform"
+    },
+    "plurk": {
+      "enabled": true,
+      "domains": ["plurk.com", "www.plurk.com"],
+      "name": "Plurk",
+      "description": "Plurk microblogging platform"
+    },
+    "bluesky": {
+      "enabled": true,
+      "domains": ["bsky.app"],
+      "name": "Bluesky",
+      "description": "Bluesky social network"
+    }
+  },
+  "community": {
+    "ptt": {
+      "enabled": true,
+      "domains": ["ptt.cc", "www.ptt.cc"],
+      "name": "PTT",
+      "description": "PTT bulletin board system"
+    },
+    "bahamut": {
+      "enabled": true,
+      "domains": ["forum.gamer.com.tw", "home.gamer.com.tw"],
+      "name": "Bahamut",
+      "description": "Bahamut gaming community"
+    },
+    "dcard": {
+      "enabled": true,
+      "domains": ["dcard.tw", "www.dcard.tw"],
+      "name": "Dcard",
+      "description": "Dcard discussion platform"
+    }
+  },
+  "media": {
+    "pixiv": {
+      "enabled": true,
+      "domains": ["pixiv.net", "www.pixiv.net"],
+      "name": "Pixiv",
+      "description": "Pixiv artwork platform"
+    },
+    "bilibili": {
+      "enabled": true,
+      "domains": ["bilibili.com", "www.bilibili.com", "b23.tv"],
+      "name": "Bilibili",
+      "description": "Bilibili video platform"
+    }
+  },
+  "ecommerce": {
+    "pchome": {
+      "enabled": true,
+      "domains": ["24h.pchome.com.tw"],
+      "name": "PChome24h",
+      "description": "PChome shopping platform"
+    }
+  },
+  "news": {
+    "linetoday": {
+      "enabled": true,
+      "domains": ["today.line.me"],
+      "name": "LINE TODAY",
+      "description": "LINE TODAY news platform"
+    },
+    "udn": {
+      "enabled": true,
+      "domains": ["udn.com", "www.udn.com", "video.udn.com"],
+      "name": "UDN 聯合新聞網",
+      "description": "UDN United Daily News"
+    },
+    "xfastest": {
+      "enabled": true,
+      "domains": ["news.xfastest.com"],
+      "name": "XFastest 最速科技",
+      "description": "科技新聞與評測"
+    }
+  },
+  "gameOfficial": {
+    "nikke": {
+      "enabled": true,
+      "domains": ["nikke.hotcool.tw"],
+      "name": "勝利女神：妮姬",
+      "description": "NIKKE 台灣官方網站公告"
+    }
+  }
+}
