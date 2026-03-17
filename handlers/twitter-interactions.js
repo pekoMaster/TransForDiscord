@@ -619,5 +619,12 @@ const twitterHandler = new TwitterInteractionHandler();
 module.exports = {
     handlePrepareButton: (interaction) => twitterHandler.handlePrepareButton(interaction),
     handleModalSubmit: (interaction) => twitterHandler.handleModalSubmit(interaction),
-    handleConfirmButton: (interaction) => twitterHandler.handleConfirmButton(interaction)
+    handleConfirmButton: (interaction) => twitterHandler.handleConfirmButton(interaction),
+    execute: (interaction) => {
+        const customId = interaction.customId;
+        if (customId.startsWith('twitter_confirm')) {
+            return twitterHandler.handleConfirmButton(interaction);
+        }
+        return twitterHandler.handlePrepareButton(interaction);
+    }
 };

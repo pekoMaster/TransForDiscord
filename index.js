@@ -20,6 +20,13 @@ client.once(Events.ClientReady, () => {
     console.log(`✅ Bot 已上線：${client.user.tag}`);
     console.log(`📡 監控 ${client.guilds.cache.size} 個伺服器`);
     console.log('✅ Ermiana URL 轉換系統已就緒');
+
+    // 初始化共享翻譯快取（從磁碟載入 + 清理過期）
+    const sharedCache = require('./utils/shared-translation-cache');
+    sharedCache.init();
+
+    // 每 24 小時清理一次過期快取（7 天 TTL）
+    setInterval(() => sharedCache.cleanup(), 24 * 60 * 60 * 1000);
 });
 
 // 訊息 → Ermiana

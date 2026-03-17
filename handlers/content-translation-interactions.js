@@ -237,6 +237,7 @@ function getLanguageName(langCode) {
 
 module.exports = {
     handleContentTranslationInteraction,
+    execute: handleContentTranslationInteraction,
     cacheContent,
     getCachedContent
 };

@@ -6,21 +6,18 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getInstance: getApiKeyService } = require('../utils/user-api-key-service.js');
 const { getInstance: getGeminiTranslator } = require('../utils/gemini-translator.js');
+const openrouterTranslator = require('../utils/openrouter-translator.js');
+const sharedCache = require('../utils/shared-translation-cache.js');
 
 // 引入快取系統以取得完整文字
 const { getCachedContent } = require('./content-translation-interactions.js');
 
-// 翻譯快取 (避免重複翻譯相同內容)
-// 格式: Map<cacheKey, { text, fullText, timestamp }>
-// text: 截斷後的翻譯文字, fullText: 完整翻譯文字
-const translationCache = new Map();
-
-// 翻譯狀態快取（記錄哪些推文目前是翻譯狀態）
+// 翻譯狀態快取（記錄哪些推文目前是翻譯狀態，純 UI 狀態，不需持久化）
 // 格式: Map<tweetId, { isTranslated, translatedFullText, originalFullText }>
 const translationStateCache = new Map();
 
-// 快取過期時間 (30 分鐘)
-const CACHE_TTL = 30 * 60 * 1000;
+// 翻譯狀態快取過期時間（1 小時，UI 狀態不需要太長）
+const STATE_CACHE_TTL = 60 * 60 * 1000;
 
 /**
  * 處理翻譯按鈕互動
@@ -53,101 +50,91 @@ async function handleTranslateButton(interaction) {
         const apiKeyService = getApiKeyService();
         const userApiKey = await apiKeyService.getApiKey(userId, 'gemini');
 
-        // 決定翻譯引擎：有 Gemini Key 用 Gemini，否則用 DeepL
-        const useDeepL = !userApiKey;
-
         // 獲取原始嵌入訊息
         const originalMessage = interaction.message;
         const originalEmbed = originalMessage.embeds[0];
 
         if (!originalEmbed) {
-            await interaction.followUp({
-                content: '❌ 無法獲取推文內容',
-                ephemeral: true
-            });
+            await interaction.followUp({ content: '❌ 無法獲取推文內容', ephemeral: true });
             return;
         }
 
-        // 優先從快取取得完整文字
-        let fullOriginalText = getCachedContent(tweetId);
-
-        // 如果快取沒有，嘗試從 fxtwitter API 獲取
-        if (!fullOriginalText) {
-            console.log(`[Twitter-Translate] 快取中無完整文字，從 API 獲取: ${tweetId}`);
-            try {
-                const HTTPClient = require('../ermiana-system/utils/http-client');
-                const httpClient = new HTTPClient();
-                const fxapiResp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, {
-                    timeout: 5000
-                });
-
-                if (fxapiResp && fxapiResp.tweet && fxapiResp.tweet.text) {
-                    fullOriginalText = fxapiResp.tweet.text;
-                }
-            } catch (fetchError) {
-                console.error(`[Twitter-Translate] 從 API 獲取失敗:`, fetchError.message);
-            }
-        }
-
-        // 如果還是沒有，使用 embed 中的文字作為後備
-        if (!fullOriginalText) {
-            fullOriginalText = originalEmbed.description;
-        }
-
-        if (!fullOriginalText) {
-            await interaction.followUp({
-                content: '❌ 無法獲取推文內容',
-                ephemeral: true
-            });
-            return;
-        }
-
-        // 檢查快取
-        const cacheKey = `${tweetId}_${userId}`;
-        const cachedTranslation = getFromCache(cacheKey);
-
+        // ① 查共享持久快取（所有用戶共用，不需重複翻譯）
+        const cachedEntry = sharedCache.get(tweetId);
         let translatedFullText;
+        let fullOriginalText;
 
-        if (cachedTranslation && cachedTranslation.fullText) {
-            console.log(`[Twitter-Translate] 使用快取翻譯: ${tweetId}`);
-            translatedFullText = cachedTranslation.fullText;
+        if (cachedEntry) {
+            console.log(`[Twitter-Translate] 命中共享快取: ${tweetId} (模型: ${cachedEntry.model})`);
+            translatedFullText = cachedEntry.translatedText;
+            fullOriginalText = cachedEntry.originalText;
         } else {
-            console.log(`[Twitter-Translate] 開始翻譯: ${tweetId} (引擎: ${useDeepL ? 'DeepL' : 'Gemini'}, 長度: ${fullOriginalText.length})`);
+            // 快取未命中，需要翻譯
 
+            // 取得原文
+            fullOriginalText = getCachedContent(tweetId);
+
+            if (!fullOriginalText) {
+                try {
+                    const HTTPClient = require('../ermiana-system/utils/http-client');
+                    const httpClient = new HTTPClient();
+                    const fxapiResp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, { timeout: 5000 });
+                    if (fxapiResp?.tweet?.text) fullOriginalText = fxapiResp.tweet.text;
+                } catch (_) {}
+            }
+
+            if (!fullOriginalText) fullOriginalText = originalEmbed.description;
+
+            if (!fullOriginalText) {
+                await interaction.followUp({ content: '❌ 無法獲取推文內容', ephemeral: true });
+                return;
+            }
+
+            // 翻譯流程：② Gemini（個人 Key）→ ③ OpenRouter → ④ DeepL 兜底
             let translateResult;
+            let usedModel = 'unknown';
 
-            if (useDeepL) {
-                // DeepL 翻譯（系統預設，不需用戶 Key）
-                const DeepLTranslator = require('../utils/deepl-translator.js');
-                const deepl = new DeepLTranslator();
-                const result = await deepl.translate(fullOriginalText, 'ZH');
-                translateResult = result.success
-                    ? { success: true, text: result.translatedText }
-                    : { success: false, error: result.error, errorType: 'DEEPL_ERROR' };
-            } else {
-                // Gemini AI 翻譯（使用用戶個人 Key）
+            if (userApiKey) {
+                // ② 用戶有個人 Gemini Key → 優先使用（自己的配額）
+                console.log(`[Twitter-Translate] 使用 Gemini（個人 Key）翻譯: ${tweetId}`);
                 const geminiTranslator = getGeminiTranslator();
-                translateResult = await geminiTranslator.translateWithUserKey(
-                    fullOriginalText,
-                    userApiKey,
-                    { targetLanguage: '繁體中文' }
-                );
+                translateResult = await geminiTranslator.translateWithUserKey(fullOriginalText, userApiKey, { targetLanguage: '繁體中文' });
+                usedModel = 'gemini-user-key';
+            } else {
+                // ③ 系統翻譯：OpenRouter 三層模型
+                console.log(`[Twitter-Translate] 使用 OpenRouter 翻譯: ${tweetId}`);
+                const orResult = await openrouterTranslator.translate(fullOriginalText);
+
+                if (orResult.success) {
+                    translateResult = orResult;
+                    usedModel = orResult.model;
+                } else {
+                    // ④ OpenRouter 全部失敗 → DeepL 兜底
+                    console.warn(`[Twitter-Translate] OpenRouter 全部失敗，使用 DeepL 兜底: ${tweetId}`);
+                    const DeepLTranslator = require('../utils/deepl-translator.js');
+                    const deepl = new DeepLTranslator();
+                    const deepResult = await deepl.translate(fullOriginalText, 'ZH');
+                    translateResult = deepResult.success
+                        ? { success: true, text: deepResult.translatedText }
+                        : { success: false, error: deepResult.error, errorType: 'DEEPL_ERROR' };
+                    usedModel = 'deepl';
+                }
             }
 
             if (!translateResult.success) {
                 let errorMessage;
                 switch (translateResult.errorType) {
                     case 'QUOTA_EXHAUSTED':
-                        errorMessage = '⚠️ Gemini API 額度已用盡，請稍後再試。\n每分鐘 15 次 / 每日 1500 次。';
+                        errorMessage = '⚠️ Gemini API 額度已用盡，請稍後再試。';
                         break;
                     case 'INVALID_API_KEY':
                         errorMessage = '❌ Gemini API Key 無效，請用 `/apikey set` 重新設定。';
                         break;
-                    case 'TIMEOUT':
-                        errorMessage = '⏰ 翻譯超時，請稍後再試。';
+                    case 'ALL_MODELS_COOLDOWN':
+                        errorMessage = '⏳ 翻譯服務目前繁忙（達到使用限制），請 5 分鐘後再試。';
                         break;
                     case 'DEEPL_ERROR':
-                        errorMessage = `❌ DeepL 翻譯失敗：${translateResult.error}`;
+                        errorMessage = `❌ 翻譯失敗：所有服務均無法使用，請稍後再試。`;
                         break;
                     default:
                         errorMessage = `❌ 翻譯失敗：${translateResult.error || '未知錯誤'}`;
@@ -157,7 +144,13 @@ async function handleTranslateButton(interaction) {
             }
 
             translatedFullText = translateResult.text;
-            saveToCache(cacheKey, { fullText: translatedFullText });
+
+            // 儲存到共享快取（7 天，所有用戶共用）
+            sharedCache.set(tweetId, {
+                translatedText: translatedFullText,
+                originalText: fullOriginalText,
+                model: usedModel
+            });
         }
 
         // 檢查當前是展開還是收起狀態（檢查是否有 expand/collapse 按鈕）
@@ -393,54 +386,6 @@ function updateTranslateButton(components, tweetId, isTranslated) {
 }
 
 /**
- * 從快取獲取翻譯
- */
-function getFromCache(key) {
-    const cached = translationCache.get(key);
-    if (!cached) return null;
-
-    // 檢查是否過期
-    if (Date.now() - cached.timestamp > CACHE_TTL) {
-        translationCache.delete(key);
-        return null;
-    }
-
-    return cached;
-}
-
-/**
- * 儲存翻譯到快取
- */
-function saveToCache(key, data) {
-    translationCache.set(key, {
-        ...data,
-        timestamp: Date.now()
-    });
-
-    // 清理過期快取
-    cleanExpiredCache();
-}
-
-/**
- * 清理過期快取
- */
-function cleanExpiredCache() {
-    const now = Date.now();
-    for (const [key, value] of translationCache.entries()) {
-        if (now - value.timestamp > CACHE_TTL) {
-            translationCache.delete(key);
-        }
-    }
-
-    // 同時清理翻譯狀態快取
-    for (const [key, value] of translationStateCache.entries()) {
-        if (now - value.timestamp > CACHE_TTL) {
-            translationStateCache.delete(key);
-        }
-    }
-}
-
-/**
  * 獲取翻譯狀態（供展開/收起功能使用）
  * @param {string} tweetId - 推文 ID
  * @returns {Object|null} 翻譯狀態物件
@@ -450,7 +395,7 @@ function getTranslationState(tweetId) {
     if (!state) return null;
 
     // 檢查是否過期
-    if (Date.now() - state.timestamp > CACHE_TTL) {
+    if (Date.now() - state.timestamp > STATE_CACHE_TTL) {
         translationStateCache.delete(tweetId);
         return null;
     }
@@ -472,6 +417,7 @@ function setTranslationState(tweetId, state) {
 
 module.exports = {
     handleTranslateInteraction,
+    execute: handleTranslateInteraction,
     getTranslationState,
     setTranslationState
 };
