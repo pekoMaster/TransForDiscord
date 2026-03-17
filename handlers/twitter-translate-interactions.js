@@ -53,26 +53,8 @@ async function handleTranslateButton(interaction) {
         const apiKeyService = getApiKeyService();
         const userApiKey = await apiKeyService.getApiKey(userId, 'gemini');
 
-        if (!userApiKey) {
-            // 用戶沒有 API Key，顯示引導訊息（使用 followUp 因為已經 defer）
-            await interaction.followUp({
-                content: `## 🌐 翻譯功能需要設定 API Key
-
-此功能使用 **Google Gemini AI** 進行翻譯，需要你提供自己的 API Key。
-
-### 📝 設定步驟：
-1. 前往 [Google AI Studio](https://aistudio.google.com/app/apikey) 取得免費 API Key
-2. 使用 \`/translate_api\` 指令登記你的 API Key
-
-### 💡 免費額度：
-- 每分鐘 15 次請求
-- 每日 1500 次請求
-
-設定完成後即可使用翻譯功能！`,
-                ephemeral: true
-            });
-            return;
-        }
+        // 決定翻譯引擎：有 Gemini Key 用 Gemini，否則用 DeepL
+        const useDeepL = !userApiKey;
 
         // 獲取原始嵌入訊息
         const originalMessage = interaction.message;
@@ -130,50 +112,52 @@ async function handleTranslateButton(interaction) {
             console.log(`[Twitter-Translate] 使用快取翻譯: ${tweetId}`);
             translatedFullText = cachedTranslation.fullText;
         } else {
-            // 執行翻譯（翻譯完整文字）
-            console.log(`[Twitter-Translate] 開始翻譯推文完整文字: ${tweetId} (長度: ${fullOriginalText.length})`);
+            console.log(`[Twitter-Translate] 開始翻譯: ${tweetId} (引擎: ${useDeepL ? 'DeepL' : 'Gemini'}, 長度: ${fullOriginalText.length})`);
 
-            const geminiTranslator = getGeminiTranslator();
-            const originalText = fullOriginalText;
+            let translateResult;
 
-            const translateResult = await geminiTranslator.translateWithUserKey(
-                originalText,
-                userApiKey,
-                { targetLanguage: '繁體中文' }
-            );
+            if (useDeepL) {
+                // DeepL 翻譯（系統預設，不需用戶 Key）
+                const DeepLTranslator = require('../utils/deepl-translator.js');
+                const deepl = new DeepLTranslator();
+                const result = await deepl.translate(fullOriginalText, 'ZH');
+                translateResult = result.success
+                    ? { success: true, text: result.translatedText }
+                    : { success: false, error: result.error, errorType: 'DEEPL_ERROR' };
+            } else {
+                // Gemini AI 翻譯（使用用戶個人 Key）
+                const geminiTranslator = getGeminiTranslator();
+                translateResult = await geminiTranslator.translateWithUserKey(
+                    fullOriginalText,
+                    userApiKey,
+                    { targetLanguage: '繁體中文' }
+                );
+            }
 
             if (!translateResult.success) {
-                // 處理錯誤
-                let errorMessage = '❌ 翻譯失敗';
-
+                let errorMessage;
                 switch (translateResult.errorType) {
                     case 'QUOTA_EXHAUSTED':
-                        errorMessage = '⚠️ API 額度已用盡\n\n免費額度會在每分鐘/每日自動重置。\n每分鐘限制：15 次\n每日限制：1500 次';
+                        errorMessage = '⚠️ Gemini API 額度已用盡，請稍後再試。\n每分鐘 15 次 / 每日 1500 次。';
                         break;
                     case 'INVALID_API_KEY':
-                        errorMessage = '❌ API Key 無效\n\n請使用 `/translate_api` 重新設定正確的 API Key。';
+                        errorMessage = '❌ Gemini API Key 無效，請用 `/apikey set` 重新設定。';
                         break;
                     case 'TIMEOUT':
-                        errorMessage = '⏰ 翻譯超時，請稍後再試';
+                        errorMessage = '⏰ 翻譯超時，請稍後再試。';
+                        break;
+                    case 'DEEPL_ERROR':
+                        errorMessage = `❌ DeepL 翻譯失敗：${translateResult.error}`;
                         break;
                     default:
                         errorMessage = `❌ 翻譯失敗：${translateResult.error || '未知錯誤'}`;
                 }
-
-                await interaction.followUp({
-                    content: errorMessage,
-                    ephemeral: true
-                });
+                await interaction.followUp({ content: errorMessage, ephemeral: true });
                 return;
             }
 
             translatedFullText = translateResult.text;
-
-            // 儲存完整翻譯到快取
             saveToCache(cacheKey, { fullText: translatedFullText });
-
-            // 更新使用次數
-            await apiKeyService.incrementUsageCount(userId, 'gemini');
         }
 
         // 檢查當前是展開還是收起狀態（檢查是否有 expand/collapse 按鈕）
