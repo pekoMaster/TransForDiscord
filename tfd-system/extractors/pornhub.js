@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - Pornhub 提取器
+ * TFD 系統 - Pornhub 提取器
  * 使用域名替換提供嵌入預覽功能
  */
 

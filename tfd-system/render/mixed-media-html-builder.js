@@ -22,7 +22,7 @@ class MixedMediaHTMLBuilder {
             videos = [],
             images = [],
             originalURL,
-            siteName = 'Enhanced Ermiana'
+            siteName = 'Enhanced TFD'
         } = options;
 
         console.log(`[MixedMediaHTMLBuilder] 建構 HTML: ${videos.length} 影片, ${images.length} 圖片`);

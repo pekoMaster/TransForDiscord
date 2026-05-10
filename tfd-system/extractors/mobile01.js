@@ -4,7 +4,7 @@
  */
 
 const { EmbedBuilder } = require('discord.js');
-let puppeteer; try { puppeteer = require('puppeteer'); } catch (_) { puppeteer = null; }
+const puppeteer = require('puppeteer');
 
 class Mobile01Extractor {
     constructor() {

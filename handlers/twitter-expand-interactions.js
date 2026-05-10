@@ -3,7 +3,7 @@
  * 處理「顯示全文」和「收回全文」按鈕的切換功能
  */
 
-const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+const { ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
 
 // 從 content-translation-interactions.js 引入快取系統
 const { getCachedContent } = require('./content-translation-interactions.js');
@@ -40,7 +40,7 @@ async function handleTwitterExpandInteraction(interaction) {
         if (!message || !message.embeds || message.embeds.length === 0) {
             await interaction.reply({
                 content: '❌ 無法找到推文內容',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
             return true;
         }
@@ -58,7 +58,7 @@ async function handleTwitterExpandInteraction(interaction) {
         let originalFullText = getCachedContent(tweetId);
 
         // 使用 TextTruncator 進行截斷處理
-        const TextTruncator = require('../ermiana-system/utils/text-truncator.js');
+        const TextTruncator = require('../tfd-system/utils/text-truncator.js');
         const truncator = new TextTruncator();
 
         // 決定要使用的文字（翻譯文字或原文）
@@ -66,25 +66,22 @@ async function handleTwitterExpandInteraction(interaction) {
         let needsAPIFetch = false;
 
         if (isTranslated) {
-            // 翻譯狀態下
+            // 翻譯狀態下：優先用翻譯快取的完整文字
             if (translationState && translationState.translatedFullText) {
-                // 有翻譯快取，使用翻譯後的完整文字
                 textToUse = translationState.translatedFullText;
             } else {
-                // 沒有翻譯快取，但 embed 是翻譯狀態
-                // 使用當前 embed 的內容作為基礎（可能是截斷或完整的翻譯文字）
+                // 沒有翻譯快取 — 使用當前 embed 內容
                 const currentDescription = originalEmbed.description || '';
 
                 if (isExpanding) {
-                    // 展開時，如果當前是截斷的翻譯，無法取得完整翻譯
-                    // 顯示提示訊息
+                    // 嘗試從 embed description 恢復（可能是截斷的翻譯）
+                    // 如果無法取得完整翻譯，提示用戶
                     await interaction.reply({
                         content: '⚠️ 翻譯快取已過期，無法展開完整翻譯內容。\n請點擊「原文」按鈕後重新翻譯。',
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
                     return true;
                 } else {
-                    // 收起時，使用當前內容（已經是翻譯文字）進行截斷
                     textToUse = currentDescription;
                 }
             }
@@ -102,7 +99,7 @@ async function handleTwitterExpandInteraction(interaction) {
         // 如果需要從 API 獲取原文
         if (needsAPIFetch) {
             try {
-                const HTTPClient = require('../ermiana-system/utils/http-client');
+                const HTTPClient = require('../tfd-system/utils/http-client');
                 const httpClient = new HTTPClient();
                 const fxapiResp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, {
                     timeout: 5000
@@ -119,19 +116,23 @@ async function handleTwitterExpandInteraction(interaction) {
         if (!textToUse) {
             await interaction.reply({
                 content: '❌ 推文內容已過期，請重新發送連結',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
             return true;
         }
 
         let newDescription;
         // 創建新的展開/收起按鈕組件
-        const ErmianaTwitterExtractor = require('../ermiana-system/extractors/twitter-v2.js');
-        const extractor = new ErmianaTwitterExtractor();
+        const TFDTwitterExtractor = require('../tfd-system/extractors/twitter-v2.js');
+        const extractor = new TFDTwitterExtractor();
 
         if (isExpanding) {
-            // 展開：顯示完整文字
-            newDescription = textToUse;
+            // 展開：顯示完整文字（Discord embed description 上限 4096 字元）
+            if (textToUse.length > 4086) {
+                newDescription = textToUse.slice(0, 4084) + '\n…';
+            } else {
+                newDescription = textToUse;
+            }
         } else {
             // 收起：顯示截斷文字
             const truncationResult = truncator.truncateText(textToUse);
@@ -153,9 +154,27 @@ async function handleTwitterExpandInteraction(interaction) {
             description: newDescription
         };
 
-        // 保留所有其他 embeds（圖片等）
+        // 如果是翻譯狀態且有引用翻譯，更新引用 field 為翻譯版本
+        if (isTranslated && translationState && translationState.translatedQuoteText && newEmbed.fields) {
+            for (let i = 0; i < newEmbed.fields.length; i++) {
+                const field = newEmbed.fields[i];
+                if (field.value && (field.value.includes('[RT](') || field.value.includes('[↩️ 回覆]('))) {
+                    const lines = field.value.split('\n');
+                    const headerLine = lines[0];
+                    const spacerLine = lines[1] || '> \u3000';
+                    const translatedQuoteLines = translationState.translatedQuoteText
+                        .split('\n')
+                        .map(line => line.trim() === '' ? '> \u3000' : `> ${line}`)
+                        .join('\n');
+                    newEmbed.fields[i].value = `${headerLine}\n${spacerLine}\n${translatedQuoteLines}`;
+                }
+            }
+        }
+
+        // 🔧 修復：保留所有其他 embeds（圖片等）
         const allEmbeds = [newEmbed];
         if (message.embeds.length > 1) {
+            // 保留第 2 個及之後的 embeds（通常是圖片）
             for (let i = 1; i < message.embeds.length; i++) {
                 allEmbeds.push(message.embeds[i].toJSON());
             }
@@ -165,7 +184,7 @@ async function handleTwitterExpandInteraction(interaction) {
         const existingComponents = message.components || [];
         const newComponents = [...existingComponents];
 
-        // 找到包含切換按鈕的那一行
+        // 找到包含切換按鈕的那一行（與其他按鈕同一行）
         const toggleRowIndex = existingComponents.findIndex(row =>
             row.components && row.components.some(btn =>
                 btn.customId && (
@@ -177,15 +196,17 @@ async function handleTwitterExpandInteraction(interaction) {
         );
 
         if (toggleRowIndex !== -1) {
+            // 在同一行中更新展開/收起按鈕
             const existingRow = existingComponents[toggleRowIndex];
             const newButtons = existingRow.components.map(btn => {
                 if (btn.customId && (btn.customId.startsWith('twitter_expand_') || btn.customId.startsWith('twitter_collapse_'))) {
-                    return extractor.buildExpandToggleButtonComponent(tweetId, isExpanding);
+                    return extractor.buildExpandToggleButtonComponent(tweetId, isExpanding); // isExpanding 決定按鈕狀態
                 }
                 return btn;
             });
             newComponents[toggleRowIndex] = new ActionRowBuilder().addComponents(...newButtons);
         } else {
+            // 沒有找到切換按鈕行（理論上不應該發生），添加新的單獨按鈕
             const newButton = new ActionRowBuilder().addComponents(
                 extractor.buildExpandToggleButtonComponent(tweetId, isExpanding)
             );
@@ -207,12 +228,12 @@ async function handleTwitterExpandInteraction(interaction) {
             if (interaction.deferred || interaction.replied) {
                 await interaction.followUp({
                     content: '❌ 處理失敗，請稍後再試',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             } else {
                 await interaction.reply({
                     content: '❌ 處理失敗，請稍後再試',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
         } catch (replyError) {
@@ -224,6 +245,5 @@ async function handleTwitterExpandInteraction(interaction) {
 }
 
 module.exports = {
-    handleTwitterExpandInteraction,
-    execute: handleTwitterExpandInteraction
+    handleTwitterExpandInteraction
 };

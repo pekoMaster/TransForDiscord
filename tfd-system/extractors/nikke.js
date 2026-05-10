@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - 勝利女神：妮姬 官方網站提取器
+ * TFD 系統 - 勝利女神：妮姬 官方網站提取器
  * 抓取 nikke.hotcool.tw/News_detail-{id} 頁面
  *
  * 擷取欄位：
@@ -253,8 +253,8 @@ class NikkeExtractor {
     buildButtons(newsId, userId, expanded) {
         const button = new ButtonBuilder()
             .setCustomId(`nikke_${expanded ? 'collapse' : 'expand'}_${newsId}_${userId}`)
-            .setLabel(expanded ? '📕 縮回內文' : '📖 顯示全文')
-            .setStyle(expanded ? ButtonStyle.Secondary : ButtonStyle.Primary);
+            .setLabel(expanded ? '縮回內文' : '顯示全文')
+            .setStyle(ButtonStyle.Secondary);
 
         return [new ActionRowBuilder().addComponents(button)];
     }

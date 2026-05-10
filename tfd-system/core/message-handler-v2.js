@@ -1100,6 +1100,43 @@ class TFDMessageHandler {
     }
 
     /**
+     * 發送多圖片 Threads 回應（Discord gallery 多 embed 方式）
+     */
+    async sendThreadsWithMultipleEmbeds(message, result) {
+        try {
+            const embeds = [];
+            const originalURL = result.originalURL || 'https://www.threads.com';
+
+            // 📊 Footer 統計注入
+            try {
+                if (originalURL && message.guildId && message.channelId) {
+                    const urlCounts = recordUrl(originalURL, message.guildId, message.channelId);
+                    const footer = result.embed.data?.footer;
+                    const baseText = (footer?.text || '🧵 Threads').replace(/(\s*•\s*\d+\/\d+\/\d+)+$/, '');
+                    result.embed.setFooter({
+                        text: `${baseText} • ${urlCounts.channel}/${urlCounts.guild}/${urlCounts.total}`,
+                        iconURL: footer?.icon_url
+                    });
+                }
+            } catch (_e) {}
+
+            // 主 embed（已含 images[0]），確保 url 正確
+            result.embed.setURL(originalURL);
+            embeds.push(result.embed);
+
+            // 額外圖片（從第 2 張開始，同 URL 觸發 Discord gallery）
+            for (let i = 1; i < result.multipleImages.length; i++) {
+                embeds.push(new EmbedBuilder().setURL(originalURL).setImage(result.multipleImages[i]));
+            }
+
+            await this.sendViaWebhook(message, { embeds });
+        } catch (error) {
+            this.log(`[Threads] 多圖 embed 發送失敗: ${error.message}`, 'error');
+            await this.messageSender(message, this.getSiteIcon(result.siteName), result.embed, '🧵 Threads');
+        }
+    }
+
+    /**
      * 發送包含影片連結的回應
      * @param {Object} message
      * @param {Object} result
@@ -1479,6 +1516,10 @@ class TFDMessageHandler {
 
                                 await this.sendPixivSingle(message, result);
                                 // 立即抑制原始預覽
+                                await this.embedSuppresser(message);
+                            } else if (result.siteName === 'threads' && result.multipleImages) {
+                                // 發送多圖片的 Threads 回應（多嵌入式訊息 gallery）
+                                await this.sendThreadsWithMultipleEmbeds(message, result);
                                 await this.embedSuppresser(message);
                             } else if (result.siteName === 'facebook' && result.multipleImages) {
                                 // 發送多圖片的 Facebook 回應 (≤4張圖，使用多嵌入式訊息)

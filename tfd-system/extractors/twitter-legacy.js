@@ -1,17 +1,17 @@
 /**
- * Ermiana 系統 - Twitter/X 提取器
+ * TFD 系統 - Twitter/X 提取器
  * 提取 Twitter/X 推文和個人資料資訊
  */
 
 const HTTPClient = require('../utils/http-client');
 const DOMParser = require('../utils/dom-parser');
-const ErmianaEmbedBuilder = require('../utils/embed-builder');
+const TFDEmbedBuilder = require('../utils/embed-builder');
 
 class TwitterExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.domParser = new DOMParser();
-        this.embedBuilder = new ErmianaEmbedBuilder();
+        this.embedBuilder = new TFDEmbedBuilder();
         this.name = 'Twitter/X';
     }
 
@@ -33,7 +33,7 @@ class TwitterExtractor {
                     throw new Error(`不支援的 Twitter 模式: ${patternName}`);
             }
         } catch (error) {
-            console.error(`[Ermiana-Twitter] 提取失敗: ${error.message}`);
+            console.error(`[TFD-Twitter] 提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -52,7 +52,7 @@ class TwitterExtractor {
         try {
             tweetData = await this.fetchFromFxTwitter(tweetId);
         } catch (error) {
-            console.log(`[Ermiana-Twitter] FxTwitter 失敗: ${error.message}`);
+            console.log(`[TFD-Twitter] FxTwitter 失敗: ${error.message}`);
         }
 
         // 方法2: 嘗試直接解析 Twitter HTML
@@ -60,7 +60,7 @@ class TwitterExtractor {
             try {
                 tweetData = await this.fetchFromTwitterHTML(originalURL);
             } catch (error) {
-                console.log(`[Ermiana-Twitter] HTML 解析失敗: ${error.message}`);
+                console.log(`[TFD-Twitter] HTML 解析失敗: ${error.message}`);
             }
         }
 
@@ -70,7 +70,7 @@ class TwitterExtractor {
                 const fixupURL = originalURL.replace(/https?:\/\/(twitter\.com|x\.com)/, 'https://fixupx.com');
                 tweetData = await this.fetchFromTwitterHTML(fixupURL);
             } catch (error) {
-                console.log(`[Ermiana-Twitter] FixupX 失敗: ${error.message}`);
+                console.log(`[TFD-Twitter] FixupX 失敗: ${error.message}`);
             }
         }
 
@@ -91,7 +91,7 @@ class TwitterExtractor {
         const data = await this.httpClient.fetchJSON(apiURL);
 
         // 只記錄關鍵資訊，避免輸出完整 API 回應
-        console.log(`[Ermiana-Twitter] FxTwitter API 回應: tweet=${data?.tweet ? 'OK' : 'null'}, author=${data?.tweet?.author?.screen_name || 'N/A'}`);
+        console.log(`[TFD-Twitter] FxTwitter API 回應: tweet=${data?.tweet ? 'OK' : 'null'}, author=${data?.tweet?.author?.screen_name || 'N/A'}`);
 
         if (!data || !data.tweet) {
             throw new Error('FxTwitter API 回應無效');
@@ -249,10 +249,10 @@ class TwitterExtractor {
                 type: video.type
             }));
 
-            console.log(`[Ermiana-Twitter] 檢測到影片媒體，將在嵌入式訊息外顯示:`, result.videoLinks);
+            console.log(`[TFD-Twitter] 檢測到影片媒體，將在嵌入式訊息外顯示:`, result.videoLinks);
         }
 
-        console.log(`[Ermiana-Twitter] 建立回應:`, {
+        console.log(`[TFD-Twitter] 建立回應:`, {
             success: result.success,
             hasEmbed: !!result.embed,
             embedType: result.embed?.constructor?.name,

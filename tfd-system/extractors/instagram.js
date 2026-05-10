@@ -1,11 +1,11 @@
 /**
- * Ermiana 系統 - Instagram 提取器
+ * TFD 系統 - Instagram 提取器
  * 提取 Instagram 貼文和個人資料資訊
  */
 
 const HTTPClient = require('../utils/http-client');
 const DOMParser = require('../utils/dom-parser');
-const ErmianaEmbedBuilder = require('../utils/embed-builder');
+const TFDEmbedBuilder = require('../utils/embed-builder');
 const URLConverterLogger = require('../utils/url-converter-logger');
 const axios = require('axios');
 const { EmbedBuilder } = require('discord.js');
@@ -14,7 +14,7 @@ class InstagramExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.domParser = new DOMParser();
-        this.embedBuilder = new ErmianaEmbedBuilder();
+        this.embedBuilder = new TFDEmbedBuilder();
         this.name = 'Instagram';
     }
 
@@ -39,7 +39,7 @@ class InstagramExtractor {
                     throw new Error(`不支援的 Instagram 模式: ${patternName}`);
             }
         } catch (error) {
-            console.error(`[Ermiana-Instagram] 提取失敗: ${error.message}`);
+            console.error(`[TFD-Instagram] 提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -87,9 +87,9 @@ class InstagramExtractor {
         let reelsData = null;
         try {
             reelsData = await this.scrapeReelsWithPuppeteer(originalURL);
-            console.log(`[Ermiana-Instagram] Reels 資料提取成功:`, reelsData);
+            console.log(`[TFD-Instagram] Reels 資料提取成功:`, reelsData);
         } catch (error) {
-            console.error(`[Ermiana-Instagram] Reels 爬取失敗: ${error.message}`);
+            console.error(`[TFD-Instagram] Reels 爬取失敗: ${error.message}`);
             // 爬取失敗時仍繼續處理，使用基本 URL 轉換
         }
 
@@ -233,7 +233,7 @@ class InstagramExtractor {
 
             return url;
         } catch (error) {
-            console.error(`[Ermiana-Instagram] URL 轉換失敗: ${error.message}`);
+            console.error(`[TFD-Instagram] URL 轉換失敗: ${error.message}`);
             return url;
         }
     }
@@ -391,7 +391,7 @@ class InstagramExtractor {
                 url: originalURL,
                 type: contentType
             }];
-            console.log(`[Ermiana-Instagram] 檢測到影片內容 (${contentType})，將在嵌入式訊息外顯示連結`);
+            console.log(`[TFD-Instagram] 檢測到影片內容 (${contentType})，將在嵌入式訊息外顯示連結`);
         }
 
         return result;
@@ -492,7 +492,7 @@ class InstagramExtractor {
         };
 
         try {
-            console.log(`[Ermiana-Instagram] 輕量 HTTP 提取 Reels 資料: ${url}`);
+            console.log(`[TFD-Instagram] 輕量 HTTP 提取 Reels 資料: ${url}`);
 
             const response = await axios.get(url, {
                 timeout: 5000,
@@ -534,13 +534,13 @@ class InstagramExtractor {
                 }
 
                 if (result.metaDescription || result.metaTitle) {
-                    console.log(`[Ermiana-Instagram] HTTP 提取成功: 作者=${result.authorName || 'N/A'}`);
+                    console.log(`[TFD-Instagram] HTTP 提取成功: 作者=${result.authorName || 'N/A'}`);
                 } else {
-                    console.log(`[Ermiana-Instagram] HTTP 回應無 OG 標籤（可能被登入牆阻擋）`);
+                    console.log(`[TFD-Instagram] HTTP 回應無 OG 標籤（可能被登入牆阻擋）`);
                 }
             }
         } catch (error) {
-            console.log(`[Ermiana-Instagram] HTTP 提取失敗（${error.code || error.message}），跳過 metadata`);
+            console.log(`[TFD-Instagram] HTTP 提取失敗（${error.code || error.message}），跳過 metadata`);
         }
 
         return result;

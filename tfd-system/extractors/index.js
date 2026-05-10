@@ -1,27 +1,31 @@
 /**
- * Ermiana 系統 - 提取器索引
+ * TFD 系統 - 提取器索引
  * 管理所有網站提取器
  */
 
 const TwitterExtractor = require('./twitter-v2');
 const InstagramExtractor = require('./instagram');
-const ThreadsExtractor = require('./threads');
 const FacebookSmartExtractor = require('./facebook-smart');  // 智能版本，自動選擇最佳提取方式
 const FacebookExtractor = require('./facebook');  // 標準版本（作為備用）
 const FacebookEZExtractor = require('./facebookez');  // 保留舊版作為備用
 const PTTExtractor = require('./ptt');
 const BahamutExtractor = require('./bahamut');
 const PixivExtractor = require('./pixiv');
-const IwaraSimpleExtractor = require('./iwara-simple');
-const IwaraV2Extractor = require('./iwara-v2');
+// iwara: 已移除 (2026-04-12) - Cloudflare 擋住所有 API/fxiwara 請求
 const BilibiliExtractor = require('./bilibili');
 const PChomeExtractor = require('./pchome');
 const LineTodayExtractor = require('./line-today');
 const UDNExtractor = require('./udn');
+const MSNExtractor = require('./msn');
+const CTSExtractor = require('./cts');
 const XFastestExtractor = require('./xfastest');
 const Mobile01Extractor = require('./mobile01');
 const PornhubExtractor = require('./pornhub');
 const NikkeExtractor = require('./nikke');
+const PokeWikiExtractor = require('./52poke');
+const FourGamersExtractor = require('./4gamers');
+const ThreadsExtractor = require('./threads');
+const YouTubeExtractor = require('./youtube');
 
 class ExtractorManager {
     constructor() {
@@ -36,7 +40,6 @@ class ExtractorManager {
         // 社交媒體
         this.extractors.set('twitter', new TwitterExtractor());
         this.extractors.set('instagram', new InstagramExtractor());
-        this.extractors.set('threads', new ThreadsExtractor());
         // 2026-02-23: 重構為 MBasic 版本（參考 kevinzg/facebook-scraper）
         this.extractors.set('facebook', new FacebookSmartExtractor());
 
@@ -49,7 +52,7 @@ class ExtractorManager {
         this.extractors.set('pixiv', new PixivExtractor());
 
         // 影片平台
-        this.extractors.set('iwara', new IwaraV2Extractor());
+        // iwara: 已移除 (2026-04-12)
         this.extractors.set('bilibili', new BilibiliExtractor());
         this.extractors.set('pornhub', new PornhubExtractor());
 
@@ -58,7 +61,9 @@ class ExtractorManager {
 
         // 新聞平台
         this.extractors.set('linetoday', new LineTodayExtractor());
+        this.extractors.set('msn', new MSNExtractor());
         this.extractors.set('udn', new UDNExtractor());
+        this.extractors.set('cts', new CTSExtractor());
         this.extractors.set('xfastest', new XFastestExtractor());
 
         // 論壇
@@ -66,6 +71,18 @@ class ExtractorManager {
 
         // 遊戲官網
         this.extractors.set('nikke', new NikkeExtractor());
+
+        // 遊戲百科
+        this.extractors.set('pokewiki', new PokeWikiExtractor());
+
+        // 遊戲新聞
+        this.extractors.set('4gamers', new FourGamersExtractor());
+
+        // 社群平台
+        this.extractors.set('threads', new ThreadsExtractor());
+
+        // 影片平台 - YouTube /live/ 連結轉換
+        this.extractors.set('youtube', new YouTubeExtractor());
 
         // 提取器載入日誌已移除（減少啟動時輸出）
     }
@@ -121,7 +138,7 @@ class ExtractorManager {
 
             return result;
         } catch (error) {
-            console.error(`[Ermiana-ExtractorManager] ${siteName} 提取失敗: ${error.message}`);
+            console.error(`[TFD-ExtractorManager] ${siteName} 提取失敗: ${error.message}`);
             throw error;
         }
     }
@@ -140,7 +157,7 @@ class ExtractorManager {
                 results.push(result);
             } catch (error) {
                 // 記錄錯誤但繼續處理其他 URL
-                console.error(`[Ermiana-ExtractorManager] 批次提取失敗: ${error.message}`);
+                console.error(`[TFD-ExtractorManager] 批次提取失敗: ${error.message}`);
                 results.push({
                     success: false,
                     error: error.message,
@@ -184,20 +201,23 @@ class ExtractorManager {
             const extractorPaths = {
                 twitter: './twitter-v2',
                 instagram: './instagram',
-                threads: './threads',
-                facebook: './facebookez',
+                facebook: './facebook-smart',
                 ptt: './ptt',
                 bahamut: './bahamut',
                 pixiv: './pixiv',
-                iwara: './iwara-simple',
                 bilibili: './bilibili',
                 pchome: './pchome',
                 linetoday: './line-today',
+                msn: './msn',
                 udn: './udn',
+                cts: './cts',
                 xfastest: './xfastest',
                 mobile01: './mobile01',
                 pornhub: './pornhub',
-                nikke: './nikke'
+                nikke: './nikke',
+                pokewiki: './52poke',
+                '4gamers': './4gamers',
+                threads: './threads'
             };
 
             if (extractorPaths[siteName]) {
@@ -207,13 +227,13 @@ class ExtractorManager {
                 const ExtractorClass = require(extractorPaths[siteName]);
                 this.extractors.set(siteName, new ExtractorClass());
 
-                console.log(`[Ermiana-ExtractorManager] ${siteName} 提取器重新載入成功`);
+                console.log(`[TFD-ExtractorManager] ${siteName} 提取器重新載入成功`);
                 return true;
             }
 
             return false;
         } catch (error) {
-            console.error(`[Ermiana-ExtractorManager] 重新載入 ${siteName} 失敗: ${error.message}`);
+            console.error(`[TFD-ExtractorManager] 重新載入 ${siteName} 失敗: ${error.message}`);
             return false;
         }
     }
@@ -225,7 +245,7 @@ class ExtractorManager {
      */
     addExtractor(siteName, extractor) {
         this.extractors.set(siteName, extractor);
-        console.log(`[Ermiana-ExtractorManager] 已添加 ${siteName} 提取器`);
+        console.log(`[TFD-ExtractorManager] 已添加 ${siteName} 提取器`);
     }
 
     /**
@@ -236,7 +256,7 @@ class ExtractorManager {
     removeExtractor(siteName) {
         if (this.extractors.has(siteName)) {
             this.extractors.delete(siteName);
-            console.log(`[Ermiana-ExtractorManager] 已移除 ${siteName} 提取器`);
+            console.log(`[TFD-ExtractorManager] 已移除 ${siteName} 提取器`);
             return true;
         }
         return false;

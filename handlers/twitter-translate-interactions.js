@@ -3,21 +3,31 @@
  * 處理推文翻譯按鈕的點擊事件
  */
 
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { getInstance: getApiKeyService } = require('../utils/user-api-key-service.js');
 const { getInstance: getGeminiTranslator } = require('../utils/gemini-translator.js');
-const openrouterTranslator = require('../utils/openrouter-translator.js');
-const sharedCache = require('../utils/shared-translation-cache.js');
 
 // 引入快取系統以取得完整文字
 const { getCachedContent } = require('./content-translation-interactions.js');
 
-// 翻譯狀態快取（記錄哪些推文目前是翻譯狀態，純 UI 狀態，不需持久化）
+// 翻譯快取 (避免重複翻譯相同內容)
+// 格式: Map<cacheKey, { text, fullText, timestamp }>
+// text: 截斷後的翻譯文字, fullText: 完整翻譯文字
+const translationCache = new Map();
+
+// 翻譯狀態快取（記錄哪些推文目前是翻譯狀態）
 // 格式: Map<tweetId, { isTranslated, translatedFullText, originalFullText }>
 const translationStateCache = new Map();
 
-// 翻譯狀態快取過期時間（1 小時，UI 狀態不需要太長）
-const STATE_CACHE_TTL = 60 * 60 * 1000;
+// 快取過期時間 (30 分鐘)
+const CACHE_TTL = 30 * 60 * 1000;
+
+function getTimePrefix() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `[${hours}:${minutes}]`;
+}
 
 /**
  * 處理翻譯按鈕互動
@@ -50,107 +60,254 @@ async function handleTranslateButton(interaction) {
         const apiKeyService = getApiKeyService();
         const userApiKey = await apiKeyService.getApiKey(userId, 'gemini');
 
+        if (!userApiKey) {
+            // 用戶沒有 API Key，顯示引導訊息（使用 followUp 因為已經 defer）
+            await interaction.followUp({
+                content: `## 🌐 翻譯功能需要設定 API Key
+
+此功能使用 **Google Gemini AI** 進行翻譯，需要你提供自己的 API Key。
+
+### 📝 設定步驟：
+1. 前往 [Google AI Studio](https://aistudio.google.com/app/apikey) 取得免費 API Key
+2. 使用 \`/translate_api\` 指令登記你的 API Key
+
+### 💡 免費額度：
+- 每分鐘 15 次請求
+- 每日 1500 次請求
+
+設定完成後即可使用翻譯功能！`,
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+
         // 獲取原始嵌入訊息
         const originalMessage = interaction.message;
         const originalEmbed = originalMessage.embeds[0];
 
         if (!originalEmbed) {
-            await interaction.followUp({ content: '❌ 無法獲取推文內容', ephemeral: true });
+            await interaction.followUp({
+                content: '❌ 無法獲取推文內容',
+                flags: MessageFlags.Ephemeral
+            });
             return;
         }
 
-        // ① 查共享持久快取（所有用戶共用，不需重複翻譯）
-        const cachedEntry = sharedCache.get(tweetId);
-        let translatedFullText;
-        let fullOriginalText;
+        // 優先從快取取得完整文字
+        let fullOriginalText = getCachedContent(tweetId);
+        let tweetData = null; // 保存完整 API 回應以取得引用推文
 
-        if (cachedEntry) {
-            console.log(`[Twitter-Translate] 命中共享快取: ${tweetId} (模型: ${cachedEntry.model})`);
-            translatedFullText = cachedEntry.translatedText;
-            fullOriginalText = cachedEntry.originalText;
+        // 如果快取沒有，嘗試從 fxtwitter API 獲取
+        if (!fullOriginalText) {
+            console.log(`${getTimePrefix()} [Twitter-Translate] 快取中無完整文字，從 API 獲取: ${tweetId}`);
+            try {
+                const HTTPClient = require('../tfd-system/utils/http-client');
+                const httpClient = new HTTPClient();
+                const fxapiResp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, {
+                    timeout: 5000
+                });
+
+                if (fxapiResp && fxapiResp.tweet) {
+                    tweetData = fxapiResp.tweet;
+                    fullOriginalText = tweetData.text;
+                }
+            } catch (fetchError) {
+                console.error(`${getTimePrefix()} [Twitter-Translate] 從 API 獲取失敗:`, fetchError.message);
+            }
         } else {
-            // 快取未命中，需要翻譯
+            // 有快取文字但沒有 tweetData，嘗試獲取（為了引用推文上下文）
+            try {
+                const HTTPClient = require('../tfd-system/utils/http-client');
+                const httpClient = new HTTPClient();
+                const fxapiResp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, {
+                    timeout: 5000
+                });
+                if (fxapiResp && fxapiResp.tweet) tweetData = fxapiResp.tweet;
+            } catch (_) {}
+        }
 
-            // 取得原文
-            fullOriginalText = getCachedContent(tweetId);
+        // 如果還是沒有，使用 embed 中的文字作為後備
+        if (!fullOriginalText) {
+            fullOriginalText = originalEmbed.description;
+        }
 
-            if (!fullOriginalText) {
+        if (!fullOriginalText) {
+            await interaction.followUp({
+                content: '❌ 無法獲取推文內容',
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+
+        // 提取引用推文/回覆推文的原文作為翻譯上下文
+        let quoteContext = '';
+        let quoteOriginalText = ''; // 引用推文的原文（用於翻譯）
+        let replyOriginalText = ''; // 回覆推文的原文（用於翻譯）
+        
+        if (tweetData) {
+            // 引用推文
+            if (tweetData.quote) {
+                const qt = tweetData.quote;
+                quoteOriginalText = qt.text || '';
+                quoteContext += `[引用推文 by @${qt.author?.screen_name || ''}]: ${quoteOriginalText}\n`;
+            }
+            // 回覆對象（replying_to_status 是推文 ID 字串，需要額外 API 呼叫取得內容）
+            if (tweetData.replying_to_status) {
                 try {
-                    const HTTPClient = require('../ermiana-system/utils/http-client');
-                    const httpClient = new HTTPClient();
-                    const fxapiResp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, { timeout: 5000 });
-                    if (fxapiResp?.tweet?.text) fullOriginalText = fxapiResp.tweet.text;
-                } catch (_) {}
-            }
-
-            if (!fullOriginalText) fullOriginalText = originalEmbed.description;
-
-            if (!fullOriginalText) {
-                await interaction.followUp({ content: '❌ 無法獲取推文內容', ephemeral: true });
-                return;
-            }
-
-            // 翻譯流程：② Gemini（個人 Key）→ ③ OpenRouter → ④ DeepL 兜底
-            let translateResult;
-            let usedModel = 'unknown';
-
-            if (userApiKey) {
-                // ② 用戶有個人 Gemini Key → 優先使用（自己的配額）
-                console.log(`[Twitter-Translate] 使用 Gemini（個人 Key）翻譯: ${tweetId}`);
-                const geminiTranslator = getGeminiTranslator();
-                translateResult = await geminiTranslator.translateWithUserKey(fullOriginalText, userApiKey, { targetLanguage: '繁體中文' });
-                usedModel = 'gemini-user-key';
-            } else {
-                // ③ 系統翻譯：OpenRouter 三層模型
-                console.log(`[Twitter-Translate] 使用 OpenRouter 翻譯: ${tweetId}`);
-                const orResult = await openrouterTranslator.translate(fullOriginalText);
-
-                if (orResult.success) {
-                    translateResult = orResult;
-                    usedModel = orResult.model;
-                } else {
-                    // ④ OpenRouter 全部失敗 → DeepL 兜底
-                    console.warn(`[Twitter-Translate] OpenRouter 全部失敗，使用 DeepL 兜底: ${tweetId}`);
-                    const DeepLTranslator = require('../utils/deepl-translator.js');
-                    const deepl = new DeepLTranslator();
-                    const deepResult = await deepl.translate(fullOriginalText, 'ZH');
-                    translateResult = deepResult.success
-                        ? { success: true, text: deepResult.translatedText }
-                        : { success: false, error: deepResult.error, errorType: 'DEEPL_ERROR' };
-                    usedModel = 'deepl';
+                    const HTTPClient = require('../tfd-system/utils/http-client');
+                    const replyHttpClient = new HTTPClient();
+                    const replyResp = await replyHttpClient.fetchJSON(
+                        `https://api.fxtwitter.com/i/status/${tweetData.replying_to_status}`,
+                        { timeout: 5000 }
+                    );
+                    if (replyResp?.tweet) {
+                        const rt = replyResp.tweet;
+                        replyOriginalText = rt.text || ''; // 保存回覆推文原文
+                        quoteContext += `[被回覆的推文 by @${rt.author?.screen_name || ''}]: ${replyOriginalText}\n`;
+                    }
+                } catch (replyFetchErr) {
+                    console.warn(`${getTimePrefix()} [Twitter-Translate] 獲取回覆推文失敗: ${replyFetchErr.message}`);
                 }
             }
+        }
+
+        // 也從 embed fields 中提取已展開的引用/回覆內容作為上下文
+        if (!quoteContext && originalEmbed.fields?.length > 0) {
+            for (const field of originalEmbed.fields) {
+                if (field.value && (field.value.includes('[RT](') || field.value.includes('[↩️ 回覆]('))) {
+                    // 清除 markdown 格式提取純文字
+                    const cleanText = field.value
+                        .replace(/^> /gm, '')
+                        .replace(/\[.*?\]\(.*?\)/g, '')
+                        .replace(/\u3000/g, '')
+                        .trim();
+                    if (cleanText) {
+                        quoteContext += `[引用/回覆內容]: ${cleanText}\n`;
+                    }
+                }
+            }
+        }
+
+        // 組合翻譯文本：主推文 + 引用推文 + 回覆推文（一起翻譯）
+        let textToTranslate = fullOriginalText;
+        const QUOTE_SEPARATOR = '\n\n---QUOTE---\n\n';
+        const REPLY_SEPARATOR = '\n\n---REPLY---\n\n';
+        
+        if (quoteOriginalText) {
+            textToTranslate += QUOTE_SEPARATOR + quoteOriginalText;
+        }
+        if (replyOriginalText) {
+            textToTranslate += REPLY_SEPARATOR + replyOriginalText;
+        }
+
+        // 檢查快取
+        const cacheKey = `${tweetId}_${userId}`;
+        const cachedTranslation = getFromCache(cacheKey);
+
+        let translatedFullText;
+        let translatedQuoteText = '';
+        let translatedReplyText = ''; // 回覆推文的翻譯
+
+        if (cachedTranslation && cachedTranslation.fullText) {
+            console.log(`${getTimePrefix()} [Twitter-Translate] 使用快取翻譯: ${tweetId}`);
+            translatedFullText = cachedTranslation.fullText;
+            translatedQuoteText = cachedTranslation.quoteText || '';
+            translatedReplyText = cachedTranslation.replyText || ''; // 回覆推文的翻譯
+        } else {
+            // 先顯示「翻譯中...」提示，讓用戶知道正在處理
+            try {
+                const loadingEmbed = EmbedBuilder.from(originalEmbed)
+                    .setDescription('🔄 正在翻譯中，請稍候...')
+                    .setFooter({
+                        text: `${originalEmbed.footer?.text || ''} | 🌐 翻譯中...`,
+                        iconURL: originalEmbed.footer?.iconURL
+                    });
+                const loadingEmbeds = [loadingEmbed];
+                if (originalMessage.embeds.length > 1) {
+                    for (let i = 1; i < originalMessage.embeds.length; i++) {
+                        loadingEmbeds.push(originalMessage.embeds[i].toJSON());
+                    }
+                }
+                await interaction.editReply({
+                    embeds: loadingEmbeds,
+                    components: originalMessage.components
+                });
+            } catch (loadingErr) {
+                console.warn(`${getTimePrefix()} [Twitter-Translate] 顯示翻譯中提示失敗:`, loadingErr.message);
+            }
+
+            // 執行翻譯（主推文 + 引用推文 + 回覆推文一起翻，用上下文提高準確度）
+            console.log(`${getTimePrefix()} [Twitter-Translate] 開始翻譯推文: ${tweetId} (主文: ${fullOriginalText.length}字, 引用: ${quoteOriginalText.length}字, 回覆: ${replyOriginalText.length}字, 上下文: ${quoteContext.length}字)`);
+
+            const geminiTranslator = getGeminiTranslator();
+
+            const translateOptions = { targetLanguage: '繁體中文' };
+            // 傳入發文者帳號名稱（用於自稱判定）
+            if (tweetData?.author?.name) {
+                translateOptions.authorName = tweetData.author.name;
+            } else if (originalEmbed.author?.name) {
+                translateOptions.authorName = originalEmbed.author.name;
+            }
+            // 如果有上下文但沒有引用原文合併翻譯，則作為 context 傳入
+            if (quoteContext && !quoteOriginalText) {
+                translateOptions.context = quoteContext;
+            }
+
+            const translateResult = await geminiTranslator.translateWithUserKey(
+                textToTranslate,
+                userApiKey,
+                translateOptions
+            );
 
             if (!translateResult.success) {
-                let errorMessage;
+                let errorMessage = '❌ 翻譯失敗';
+
                 switch (translateResult.errorType) {
                     case 'QUOTA_EXHAUSTED':
-                        errorMessage = '⚠️ Gemini API 額度已用盡，請稍後再試。';
+                        errorMessage = '⚠️ 翻譯服務目前無法使用，請和開發者聯絡。';
                         break;
                     case 'INVALID_API_KEY':
-                        errorMessage = '❌ Gemini API Key 無效，請用 `/apikey set` 重新設定。';
+                        errorMessage = '❌ API Key 無效\n\n請使用 `/translate_api` 重新設定正確的 API Key。';
                         break;
-                    case 'ALL_MODELS_COOLDOWN':
-                        errorMessage = '⏳ 翻譯服務目前繁忙（達到使用限制），請 5 分鐘後再試。';
-                        break;
-                    case 'DEEPL_ERROR':
-                        errorMessage = `❌ 翻譯失敗：所有服務均無法使用，請稍後再試。`;
+                    case 'TIMEOUT':
+                        errorMessage = '⏰ 翻譯超時，請稍後再試';
                         break;
                     default:
                         errorMessage = `❌ 翻譯失敗：${translateResult.error || '未知錯誤'}`;
                 }
-                await interaction.followUp({ content: errorMessage, ephemeral: true });
+
+                await interaction.followUp({
+                    content: errorMessage,
+                    flags: MessageFlags.Ephemeral
+                });
                 return;
             }
 
-            translatedFullText = translateResult.text;
+            // 拆分翻譯結果（主推文 + 引用推文 + 回覆推文）
+            const fullTranslation = translateResult.text;
+            let remaining = fullTranslation;
+            
+            // 先拆 REPLY（從後面拆，避免順序依賴）
+            if (replyOriginalText && remaining.includes('---REPLY---')) {
+                const replyParts = remaining.split(/---REPLY---/);
+                remaining = replyParts[0];
+                translatedReplyText = replyParts.slice(1).join('').trim();
+            }
+            
+            // 再拆 QUOTE
+            if (quoteOriginalText && remaining.includes('---QUOTE---')) {
+                const quoteParts = remaining.split(/---QUOTE---/);
+                remaining = quoteParts[0];
+                translatedQuoteText = quoteParts.slice(1).join('').trim();
+            }
+            
+            translatedFullText = remaining.replace(/---QUOTE---/g, '').replace(/---REPLY---/g, '').trim();
 
-            // 儲存到共享快取（7 天，所有用戶共用）
-            sharedCache.set(tweetId, {
-                translatedText: translatedFullText,
-                originalText: fullOriginalText,
-                model: usedModel
-            });
+            // 儲存完整翻譯到快取（包含引用和回覆翻譯）
+            saveToCache(cacheKey, { fullText: translatedFullText, quoteText: translatedQuoteText, replyText: translatedReplyText });
+
+            // 更新使用次數
+            await apiKeyService.incrementUsageCount(userId, 'gemini');
         }
 
         // 檢查當前是展開還是收起狀態（檢查是否有 expand/collapse 按鈕）
@@ -163,21 +320,24 @@ async function handleTranslateButton(interaction) {
         // 根據當前狀態決定顯示截斷還是完整翻譯
         let displayText = translatedFullText;
         if (!isCurrentlyExpanded) {
-            // 如果目前是收起狀態，截斷翻譯文字
-            const TextTruncator = require('../ermiana-system/utils/text-truncator.js');
+            const TextTruncator = require('../tfd-system/utils/text-truncator.js');
             const truncator = new TextTruncator();
             const truncationResult = truncator.truncateText(translatedFullText);
             if (truncationResult.isTruncated) {
                 displayText = truncationResult.truncatedText;
-                console.log(`[Twitter-Translate] 翻譯文字已截斷: ${translatedFullText.length} -> ${displayText.length}`);
+                console.log(`${getTimePrefix()} [Twitter-Translate] 翻譯文字已截斷: ${translatedFullText.length} -> ${displayText.length}`);
             }
         }
 
-        // 更新翻譯狀態快取（供展開/收起功能使用）
+        // 更新翻譯狀態快取（供展開/收起功能使用，包含引用和回覆翻譯）
         translationStateCache.set(tweetId, {
             isTranslated: true,
             translatedFullText: translatedFullText,
+            translatedQuoteText: translatedQuoteText,
+            translatedReplyText: translatedReplyText,
             originalFullText: fullOriginalText,
+            originalQuoteText: quoteOriginalText,
+            originalReplyText: replyOriginalText,
             timestamp: Date.now()
         });
 
@@ -189,6 +349,34 @@ async function handleTranslateButton(interaction) {
                 iconURL: originalEmbed.footer?.iconURL
             });
 
+        // 如果引用/回覆已展開（field 已存在），更新為翻譯內容
+        // 但不自動展開原本收起的引用/回覆
+        if ((translatedQuoteText || translatedReplyText) && translatedEmbed.data.fields?.length > 0) {
+            const existingFields = translatedEmbed.data.fields;
+            for (let i = 0; i < existingFields.length; i++) {
+                const field = existingFields[i];
+                if (field.value && field.value.includes('[RT](') && translatedQuoteText) {
+                    const lines = field.value.split('\n');
+                    const headerLine = lines[0];
+                    const spacerLine = lines[1] || '> \u3000';
+                    const translatedQuoteLines = translatedQuoteText
+                        .split('\n')
+                        .map(line => line.trim() === '' ? '> \u3000' : `> ${line}`)
+                        .join('\n');
+                    existingFields[i].value = `${headerLine}\n${spacerLine}\n${translatedQuoteLines}`;
+                } else if (field.value && field.value.includes('[↩️ 回覆](') && translatedReplyText) {
+                    const lines = field.value.split('\n');
+                    const headerLine = lines[0];
+                    const spacerLine = lines[1] || '> \u3000';
+                    const translatedReplyLines = translatedReplyText
+                        .split('\n')
+                        .map(line => line.trim() === '' ? '> \u3000' : `> ${line}`)
+                        .join('\n');
+                    existingFields[i].value = `${headerLine}\n${spacerLine}\n${translatedReplyLines}`;
+                }
+            }
+        }
+
         // 更新按鈕狀態（將「翻譯」改為「原文」）
         const updatedComponents = updateTranslateButton(
             originalMessage.components,
@@ -196,34 +384,37 @@ async function handleTranslateButton(interaction) {
             true // isTranslated = true
         );
 
-        // 儲存原始文字到訊息資料中（用於切換回原文）
-        // 使用 interaction.message 的 content 或其他方式存儲
+        // 保留所有 embeds（主 embed + 圖片 embeds）
+        const allEmbeds = [translatedEmbed];
+        if (originalMessage.embeds.length > 1) {
+            for (let i = 1; i < originalMessage.embeds.length; i++) {
+                allEmbeds.push(originalMessage.embeds[i].toJSON());
+            }
+        }
 
         // 使用 editReply（因為已經 deferUpdate）
         await interaction.editReply({
-            embeds: [translatedEmbed],
+            embeds: allEmbeds,
             components: updatedComponents
         });
 
-        console.log(`[Twitter-Translate] 翻譯完成: ${tweetId}`);
-
     } catch (error) {
-        console.error('[Twitter-Translate] 翻譯錯誤:', error);
+        console.error(`${getTimePrefix()} [Twitter-Translate] 翻譯錯誤:`, error);
 
         try {
             if (interaction.deferred) {
                 await interaction.followUp({
                     content: '❌ 翻譯時發生錯誤，請稍後再試',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             } else {
                 await interaction.reply({
                     content: '❌ 翻譯時發生錯誤，請稍後再試',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
         } catch (replyError) {
-            console.error('[Twitter-Translate] 回應錯誤:', replyError);
+            console.error(`${getTimePrefix()} [Twitter-Translate] 回應錯誤:`, replyError);
         }
     }
 }
@@ -244,7 +435,7 @@ async function handleShowOriginalButton(interaction) {
         if (!currentEmbed) {
             await interaction.followUp({
                 content: '❌ 無法獲取訊息內容',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -263,8 +454,8 @@ async function handleShowOriginalButton(interaction) {
 
         // 如果還是沒有，從 API 獲取
         if (!originalFullText) {
-            console.log(`[Twitter-Translate] 快取中無原文，從 API 獲取: ${tweetId}`);
-            const HTTPClient = require('../ermiana-system/utils/http-client');
+            console.log(`${getTimePrefix()} [Twitter-Translate] 快取中無原文，從 API 獲取: ${tweetId}`);
+            const HTTPClient = require('../tfd-system/utils/http-client');
             const httpClient = new HTTPClient();
 
             try {
@@ -276,14 +467,14 @@ async function handleShowOriginalButton(interaction) {
                     originalFullText = fxapiResp.tweet.text;
                 }
             } catch (fetchError) {
-                console.error('[Twitter-Translate] 從 API 獲取失敗:', fetchError.message);
+                console.error(`${getTimePrefix()} [Twitter-Translate] 從 API 獲取失敗:`, fetchError.message);
             }
         }
 
         if (!originalFullText) {
             await interaction.followUp({
                 content: '❌ 無法獲取原始推文內容，請稍後再試',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -299,12 +490,12 @@ async function handleShowOriginalButton(interaction) {
         let displayText = originalFullText;
         if (!isCurrentlyExpanded) {
             // 如果目前是收起狀態，截斷原文
-            const TextTruncator = require('../ermiana-system/utils/text-truncator.js');
+            const TextTruncator = require('../tfd-system/utils/text-truncator.js');
             const truncator = new TextTruncator();
             const truncationResult = truncator.truncateText(originalFullText);
             if (truncationResult.isTruncated) {
                 displayText = truncationResult.truncatedText;
-                console.log(`[Twitter-Translate] 原文已截斷: ${originalFullText.length} -> ${displayText.length}`);
+                console.log(`${getTimePrefix()} [Twitter-Translate] 原文已截斷: ${originalFullText.length} -> ${displayText.length}`);
             }
         }
 
@@ -322,6 +513,32 @@ async function handleShowOriginalButton(interaction) {
                 iconURL: currentEmbed.footer?.iconURL
             });
 
+        // 如果引用/回覆已展開（field 已存在），還原為原文
+        if (translationState && restoredEmbed.data.fields?.length > 0) {
+            for (let i = 0; i < restoredEmbed.data.fields.length; i++) {
+                const field = restoredEmbed.data.fields[i];
+                if (field.value && field.value.includes('[RT](') && translationState.originalQuoteText) {
+                    const lines = field.value.split('\n');
+                    const headerLine = lines[0];
+                    const spacerLine = lines[1] || '> \u3000';
+                    const originalQuoteLines = translationState.originalQuoteText
+                        .split('\n')
+                        .map(line => line.trim() === '' ? '> \u3000' : `> ${line}`)
+                        .join('\n');
+                    restoredEmbed.data.fields[i].value = `${headerLine}\n${spacerLine}\n${originalQuoteLines}`;
+                } else if (field.value && field.value.includes('[↩️ 回覆](') && translationState.originalReplyText) {
+                    const lines = field.value.split('\n');
+                    const headerLine = lines[0];
+                    const spacerLine = lines[1] || '> \u3000';
+                    const originalReplyLines = translationState.originalReplyText
+                        .split('\n')
+                        .map(line => line.trim() === '' ? '> \u3000' : `> ${line}`)
+                        .join('\n');
+                    restoredEmbed.data.fields[i].value = `${headerLine}\n${spacerLine}\n${originalReplyLines}`;
+                }
+            }
+        }
+
         // 更新按鈕狀態（將「原文」改回「翻譯」）
         const updatedComponents = updateTranslateButton(
             originalMessage.components,
@@ -329,26 +546,34 @@ async function handleShowOriginalButton(interaction) {
             false // isTranslated = false
         );
 
+        // 保留所有 embeds（主 embed + 圖片 embeds）
+        const allEmbeds = [restoredEmbed];
+        if (originalMessage.embeds.length > 1) {
+            for (let i = 1; i < originalMessage.embeds.length; i++) {
+                allEmbeds.push(originalMessage.embeds[i].toJSON());
+            }
+        }
+
         // 使用 editReply（因為已經 deferUpdate）
         await interaction.editReply({
-            embeds: [restoredEmbed],
+            embeds: allEmbeds,
             components: updatedComponents
         });
 
-        console.log(`[Twitter-Translate] 已切換回原文: ${tweetId}`);
+        console.log(`${getTimePrefix()} [Twitter-Translate] 已切換回原文: ${tweetId}`);
 
     } catch (error) {
-        console.error('[Twitter-Translate] 切換原文錯誤:', error);
+        console.error(`${getTimePrefix()} [Twitter-Translate] 切換原文錯誤:`, error);
 
         try {
             if (interaction.deferred) {
                 await interaction.followUp({
                     content: '❌ 切換時發生錯誤，請稍後再試',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
         } catch (replyError) {
-            console.error('[Twitter-Translate] 回應錯誤:', replyError);
+            console.error(`${getTimePrefix()} [Twitter-Translate] 回應錯誤:`, replyError);
         }
     }
 }
@@ -375,14 +600,61 @@ function updateTranslateButton(components, tweetId, isTranslated) {
                 return new ButtonBuilder()
                     .setCustomId(isTranslated ? `twitter_original_${tweetId}` : `twitter_translate_${tweetId}`)
                     .setLabel(isTranslated ? '原文' : '翻譯')
-                    .setEmoji('🌐')
-                    .setStyle(isTranslated ? ButtonStyle.Secondary : ButtonStyle.Success);
+                    .setStyle(ButtonStyle.Secondary);
             }
             return ButtonBuilder.from(button);
         });
 
         return new ActionRowBuilder().addComponents(buttons);
     });
+}
+
+/**
+ * 從快取獲取翻譯
+ */
+function getFromCache(key) {
+    const cached = translationCache.get(key);
+    if (!cached) return null;
+
+    // 檢查是否過期
+    if (Date.now() - cached.timestamp > CACHE_TTL) {
+        translationCache.delete(key);
+        return null;
+    }
+
+    return cached;
+}
+
+/**
+ * 儲存翻譯到快取
+ */
+function saveToCache(key, data) {
+    translationCache.set(key, {
+        ...data,
+        timestamp: Date.now()
+    });
+
+    // 清理過期快取
+    cleanExpiredCache();
+}
+
+/**
+ * 清理過期快取
+ */
+function cleanExpiredCache() {
+    const now = Date.now();
+    for (const [key, value] of translationCache.entries()) {
+        if (now - value.timestamp > CACHE_TTL) {
+            translationCache.delete(key);
+        }
+    }
+
+    // 同時清理翻譯狀態快取
+    for (const [key, value] of translationStateCache.entries()) {
+        if (now - value.timestamp > CACHE_TTL) {
+            translationStateCache.delete(key);
+        }
+    }
 }
 
 /**
@@ -395,7 +667,7 @@ function getTranslationState(tweetId) {
     if (!state) return null;
 
     // 檢查是否過期
-    if (Date.now() - state.timestamp > STATE_CACHE_TTL) {
+    if (Date.now() - state.timestamp > CACHE_TTL) {
         translationStateCache.delete(tweetId);
         return null;
     }
@@ -417,7 +689,6 @@ function setTranslationState(tweetId, state) {
 
 module.exports = {
     handleTranslateInteraction,
-    execute: handleTranslateInteraction,
     getTranslationState,
     setTranslationState
 };

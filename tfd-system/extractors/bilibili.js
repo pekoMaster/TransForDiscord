@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - 增強版 Bilibili URL 轉換器
+ * TFD 系統 - 增強版 Bilibili URL 轉換器
  * 支援完整的 bilibili.com 和 b23.tv 到 vxbilibili.com 和 vxb23.tv 轉換
  * 包含語言參數處理和智能 URL 解析
  */

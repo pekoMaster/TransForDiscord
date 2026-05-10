@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - 增強版 Twitter/X 提取器
+ * TFD 系統 - 增強版 Twitter/X 提取器
  * 整合最終版 Twitter 提取器的所有功能
  * 支援回覆推文、引用轉推、多圖片分頁、影片重導向等功能
  */
@@ -14,7 +14,21 @@ const URLConverterLogger = require('../utils/url-converter-logger');
 const BlacklistManager = require('../../utils/blacklist-manager');
 const TranslationButtonBuilder = require('../utils/translation-button-builder');
 
-class ErmianaTwitterExtractor {
+// 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
+let _v2ContainerBuilder = null;
+function getV2ContainerBuilder() {
+    if (!_v2ContainerBuilder) {
+        try {
+            _v2ContainerBuilder = require('../../handlers/twitter-v2-container-builder');
+        } catch (e) {
+            console.warn('[Twitter-V2] twitter-v2-container-builder 模組不存在，影片 V2 功能停用');
+            _v2ContainerBuilder = { buildV2Container: null, cacheTweetData: () => {} };
+        }
+    }
+    return _v2ContainerBuilder;
+}
+
+class TFDTwitterExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.name = 'Twitter/X';
@@ -25,6 +39,14 @@ class ErmianaTwitterExtractor {
         this.textTruncator = new TextTruncator();
         this.blacklistManager = new BlacklistManager();
         this.translationButtonBuilder = TranslationButtonBuilder;
+
+        // 2026-04-11: 自家 Vercel embed 影片 URL，取代 vxtwitter
+        try {
+            const config = require('../config/tfd-config.json');
+            this.vercelEmbedBaseUrl = config.features?.twitterEmbedProxy?.vercelEmbedBaseUrl || '';
+        } catch {
+            this.vercelEmbedBaseUrl = '';
+        }
     }
 
     /**
@@ -97,17 +119,19 @@ class ErmianaTwitterExtractor {
                 return this.createPassthroughResponse(originalURL);
             }
 
-            // 原始 Twitter/X URL：正常處理流程
-            // 獲取推文資料
-            const fxapiResp = await this.httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tid}`, {
-                timeout: 2500
-            });
+            // 原始 Twitter/X URL：正常處理流程（fxtwitter → vxtwitter fallback）
+            const tweetResult = await this.fetchTweetData(tid);
 
-            if (!fxapiResp || !fxapiResp.tweet) {
-                throw new Error('無法獲取推文資料');
+            if (!tweetResult) {
+                console.warn(`[Twitter-Extractor] 推文不可用（fxtwitter + vxtwitter 均失敗）| TweetID: ${tid}`);
+                return this.createPassthroughResponse(originalURL);
             }
 
-            const tweet = fxapiResp.tweet;
+            if (tweetResult.source === 'vxtwitter') {
+                console.log(`[Twitter-Extractor] 使用 vxtwitter fallback 成功 | TweetID: ${tid}`);
+            }
+
+            const tweet = tweetResult.tweet;
 
             // 🔍 檢查作者黑名單（使用 UID + username 雙重比對）
             const authorUsername = tweet.author?.screen_name || '';
@@ -136,20 +160,10 @@ class ErmianaTwitterExtractor {
             // 分析推文類型完成
 
             // 處理不同類型的推文
-            // 🔧 2026-02-07: 恢復單影片轉換，使用 vxtwitter.com 讓 Discord 可內嵌播放
-            if (tweetType === 'video') {
-                // 單影片: 使用 vxtwitter.com 處理
-                return this.handleVideoTweet(tweet, originalURL, message);
-            }
-
-            if (tweetType === 'multi-video' || tweetType === 'multi-video-with-images') {
-                // 多影片或多影片+圖片: 使用混合媒體處理
-                return this.handleMixedMediaTweet(tweet, originalURL, tweetType);
-            }
-
-            if (tweetType === 'video-with-images') {
-                // 1影片+圖片: 使用混合媒體處理
-                return this.handleMixedMediaTweet(tweet, originalURL, tweetType);
+            // 2026-04-11: 所有影片類型推文改用 V2 Container（取代 vxtwitter redirect）
+            const videoTypes = ['video', 'multi-video', 'multi-video-with-images', 'video-with-images'];
+            if (videoTypes.includes(tweetType)) {
+                return await this.handleVideoTweetV2(tweet, originalURL, tweetType, message);
             }
 
             // 📝 Twitter 文章（長文模式）
@@ -170,6 +184,8 @@ class ErmianaTwitterExtractor {
                 // LOG removed for simplicity
                 quoteInfo = this.getQuoteTweetInfo(tweet);
             }
+
+            // 2026-04-11: 回覆/引用含影片時不再轉 vxtwitter，統一走 embed 流程 + Vercel 影片 URL
 
             // 🌐 檢查是否應該使用 Google Apps Script 模式
             if (this.shouldUseGASVideoMode(tweet.id, tweetType)) {
@@ -218,20 +234,14 @@ class ErmianaTwitterExtractor {
                 toggleButtons.push(this.buildTranslateButtonComponent(tweet.id, false)); // false = 初始未翻譯狀態
             }
 
-            // 引用推文切換按鈕
-            if (quoteInfo && quoteInfo.tweet) {
-                toggleButtons.push(this.buildQuoteToggleButtonComponent(tweet.id, false)); // false = 初始隱藏狀態
+            // 單一展開按鈕（合併引用、回覆、全文）
+            const hasExpandable = (quoteInfo && quoteInfo.tweet) || (replyInfo && replyInfo.tweet) || (truncationResult && truncationResult.isTruncated);
+            if (hasExpandable) {
+                toggleButtons.push(this.buildAllToggleButtonComponent(tweet.id, false)); // false = 初始收起狀態
             }
 
-            // 回覆推文切換按鈕
-            if (replyInfo && replyInfo.tweet) {
-                toggleButtons.push(this.buildReplyToggleButtonComponent(tweet.id, false)); // false = 初始隱藏狀態
-            }
-
-            // 「顯示全文」按鈕（如果文字被截斷）
-            if (truncationResult && truncationResult.isTruncated) {
-                toggleButtons.push(this.buildExpandToggleButtonComponent(tweet.id, false)); // false = 初始收起狀態
-            }
+            // 🔄 重新整理按鈕（用於重新讀取推文跟圖片）
+            toggleButtons.push(this.buildReloadButtonComponent(tweet.id));
 
             // 如果有任何切換按鈕，整合到同一個 ActionRow
             if (toggleButtons.length > 0) {
@@ -411,8 +421,11 @@ class ErmianaTwitterExtractor {
         }
 
         if (truncationResult && truncationResult.isTruncated) {
-            toggleButtons.push(this.buildExpandToggleButtonComponent(tweet.id, false));
+            toggleButtons.push(this.buildAllToggleButtonComponent(tweet.id, false));
         }
+
+        // 🔄 重新整理按鈕
+        toggleButtons.push(this.buildReloadButtonComponent(tweet.id));
 
         let components = null;
         if (toggleButtons.length > 0) {
@@ -483,15 +496,14 @@ class ErmianaTwitterExtractor {
                 toggleButtons.push(this.buildTranslateButtonComponent(tweet.id, false));
             }
 
-            // 引用推文切換按鈕
-            if (quoteInfo && quoteInfo.tweet) {
-                toggleButtons.push(this.buildQuoteToggleButtonComponent(tweet.id, false));
+            // 單一展開按鈕（合併引用、回覆）
+            const hasExpandable = (quoteInfo && quoteInfo.tweet) || (replyInfo && replyInfo.tweet);
+            if (hasExpandable) {
+                toggleButtons.push(this.buildAllToggleButtonComponent(tweet.id, false));
             }
 
-            // 回覆推文切換按鈕
-            if (replyInfo && replyInfo.tweet) {
-                toggleButtons.push(this.buildReplyToggleButtonComponent(tweet.id, false));
-            }
+            // 🔄 重新整理按鈕
+            toggleButtons.push(this.buildReloadButtonComponent(tweet.id));
 
             // 如果有任何切換按鈕，整合到同一個 ActionRow
             if (toggleButtons.length > 0) {
@@ -555,6 +567,69 @@ class ErmianaTwitterExtractor {
             redirectURL: vxtwitterURL,
             contentType: 'video-redirect'
         };
+    }
+
+    /**
+     * 處理影片推文 - V2 Container 版本
+     * 2026-04-11: 取代 vxtwitter redirect，所有影片推文統一用 V2 Container
+     * @param {Object} tweet - fxtwitter 推文物件
+     * @param {string} originalURL - 原始推文 URL
+     * @param {string} tweetType - 推文類型
+     * @param {Object} message - Discord 訊息物件（可選）
+     */
+    async handleVideoTweetV2(tweet, originalURL, tweetType, message = null) {
+        try {
+            // 取得回覆/引用資訊
+            let replyData = null;
+            let quoteData = null;
+
+            if (this.isReplyTweet(tweet)) {
+                replyData = await this.getReplyTweetInfo(tweet);
+                if (replyData) {
+                    replyData = { tweet: replyData.tweet, tweetId: replyData.tweetId };
+                }
+            }
+
+            if (this.isQuoteTweet(tweet)) {
+                const qi = this.getQuoteTweetInfo(tweet);
+                if (qi) {
+                    quoteData = { tweet: qi.tweet, tweetId: qi.tweetId };
+                }
+            }
+
+            // 建構 V2 Container
+            const { buildV2Container, cacheTweetData } = getV2ContainerBuilder();
+            if (!buildV2Container) {
+                // V2 模組不存在，降級為 vxtwitter redirect
+                return this.handleVideoTweet(tweet, originalURL, message);
+            }
+            const container = buildV2Container(tweet, originalURL, {
+                quoteData,
+                replyData,
+            });
+
+            // 快取推文資料（供按鈕互動重建 Container 用）
+            cacheTweetData(tweet.id, { tweet, originalURL, quoteData, replyData });
+
+            // 記錄轉換
+            URLConverterLogger.logConversion('twitter', message, null, null, `[V2] ${originalURL}`);
+
+            return {
+                success: true,
+                siteName: 'twitter',
+                contentType: tweetType,
+                isV2: true,
+                v2Container: container,
+                tweetId: tweet.id,
+                originalURL: originalURL,
+                originalText: tweet.text,
+                tweet: tweet,  // 供降級時重建舊版 embed 使用
+            };
+        } catch (error) {
+            console.error(`[Enhanced-Twitter] V2 Container 建構失敗: ${error.message}`);
+            // 降級回 vxtwitter redirect
+            return this.handleVideoTweet(tweet, originalURL, message);
+        }
     }
 
     /**
@@ -726,7 +801,7 @@ class ErmianaTwitterExtractor {
                 videos,
                 images,
                 originalURL,
-                siteName: 'Enhanced Ermiana'
+                siteName: 'Enhanced TFD'
             });
 
             // LOG removed for simplicity
@@ -831,19 +906,122 @@ class ErmianaTwitterExtractor {
             if (tweet.media && tweet.media.all) {
                 tweet.media.all.forEach(media => {
                     if (media && media.type !== 'video' && media.url) {
+                        // 將 ?name=orig 改為 ?name=large，降低 Discord 外鏈抓取失敗機率
+                        const optimizedUrl = media.url.replace('?name=orig', '?name=large');
                         // 🔒 等級 2：多圖片防爆雷
                         if (blacklistEntry && blacklistEntry.level === 2) {
-                            images.push(`SPOILER_${media.url}`);
+                            images.push(`SPOILER_${optimizedUrl}`);
                         } else {
-                            images.push(media.url);
+                            images.push(optimizedUrl);
                         }
                     }
                 });
+            }
+            
+            // 2026-04-12: 若沒有媒體但有卡片圖片（外部連結卡片），使用卡片圖片
+            if (images.length === 0 && tweet.card && tweet.card.image && tweet.card.image.url) {
+                const cardImageUrl = tweet.card.image.url;
+                const optimizedUrl = cardImageUrl.replace(/\?name=\w+/, '?name=large');
+                // 🔒 等級 2：卡片圖片也需要防爆雷
+                if (blacklistEntry && blacklistEntry.level === 2) {
+                    images.push(`SPOILER_${optimizedUrl}`);
+                } else {
+                    images.push(optimizedUrl);
+                }
             }
         } catch (error) {
             console.error(`[Enhanced-Twitter] 提取多圖片失敗: ${error.message}`);
         }
         return images;
+    }
+
+    /**
+     * 取得推文資料，依序嘗試 fxtwitter → vxtwitter
+     * @param {string} tid - 推文 ID
+     * @returns {Promise<{tweet: Object, source: string}|null>}
+     */
+    async fetchTweetData(tid) {
+        // 嘗試 fxtwitter
+        const fxResp = await this.httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tid}`);
+        if (fxResp && fxResp.tweet) {
+            return { tweet: fxResp.tweet, source: 'fxtwitter' };
+        }
+
+        // fxtwitter 失敗，嘗試 vxtwitter 作為 fallback
+        console.log(`[Twitter-Extractor] fxtwitter 失敗，嘗試 vxtwitter fallback | TweetID: ${tid}`);
+        const vxResp = await this.httpClient.fetchJSON(`https://api.vxtwitter.com/i/status/${tid}`);
+        if (vxResp) {
+            const normalized = this.normalizeVxTwitterResponse(vxResp, tid);
+            if (normalized) {
+                return { tweet: normalized, source: 'vxtwitter' };
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 將 vxtwitter API 回應格式轉為 fxtwitter 相容格式
+     * @param {Object} data - vxtwitter 回應
+     * @param {string} tid - 推文 ID
+     * @returns {Object|null}
+     */
+    normalizeVxTwitterResponse(data, tid) {
+        if (!data) return null;
+
+        const tweetId = data.tweetID || tid;
+        const text = data.text || data.description || '';
+        const userScreenName = data.user_screen_name || '';
+        const userName = data.user_name || userScreenName;
+        const profileImageUrl = data.user_profile_image_url || '';
+
+        if (!userScreenName) return null;
+
+        const tweet = {
+            id: tweetId,
+            text: text,
+            created_timestamp: data.date_epoch || null,
+            author: {
+                id: null,
+                name: userName,
+                screen_name: userScreenName,
+                profile_image_url_https: profileImageUrl,
+                avatar_url: profileImageUrl
+            },
+            engagement: {
+                likes: data.likes || 0,
+                retweets: data.retweets || 0,
+                replies: data.replies || 0,
+                views: data.views || 0
+            },
+            media: null,
+            replying_to: null,
+            replying_to_status: null,
+            quote: null,
+            _fromVxTwitter: true
+        };
+
+        // 轉換媒體格式（media_extended 陣列）
+        if (data.media_extended && data.media_extended.length > 0) {
+            tweet.media = {
+                all: data.media_extended.map(m => {
+                    const mType = m.type === 'image' ? 'photo' : (m.type || 'photo');
+                    if (mType === 'video' || mType === 'gif') {
+                        return {
+                            type: mType,
+                            url: m.thumbnail_url || m.url,
+                            variants: m.url ? [{ url: m.url, bitrate: 2176000, content_type: 'video/mp4' }] : []
+                        };
+                    }
+                    return { type: 'photo', url: m.url };
+                })
+            };
+        } else if (data.mediaURLs && data.mediaURLs.length > 0) {
+            // 簡化格式 fallback
+            tweet.media = { all: data.mediaURLs.map(url => ({ type: 'photo', url })) };
+        }
+
+        return tweet;
     }
 
     /**
@@ -1103,9 +1281,9 @@ class ErmianaTwitterExtractor {
             } else {
                 // 正常情況
                 if (stats.length > 0) {
-                    footerText = `${stats.join(' • ')} | ${tweetTypeLabel}Original By Ermiana`;
+                    footerText = `${stats.join(' • ')} | ${tweetTypeLabel}Peko Embed`;
                 } else {
-                    footerText = `${tweetTypeLabel}Original By Ermiana`;
+                    footerText = `${tweetTypeLabel}Peko Embed`;
                 }
             }
 
@@ -1187,10 +1365,38 @@ class ErmianaTwitterExtractor {
         const images = [];
         try {
             if (tweet.media && tweet.media.all && tweet.media.all.length > 0) {
+                // 先收集所有非影片的圖片
                 tweet.media.all.forEach(media => {
-                    if (media && media.type !== 'video' && media.url) {
-                        images.push(media);
+                    if (media && media.type !== 'video' && media.type !== 'gif' && media.url) {
+                        // 將 ?name=orig 改為 ?name=large，降低 Discord 外鏈抓取失敗機率
+                        const optimized = { ...media, url: media.url.replace('?name=orig', '?name=large') };
+                        images.push(optimized);
                     }
+                });
+
+                // 2026-04-11: 若沒有圖片但有影片，使用影片縮圖作為 embed 預覽圖
+                if (images.length === 0) {
+                    tweet.media.all.forEach(media => {
+                        if (media && (media.type === 'video' || media.type === 'gif') && media.thumbnail_url) {
+                            images.push({ ...media, url: media.thumbnail_url.replace('?name=orig', '?name=large') });
+                        }
+                    });
+                }
+            }
+            
+            // 2026-04-12: 若沒有媒體但有卡片圖片（外部連結卡片），使用卡片圖片
+            if (images.length === 0 && tweet.card && tweet.card.image && tweet.card.image.url) {
+                const cardImageUrl = tweet.card.image.url;
+                // 將 ?name=small 或其他小尺寸改為 ?name=large，格式可能為 ?format=jpg&name=xxx
+                let optimizedUrl = cardImageUrl;
+                // 匹配 name=xxx 並替換為 name=large
+                optimizedUrl = optimizedUrl.replace(/([?&])name=\w+/g, '$1name=large');
+                images.push({
+                    type: 'card',
+                    url: optimizedUrl,
+                    width: tweet.card.image.width,
+                    height: tweet.card.image.height,
+                    alt: tweet.card.image.alt
                 });
             }
         } catch (error) {
@@ -1274,8 +1480,8 @@ class ErmianaTwitterExtractor {
     buildQuoteToggleButtonComponent(tweetId, isShowing) {
         return new ButtonBuilder()
             .setCustomId(isShowing ? `twitter_hide_quote_${tweetId}` : `twitter_show_quote_${tweetId}`)
-            .setLabel(isShowing ? '🔼 收起引用' : '🔽 展開引用')
-            .setStyle(isShowing ? ButtonStyle.Secondary : ButtonStyle.Primary);
+            .setLabel(isShowing ? '收起引用' : '展開引用')
+            .setStyle(ButtonStyle.Secondary);
     }
 
     /**
@@ -1303,8 +1509,8 @@ class ErmianaTwitterExtractor {
     buildReplyToggleButtonComponent(tweetId, isShowing) {
         return new ButtonBuilder()
             .setCustomId(isShowing ? `twitter_hide_reply_${tweetId}` : `twitter_show_reply_${tweetId}`)
-            .setLabel(isShowing ? '🔼 收起回覆' : '🔽 展開回覆')
-            .setStyle(isShowing ? ButtonStyle.Secondary : ButtonStyle.Primary);
+            .setLabel(isShowing ? '收起回覆' : '展開回覆')
+            .setStyle(ButtonStyle.Secondary);
     }
 
     /**
@@ -1316,8 +1522,20 @@ class ErmianaTwitterExtractor {
     buildExpandToggleButtonComponent(tweetId, isExpanded) {
         return new ButtonBuilder()
             .setCustomId(isExpanded ? `twitter_collapse_${tweetId}` : `twitter_expand_${tweetId}`)
-            .setLabel(isExpanded ? '收回全文' : '顯示全文')
-            .setEmoji(isExpanded ? '📕' : '📖')
+            .setLabel(isExpanded ? '收回全文' : '展開全文')
+            .setStyle(ButtonStyle.Secondary);
+    }
+
+    /**
+     * 建立統一展開/收回按鈕組件（整合引用、回覆、全文）
+     * @param {string} tweetId - 推文 ID
+     * @param {boolean} isAllExpanded - 是否已全部展開
+     * @returns {ButtonBuilder}
+     */
+    buildAllToggleButtonComponent(tweetId, isAllExpanded) {
+        return new ButtonBuilder()
+            .setCustomId(isAllExpanded ? `twitter_collapse_all_${tweetId}` : `twitter_expand_all_${tweetId}`)
+            .setLabel(isAllExpanded ? '收回' : '展開')
             .setStyle(ButtonStyle.Secondary);
     }
 
@@ -1331,8 +1549,7 @@ class ErmianaTwitterExtractor {
         return new ButtonBuilder()
             .setCustomId(isTranslated ? `twitter_original_${tweetId}` : `twitter_translate_${tweetId}`)
             .setLabel(isTranslated ? '原文' : '翻譯')
-            .setEmoji('🌐')
-            .setStyle(isTranslated ? ButtonStyle.Secondary : ButtonStyle.Success);
+            .setStyle(ButtonStyle.Secondary);
     }
 
     /**
@@ -1393,18 +1610,24 @@ class ErmianaTwitterExtractor {
 
     /**
      * 提取視頻 URL
+     * 2026-04-11: 若有設定 Vercel embed，單影片推文改用 Vercel embed URL
      */
     extractVideoUrls(tweet) {
         const videoUrls = [];
         try {
             if (tweet.media && tweet.media.all) {
-                tweet.media.all.forEach(media => {
-                    if (media && (media.type === 'video' || media.type === 'gif') && media.url) {
+                const videos = tweet.media.all.filter(media => media && (media.type === 'video' || media.type === 'gif') && media.url);
+
+                // 由洗頻暫時註解 - 單影片且有 Vercel embed → 使用 Vercel URL 讓 Discord 自動渲染影片
+                // if (videos.length === 1 && this.vercelEmbedBaseUrl) {
+                //     videoUrls.push(`${this.vercelEmbedBaseUrl}/embed/twitter/${tweet.id}`);
+                // } else {
+                    // 多影片或無 Vercel → 使用原始影片 URL
+                    videos.forEach(media => {
                         const formattedVideoUrl = this.videoLinkFormat(media.url);
                         videoUrls.push(formattedVideoUrl);
-                        // LOG removed for simplicity
-                    }
-                });
+                    });
+                // }
             }
         } catch (error) {
             // LOG removed for simplicity
@@ -1419,7 +1642,7 @@ class ErmianaTwitterExtractor {
         if (!videoUrl) return '';
 
         try {
-            // 保持 Ermiana 原始格式
+            // 保持 TFD 原始格式
             return videoUrl;
         } catch (error) {
             return videoUrl;
@@ -1443,6 +1666,7 @@ class ErmianaTwitterExtractor {
             });
 
             if (!response || !response.user) {
+                console.error(`[Twitter-Extractor] 🔍 用戶資料 API 請求失敗診斷 | Username: ${username} | URL: ${apiURL} | 回應內容: ${JSON.stringify(response).substring(0, 500)}`);
                 throw new Error('無法獲取用戶資料');
             }
 
@@ -1566,7 +1790,7 @@ class ErmianaTwitterExtractor {
         }
 
         // 設定 Footer
-        let footerText = 'Twitter Profile | Original By Ermiana';
+        let footerText = 'Twitter Profile | Peko Embed';
         if (user.protected) {
             footerText = '🔒 受保護的帳號 | ' + footerText;
         }
@@ -1604,7 +1828,7 @@ class ErmianaTwitterExtractor {
             .setDescription(`錯誤: ${errorMessage}`)
             .setURL(originalURL)
             .setFooter({
-                text: 'Original By Ermiana',
+                text: 'Peko Embed',
                 iconURL: 'https://abs.twimg.com/favicons/twitter.2.ico'
             })
             .setTimestamp();
@@ -1619,4 +1843,11 @@ class ErmianaTwitterExtractor {
     }
 }
 
-module.exports = ErmianaTwitterExtractor;
+TFDTwitterExtractor.prototype.buildReloadButtonComponent = function(tweetId) {
+    return new ButtonBuilder()
+        .setCustomId(`twitter_reload_${tweetId}`)
+        .setLabel('重整')
+        .setStyle(ButtonStyle.Secondary);
+};
+
+module.exports = TFDTwitterExtractor;

@@ -13,7 +13,7 @@
  */
 
 const { Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const PixivExtractor = require('../ermiana-system/extractors/pixiv.js');
+const PixivExtractor = require('../tfd-system/extractors/pixiv.js');
 const PixivCacheManager = require('../utils/pixiv-cache-manager.js');
 
 // 🚀 效能優化：模組級別單例（避免每次點擊都創建新實例）
@@ -119,12 +119,12 @@ module.exports = {
                         new ButtonBuilder()
                             .setCustomId(`pixiv_prev_${artworkId}_${Math.max(0, pageNumber - 1)}`)
                             .setLabel('◀️')
-                            .setStyle(ButtonStyle.Primary)
+                            .setStyle(ButtonStyle.Secondary)
                             .setDisabled(pageNumber === 0),
                         new ButtonBuilder()
                             .setCustomId(`pixiv_next_${artworkId}_${Math.min(totalPages - 1, pageNumber + 1)}`)
                             .setLabel('▶️')
-                            .setStyle(ButtonStyle.Primary)
+                            .setStyle(ButtonStyle.Secondary)
                             .setDisabled(pageNumber === totalPages - 1),
                         new ButtonBuilder()
                             .setCustomId(`pixiv_last_${artworkId}_${totalPages - 1}`)

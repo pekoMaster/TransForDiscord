@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - URL 匹配模式
+ * TFD 系統 - URL 匹配模式
  * 各網站的正則表達式模式定義
  */
 
@@ -43,26 +43,7 @@ const patterns = {
         generic: /https?:\/\/(?:www\.|m\.)?facebook\.com\/(.+)/i
     },
 
-    threads: {
-        // 支援 threads.net（舊域名）和 threads.com（2024年後新域名）
-        post: /https?:\/\/(?:www\.)?threads(?:\.net|\.com)\/@([A-Za-z0-9._-]+)\/post\/([A-Za-z0-9_-]+)/i,
-        profile: /https?:\/\/(?:www\.)?threads(?:\.net|\.com)\/@([A-Za-z0-9._-]+)/i
-    },
-
-    tiktok: {
-        video: /https?:\/\/(?:www\.)?tiktok\.com\/@([A-Za-z0-9._-]+)\/video\/(\d+)/i,
-        shortUrl: /https?:\/\/vm\.tiktok\.com\/([A-Za-z0-9]+)/i
-    },
-
-    plurk: {
-        post: /https?:\/\/(?:www\.)?plurk\.com\/p\/([A-Za-z0-9]+)/i,
-        profile: /https?:\/\/(?:www\.)?plurk\.com\/([A-Za-z0-9_-]+)/i
-    },
-
-    bluesky: {
-        post: /https?:\/\/bsky\.app\/profile\/([^\/]+)\/post\/([A-Za-z0-9]+)/i,
-        profile: /https?:\/\/bsky\.app\/profile\/([^\/]+)$/i
-    },
+    // tiktok, plurk, bluesky: 已移除 (2026-04-12) - 無對應 extractor，匹配後會報錯
 
     // 社群網站
     ptt: {
@@ -80,10 +61,7 @@ const patterns = {
         creationDetail: /https?:\/\/home\.gamer\.com\.tw\/creationDetail\.php\?sn=(\d+)/i
     },
 
-    dcard: {
-        post: /https?:\/\/(?:www\.)?dcard\.tw\/f\/([A-Za-z0-9_-]+)\/p\/(\d+)/i,
-        forum: /https?:\/\/(?:www\.)?dcard\.tw\/f\/([A-Za-z0-9_-]+)/i
-    },
+    // dcard: 已移除 (2026-04-12) - 無對應 extractor
 
     // 媒體平台
     pixiv: {
@@ -92,10 +70,7 @@ const patterns = {
         novel: /https?:\/\/(?:www\.)?pixiv\.net\/novel\/show\.php\?id=(\d+)/i
     },
 
-    iwara: {
-        video: /https?:\/\/(?:www\.)?iwara\.tv\/video\/([A-Za-z0-9_-]+)/i,
-        profile: /https?:\/\/(?:www\.)?iwara\.tv\/profile\/([A-Za-z0-9_-]+)/i
-    },
+    // iwara: 已移除 (2026-04-12) - Cloudflare 擋住所有 API/fxiwara 請求，完全無法使用
 
     bilibili: {
         video: /https?:\/\/(?:www\.)?bilibili\.com\/video\/([A-Za-z0-9]+)(?:\?[^#\s]*)?(?:#[^\s]*)?/i,
@@ -115,13 +90,13 @@ const patterns = {
         store: /https?:\/\/24h\.pchome\.com\.tw\/store\/([A-Za-z0-9-]+)/i
     },
 
-    // 18+ 內容 (可選)
-    ehentai: {
-        gallery: /https?:\/\/(?:e-hentai\.org|exhentai\.org)\/g\/(\d+)\/([a-f0-9]+)/i
-    },
+    // ehentai, nhentai: 已移除 (2026-04-12) - 無對應 extractor
 
-    nhentai: {
-        gallery: /https?:\/\/nhentai\.net\/g\/(\d+)/i
+    // 遊戲百科
+    pokewiki: {
+        // ��奇寶貝百科 (52poke wiki)
+        // 格式: wiki.52poke.com/wiki/頁面名稱 或 wiki.52poke.com/zh/頁面名稱
+        page: /https?:\/\/wiki\.52poke\.com\/(?:wiki|zh|zh-hant|zh-hans|zh-tw|zh-cn)\/([^\s#?]+)/i
     },
 
     // 遊戲官網
@@ -136,6 +111,12 @@ const patterns = {
         article: /https?:\/\/today\.line\.me\/([a-z]{2})\/v3\/article\/([A-Za-z0-9]+)/i
     },
 
+    msn: {
+        // MSN 新聞
+        // 格式: msn.com/{locale}/news/{category}/{slug}/ar-{articleId}
+        article: /https?:\/\/(?:www\.)?msn\.com\/([a-z-]+)\/[^?#]*\/ar-([A-Za-z0-9]+)/i
+    },
+
     udn: {
         // UDN 聯合新聞網
         // 格式: udn.com/news/story/{分類ID}/{文章ID}
@@ -144,6 +125,12 @@ const patterns = {
         ampArticle: /https?:\/\/(?:www\.)?udn\.com\/news\/amp\/story\/(\d+)\/(\d+)/i,
         // 格式: video.udn.com/news/{文章ID}
         video: /https?:\/\/video\.udn\.com\/news\/(\d+)/i
+    },
+
+    cts: {
+        // 華視新聞網
+        // 格式: news.cts.com.tw/cts/{category}/{yearMonth}/{articleId}.html
+        article: /https?:\/\/news\.cts\.com\.tw\/cts\/([a-z]+)\/(\d+)\/(\d+)\.html/i
     },
 
     xfastest: {
@@ -166,6 +153,29 @@ const patterns = {
         videoNew: /https?:\/\/(?:www\.|[a-z]{2}\.)?pornhub\.com\/video\/([a-zA-Z0-9_-]+)/i,
         // 嵌入格式: pornhub.com/embed/xxxxx
         embed: /https?:\/\/(?:www\.|[a-z]{2}\.)?pornhub\.com\/embed\/([a-zA-Z0-9_-]+)/i
+    },
+
+    // 遊戲新聞
+    '4gamers': {
+        // 短網址: 4gamers.com.tw/x/{code}
+        shortUrl: /https?:\/\/(?:www\.)?4gamers\.com\.tw\/x\/([A-Za-z0-9]+)/i,
+        // 一般新聞網址: 4gamers.com.tw/news/detail/{id}/{slug}
+        news: /https?:\/\/(?:www\.)?4gamers\.com\.tw\/news\/detail\/(\d+)(?:\/[^\s?#]*)?/i
+    },
+
+    // 社群平台
+    threads: {
+        // 貼文: threads.com/@username/post/POST_ID
+        post: /https?:\/\/(?:www\.)?threads\.com\/@([A-Za-z0-9_.-]+)\/post\/([A-Za-z0-9_-]+)/i,
+        // 個人資料: threads.com/@username
+        profile: /https?:\/\/(?:www\.)?threads\.com\/@([A-Za-z0-9_.-]+)\/?$/i
+    },
+
+    // 影片平台 - YouTube
+    youtube: {
+        // /live/ 格式直播連結（含可選 si 參數）
+        // 格式: youtube.com/live/{videoId} 或 youtube.com/live/{videoId}?si=xxx
+        live: /https?:\/\/(?:www\.)?youtube\.com\/live\/([a-zA-Z0-9_-]{11})/i
     }
 };
 

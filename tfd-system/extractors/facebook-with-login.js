@@ -2,86 +2,85 @@
 /**
  * facebook-with-login.js
  * Facebook 提取器（使用已保存的登入狀態）
- * 結合 Playwright Semantic Browser 和持久化登入
  */
 
-const PlaywrightSemanticBrowser = require('../../utils/playwright-semantic-browser');
 const path = require('path');
 const fs = require('fs').promises;
-let chromium;
-try { ({ chromium } = require('playwright')); } catch (_) { chromium = null; }
+const { chromium } = require('playwright');
 
 class FacebookWithLoginExtractor {
     constructor() {
         this.name = 'facebook_with_login';
         this.userDataDir = path.join(__dirname, '..', '..', 'data', 'facebook_session');
+        this.storageStatePath = path.join(__dirname, '..', '..', 'data', 'facebook_auth.json');
+        this.browser = null;
         this.context = null;
     }
 
-    /**
-     * 初始化持久化上下文
-     */
     async initContext() {
-        // 檢查是否有保存的登入狀態
         try {
             await fs.access(this.userDataDir);
         } catch {
-            throw new Error('找不到 Facebook 登入狀態，請先執行: node utils/facebook-login-simple.js');
+            await fs.access(this.storageStatePath).catch(() => {
+                throw new Error('找不到 Facebook 登入狀態，請先執行: node utils/facebook-login-simple.js');
+            });
         }
 
-        // 啟動持久化上下文
-        this.context = await chromium.launchPersistentContext(this.userDataDir, {
-            headless: true, // 背景執行
-            channel: 'chrome',
+        try {
+            this.context = await chromium.launchPersistentContext(this.userDataDir, {
+                headless: true,
+                channel: 'chrome',
+                viewport: { width: 1280, height: 720 },
+                locale: 'zh-TW',
+                timeout: 30000
+            });
+            this.browser = null;
+            console.log('[FB Extractor] ✅ 使用已保存的持久化登入狀態');
+            return;
+        } catch (error) {
+            console.warn(`[FB Extractor] 持久化登入狀態啟動失敗，改用 storageState: ${error.message}`);
+        }
+
+        await fs.access(this.storageStatePath);
+        this.browser = await chromium.launch({
+            headless: true,
+            channel: 'chrome'
+        });
+        this.context = await this.browser.newContext({
             viewport: { width: 1280, height: 720 },
             locale: 'zh-TW',
-            timeout: 30000
+            storageState: this.storageStatePath
         });
-
-        console.log('[FB Extractor] ✅ 使用已保存的登入狀態');
+        console.log('[FB Extractor] ✅ 使用 storageState 登入狀態');
     }
 
-    /**
-     * 提取 Facebook 貼文內容
-     * @param {string} url - Facebook 貼文 URL
-     * @returns {Promise<Object>}
-     */
     async extract(url, extractedData = {}, message = null) {
         try {
             console.log(`[FB Extractor] 開始提取: ${url}`);
 
-            // 初始化上下文
             if (!this.context) {
                 await this.initContext();
             }
 
-            // 開啟新分頁
             const page = await this.context.newPage();
 
             console.log('[FB Extractor] 開啟頁面...');
             await page.goto(url, {
-                waitUntil: 'domcontentloaded', // 不等 networkidle，太慢
+                waitUntil: 'domcontentloaded',
                 timeout: 30000
             });
 
-            // 等待內容載入
             await page.waitForTimeout(3000);
 
-            // 取得語義化快照
             console.log('[FB Extractor] 取得語義化快照...');
             const snapshot = await page.accessibility.snapshot();
-
-            // 轉換為文字格式
             const lines = [];
             this._convertToLines(snapshot, lines, 0);
             const snapshotText = lines.join('\n');
-
-            // 解析元素
             const elements = this._parseSnapshot(snapshotText);
 
             console.log(`[FB Extractor] 找到 ${elements.length} 個元素`);
 
-            // 提取內容
             const result = {
                 success: true,
                 siteName: 'facebook',
@@ -89,17 +88,18 @@ class FacebookWithLoginExtractor {
                 data: {
                     url,
                     author: this._extractAuthor(elements),
+                    groupName: this._extractGroupName(elements),
+                    headline: this._extractHeadline(elements),
                     postTime: this._extractPostTime(elements),
                     content: this._extractContent(elements),
                     hashtags: this._extractHashtags(elements),
                     interactions: this._extractInteractions(elements),
                     comments: this._extractComments(elements),
-                    images: await this._extractImages(page),
+                    images: [],
                     elementCount: elements.length
                 }
             };
 
-            // 截圖
             const screenshotPath = path.join(__dirname, '..', '..', 'temp', `fb-${Date.now()}.png`);
             await fs.mkdir(path.dirname(screenshotPath), { recursive: true }).catch(() => {});
             await page.screenshot({ path: screenshotPath, fullPage: false });
@@ -107,17 +107,14 @@ class FacebookWithLoginExtractor {
 
             console.log('[FB Extractor] ✅ 提取完成');
             console.log(`  作者: ${result.data.author}`);
+            console.log(`  社團: ${result.data.groupName || '(無)'}`);
+            console.log(`  標題: ${result.data.headline || '(無)'}`);
             console.log(`  內容: ${result.data.content.substring(0, 100)}...`);
-            console.log(`  留言: ${result.data.comments.length} 則`);
-            console.log(`  圖片: ${result.data.images.length} 張`);
 
             await page.close();
-
             return result;
-
         } catch (error) {
             console.error('[FB Extractor] 錯誤:', error.message);
-
             return {
                 success: false,
                 siteName: 'facebook',
@@ -126,280 +123,175 @@ class FacebookWithLoginExtractor {
         }
     }
 
-    /**
-     * 提取作者資訊（改進版）
-     */
     _extractAuthor(elements) {
-        // 方法 1：找尋 heading 元素
-        let authorElement = elements.find(el =>
-            el.role === 'heading' &&
-            !el.text.includes('貼文') &&
-            !el.text.includes('留言') &&
-            !el.text.includes('Facebook') &&
-            el.text.length > 1 &&
-            el.text.length < 50
+        const headingAuthor = elements.find(el =>
+            el.role === 'heading' && / 的貼文$/.test(el.text)
         );
 
-        if (authorElement) {
-            return authorElement.text;
+        if (headingAuthor) {
+            return headingAuthor.text.replace(/ 的貼文$/, '').trim();
         }
 
-        // 方法 2：找尋第一個有意義的 link（通常是作者名稱連結）
-        authorElement = elements.find(el =>
+        const groupName = this._extractGroupName(elements);
+
+        const authorLink = elements.find(el =>
             el.role === 'link' &&
             el.text.length > 1 &&
-            el.text.length < 50 &&
-            !el.text.includes('http') &&
-            !el.text.includes('讚') &&
-            !el.text.includes('留言') &&
-            !el.text.includes('分享') &&
-            !el.text.includes('更多') &&
-            !el.text.includes('天前') &&
-            !el.text.includes('小時') &&
-            !el.text.includes('分鐘')
+            el.text.length < 60 &&
+            el.text !== 'Facebook' &&
+            el.text !== groupName &&
+            !this._isUiText(el.text) &&
+            !/ 的貼文$/.test(el.text)
         );
 
-        return authorElement ? authorElement.text : '未知作者';
+        if (authorLink) {
+            return authorLink.text;
+        }
+
+        return '未知作者';
     }
 
-    /**
-     * 提取發文時間
-     */
+    _extractGroupName(elements) {
+        const headingPost = elements.find(el =>
+            el.role === 'heading' && / 的貼文$/.test(el.text)
+        );
+
+        const authorFromHeading = headingPost
+            ? headingPost.text.replace(/ 的貼文$/, '').trim()
+            : null;
+
+        const groupLink = elements.find(el =>
+            el.role === 'link' &&
+            el.text.length > 3 &&
+            el.text !== 'Facebook' &&
+            el.text !== authorFromHeading &&
+            !this._isUiText(el.text)
+        );
+
+        return groupLink ? groupLink.text : '';
+    }
+
+    _extractHeadline(elements) {
+        const author = this._extractAuthor(elements);
+        const groupName = this._extractGroupName(elements);
+
+        const headline = elements.find(el =>
+            el.role === 'heading' &&
+            el.text.length > 1 &&
+            el.text.length < 120 &&
+            el.text !== 'Facebook' &&
+            el.text !== author &&
+            el.text !== groupName &&
+            !/ 的貼文$/.test(el.text) &&
+            !el.text.includes('尚無留言')
+        );
+
+        return headline ? headline.text : '';
+    }
+
     _extractPostTime(elements) {
-        // 找尋時間相關的連結
         const timeElement = elements.find(el =>
             el.role === 'link' &&
-            (el.text.includes('天') || el.text.includes('小時') || el.text.includes('分鐘'))
+            /\d+\s*(分鐘|小時|天|週|個月|年)/.test(el.text)
         );
 
         return timeElement ? timeElement.text : '';
     }
 
-    /**
-     * 提取貼文內容（改進版）
-     */
     _extractContent(elements) {
-        // 排除常見的 UI 文字
-        const excludeTexts = [
-            '登入', 'Cookie', 'Facebook', '查看更多',
-            '所有留言', '最相關', '讚', '留言', '分享',
-            '傳送', '表情', '貼圖', '相片', '影片',
-            '隱私政策', '服務條款', '廣告', '建立帳號'
-        ];
+        const author = this._extractAuthor(elements);
+        const groupName = this._extractGroupName(elements);
+        const headline = this._extractHeadline(elements);
 
         const textElements = elements.filter(el => {
-            // 必須是 text 或 StaticText
             if (el.role !== 'text' && el.role !== 'StaticText') return false;
-
-            // 長度限制
-            if (el.text.length < 5) return false;
-
-            // 排除 UI 文字
-            if (excludeTexts.some(ex => el.text.includes(ex))) return false;
-
+            const text = (el.text || '').trim();
+            if (text.length < 2) return false;
+            if (text === author || text === groupName || text === headline) return false;
+            if (this._isUiText(text)) return false;
             return true;
         });
 
-        // 取最長的幾個文字段落（通常是貼文內容）
-        const sortedTexts = textElements
-            .sort((a, b) => b.text.length - a.text.length)
-            .slice(0, 5);
+        const contentParts = [];
+        if (headline) contentParts.push(headline);
 
-        const content = sortedTexts.map(el => el.text).join('\n\n');
+        for (const el of textElements) {
+            const text = el.text.trim();
+            if (!contentParts.includes(text)) {
+                contentParts.push(text);
+            }
+        }
 
-        return content || '（無法提取內容）';
+        return contentParts.join('\n\n') || '未找到可用正文';
     }
 
-    /**
-     * 提取 Hashtags
-     */
     _extractHashtags(elements) {
         return elements
             .filter(el => el.role === 'link' && el.text.startsWith('#'))
             .map(el => el.text);
     }
 
-    /**
-     * 提取互動數據
-     */
     _extractInteractions(elements) {
-        const interactions = {
-            likes: 0,
-            comments: 0,
-            shares: 0
-        };
+        const interactions = { likes: 0, comments: 0, shares: 0 };
 
         elements.forEach(el => {
-            if (el.role === 'button') {
-                if (el.text.includes('讚：')) {
-                    const match = el.text.match(/讚：(\d+)/);
-                    if (match) interactions.likes = parseInt(match[1]);
-                }
-                if (el.text.includes('則留言')) {
-                    const match = el.text.match(/(\d+)則留言/);
-                    if (match) interactions.comments = parseInt(match[1]);
-                }
-                if (el.text.includes('次分享')) {
-                    const match = el.text.match(/(\d+)次分享/);
-                    if (match) interactions.shares = parseInt(match[1]);
-                }
-            }
+            const text = el.text || '';
+            const match = text.match(/(\d+)/);
+            if (!match) return;
+
+            if (text.includes('讚')) interactions.likes = parseInt(match[1]);
+            if (text.includes('留言')) interactions.comments = parseInt(match[1]);
+            if (text.includes('分享')) interactions.shares = parseInt(match[1]);
         });
 
         return interactions;
     }
 
-    /**
-     * 提取留言
-     */
     _extractComments(elements) {
-        const comments = [];
-
-        const articleElements = elements.filter(el => el.role === 'article');
-
-        articleElements.forEach(article => {
-            // 留言通常在 article 元素中
-            const textInArticle = elements.filter(el =>
-                el.role === 'text' &&
-                el.text.length > 10
-            );
-
-            if (textInArticle.length > 0) {
-                comments.push({
-                    author: '', // 可以進一步解析
-                    text: textInArticle[0].text,
-                    time: ''
-                });
-            }
-        });
-
-        return comments.slice(0, 10); // 最多返回 10 則留言
+        return [];
     }
 
-    /**
-     * 提取圖片 URL（改進版：過濾無關圖片）
-     */
-    async _extractImages(page) {
-        try {
-            const images = await page.$$eval('img', imgs => {
-                // 收集所有圖片資訊
-                return imgs.map(img => {
-                    const rect = img.getBoundingClientRect();
-                    return {
-                        src: img.src,
-                        alt: img.alt || '',
-                        width: rect.width,
-                        height: rect.height,
-                        // 檢查是否在貼文區域（通常在頁面中央）
-                        centerX: rect.left + rect.width / 2,
-                        // 檢查父元素是否包含特定 class
-                        parentClass: img.parentElement?.className || '',
-                        grandParentClass: img.parentElement?.parentElement?.className || ''
-                    };
-                });
-            });
-
-            // 過濾條件
-            const filteredImages = images.filter(img => {
-                // 必須有 src
-                if (!img.src || !img.src.startsWith('http')) return false;
-
-                // 排除小圖片（頭像、圖標等，通常 < 100px）
-                if (img.width < 100 || img.height < 100) return false;
-
-                // 排除 Facebook 系統圖片
-                const excludePatterns = [
-                    'static',
-                    'icon',
-                    'emoji',
-                    'profile',
-                    'avatar',
-                    'rsrc.php',  // Facebook 資源檔
-                    'safe_image.php',  // 外部連結預覽圖
-                    '/ads/',
-                    'sponsored',
-                    'pixel',
-                    'tracking',
-                    '/a.png',  // 1x1 追蹤像素
-                    'badge',
-                    'logo'
-                ];
-
-                const srcLower = img.src.toLowerCase();
-                if (excludePatterns.some(pattern => srcLower.includes(pattern))) {
-                    return false;
-                }
-
-                // 必須是 scontent（Facebook CDN 貼文圖片）
-                // 或是 fbcdn（Facebook 內容 CDN）
-                if (!img.src.includes('scontent') && !img.src.includes('fbcdn')) {
-                    return false;
-                }
-
-                return true;
-            });
-
-            console.log(`[FB Extractor] 圖片過濾: ${images.length} → ${filteredImages.length} 張`);
-
-            return filteredImages.slice(0, 10); // 最多 10 張圖片
-
-        } catch (error) {
-            console.error('[FB Extractor] 圖片提取失敗:', error.message);
-            return [];
-        }
-    }
-
-    /**
-     * 轉換 accessibility tree 為文字行
-     */
     _convertToLines(node, lines, depth) {
         if (!node) return;
-
         const indent = '  '.repeat(depth);
         const role = node.role || 'unknown';
         const name = node.name || '';
-
         if (name) {
-            const ref = `e${lines.length + 1}`;
-            lines.push(`${indent}- ${role} "${name}" [ref=${ref}]`);
+            lines.push(`${indent}- ${role}: ${String(name).replace(/\s+/g, ' ').trim()}`);
         }
-
         if (node.children) {
-            node.children.forEach(child => {
-                this._convertToLines(child, lines, depth + 1);
-            });
+            node.children.forEach(child => this._convertToLines(child, lines, depth + 1));
         }
     }
 
-    /**
-     * 解析快照文字
-     */
     _parseSnapshot(snapshot) {
-        const lines = snapshot.split('\n');
-        const elements = [];
-
-        lines.forEach(line => {
-            const match = line.match(/- (\w+) "([^"]+)" \[ref=(\w+)\]/);
-            if (match) {
-                elements.push({
-                    role: match[1],
-                    text: match[2],
-                    ref: match[3]
-                });
-            }
-        });
-
-        return elements;
+        return snapshot.split('\n')
+            .map(line => line.trim())
+            .filter(line => line.startsWith('- '))
+            .map(line => {
+                const match = line.match(/^- ([^:]+):\s*(.*)$/);
+                return match ? { role: match[1].trim(), text: match[2].trim() } : null;
+            })
+            .filter(Boolean);
     }
 
-    /**
-     * 關閉上下文
-     */
+    _isUiText(text) {
+        return [
+            'Facebook', '登入', 'Cookie', '查看更多', '更多選項', '分享', '留言', '傳送',
+            '按讚', '表情符號', '貼圖', '影片', '新增相片', '查看翻譯', '回覆', '發佈',
+            '尚無留言', '留言搶頭香！', '通知', 'Messenger', '功能表', '你的個人檔案', '關閉'
+        ].some(keyword => text.includes(keyword));
+    }
+
     async close() {
         if (this.context) {
             await this.context.close();
             this.context = null;
             console.log('[FB Extractor] 上下文已關閉');
+        }
+        if (this.browser) {
+            await this.browser.close().catch(() => {});
+            this.browser = null;
         }
     }
 }

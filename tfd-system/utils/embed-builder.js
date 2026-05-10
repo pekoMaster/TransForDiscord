@@ -1,11 +1,11 @@
 /**
- * Ermiana 系統 - Discord Embed 建構器
+ * TFD 系統 - Discord Embed 建構器
  * 生成豐富的 Discord 嵌入式訊息
  */
 
 const { EmbedBuilder } = require('discord.js');
 
-class ErmianaEmbedBuilder {
+class TFDEmbedBuilder {
     constructor() {
         this.defaultColor = 0x5865F2; // Discord Blurple
         this.maxTitleLength = 256;
@@ -285,7 +285,7 @@ class ErmianaEmbedBuilder {
         }
 
         embed.setFooter({
-            text: 'Ermiana 連結預覽系統',
+            text: 'TFD 連結預覽系統',
             iconURL: null
         });
 
@@ -376,4 +376,4 @@ class ErmianaEmbedBuilder {
     }
 }
 
-module.exports = ErmianaEmbedBuilder;
+module.exports = TFDEmbedBuilder;

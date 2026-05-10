@@ -3,7 +3,7 @@
  * 處理來自各種內容提取器（Twitter、Facebook等）的翻譯按鈕互動
  */
 
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, MessageFlags } = require('discord.js');
 const translator = require('../utils/translator.js');
 const deeplTranslator = require('../utils/deepl-translator.js').getInstance();
 
@@ -11,13 +11,15 @@ const deeplTranslator = require('../utils/deepl-translator.js').getInstance();
 // 格式：Map<sourceId, { text, timestamp }>
 const contentCache = new Map();
 
-// 自動清理過期快取（15 分鐘）
+// 快取 TTL（30 分鐘，與 translationCache / v2TweetCache 一致）
+const CACHE_TTL = 30 * 60 * 1000;
+
+// 自動清理過期快取
 setInterval(() => {
     const now = Date.now();
-    const fifteenMinutes = 15 * 60 * 1000;
 
     for (const [key, value] of contentCache.entries()) {
-        if (now - value.timestamp > fifteenMinutes) {
+        if (now - value.timestamp > CACHE_TTL) {
             contentCache.delete(key);
         }
     }
@@ -46,9 +48,8 @@ function getCachedContent(sourceId) {
     const cached = contentCache.get(sourceId);
     if (!cached) return null;
 
-    // 檢查是否過期（15 分鐘）
-    const fifteenMinutes = 15 * 60 * 1000;
-    if (Date.now() - cached.timestamp > fifteenMinutes) {
+    // 檢查是否過期
+    if (Date.now() - cached.timestamp > CACHE_TTL) {
         contentCache.delete(sourceId);
         return null;
     }
@@ -72,7 +73,7 @@ async function handleContentTranslationInteraction(interaction) {
         console.log(`[內容翻譯] 用戶 ${interaction.user.username} 點擊了 ${customId}`);
 
         // 延遲回應避免超時
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         // 解析 customId
         const isDeepL = customId.startsWith('translate_deepl_');
@@ -95,7 +96,7 @@ async function handleContentTranslationInteraction(interaction) {
         if (!originalText) {
             await interaction.followUp({
                 content: '❌ 無法找到原始文字，可能已過期或快取已清除',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
             return true;
         }
@@ -110,7 +111,7 @@ async function handleContentTranslationInteraction(interaction) {
             if (!deeplTranslator.checkAvailability()) {
                 await interaction.followUp({
                     content: '❌ DeepL 翻譯器未設定或無法使用',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return true;
             }
@@ -121,7 +122,7 @@ async function handleContentTranslationInteraction(interaction) {
                 console.error(`[內容翻譯] DeepL 翻譯失敗:`, deeplResult.error);
                 await interaction.followUp({
                     content: `❌ DeepL 翻譯失敗：${deeplResult.error}`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return true;
             }
@@ -141,7 +142,7 @@ async function handleContentTranslationInteraction(interaction) {
                 console.error(`[內容翻譯] Google 翻譯失敗:`, error.message);
                 await interaction.followUp({
                     content: `❌ 翻譯失敗：${error.message}`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return true;
             }
@@ -165,7 +166,7 @@ async function handleContentTranslationInteraction(interaction) {
         // 發送翻譯結果
         await interaction.followUp({
             embeds: [translationEmbed],
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
         console.log(`[內容翻譯] 翻譯結果已發送給 ${interaction.user.username}`);
@@ -178,12 +179,12 @@ async function handleContentTranslationInteraction(interaction) {
             if (interaction.deferred || interaction.replied) {
                 await interaction.followUp({
                     content: `❌ 發生錯誤：${error.message}`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             } else {
                 await interaction.reply({
                     content: `❌ 發生錯誤：${error.message}`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
         } catch (replyError) {
@@ -237,7 +238,6 @@ function getLanguageName(langCode) {
 
 module.exports = {
     handleContentTranslationInteraction,
-    execute: handleContentTranslationInteraction,
     cacheContent,
     getCachedContent
 };

@@ -5,7 +5,7 @@
  */
 
 const { Events } = require('discord.js');
-const PTTExtractor = require('../ermiana-system/extractors/ptt.js');
+const PTTExtractor = require('../tfd-system/extractors/ptt.js');
 const PTTCacheManager = require('../utils/ptt-cache-manager.js');
 
 // 防止快速點擊的冷卻機制

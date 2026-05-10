@@ -7,8 +7,7 @@
  * 使用 mbasic（精簡版 Facebook）更容易解析 HTML
  */
 
-let chromium;
-try { ({ chromium } = require('playwright')); } catch (_) { chromium = null; }
+const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -20,34 +19,54 @@ class FacebookMBasicExtractor {
     constructor() {
         this.name = 'facebook_mbasic';
         this.userDataDir = path.join(__dirname, '..', '..', 'data', 'facebook_session');
+        this.storageStatePath = path.join(__dirname, '..', '..', 'data', 'facebook_auth.json');
+        this.browser = null;
         this.context = null;
     }
 
     /**
-     * 初始化持久化上下文
+     * ?????????
      */
     async initContext() {
         try {
             await fs.access(this.userDataDir);
         } catch {
-            throw new Error('找不到 Facebook 登入狀態，請先執行登入');
+            await fs.access(this.storageStatePath).catch(() => {
+                throw new Error('??? Facebook ???????????');
+            });
         }
 
-        this.context = await chromium.launchPersistentContext(this.userDataDir, {
+        try {
+            this.context = await chromium.launchPersistentContext(this.userDataDir, {
+                headless: true,
+                channel: 'chrome',
+                viewport: { width: 480, height: 800 },
+                userAgent: 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36',
+                locale: 'zh-TW',
+                timeout: 30000
+            });
+            this.browser = null;
+            console.log('[FB MBasic] ? ?????????');
+            return;
+        } catch (error) {
+            console.warn('[FB MBasic] ?????????????? storageState: ' + error.message);
+        }
+
+        await fs.access(this.storageStatePath);
+        this.browser = await chromium.launch({
             headless: true,
-            channel: 'chrome',
-            viewport: { width: 480, height: 800 }, // 手機版尺寸
+            channel: 'chrome'
+        });
+        this.context = await this.browser.newContext({
+            viewport: { width: 480, height: 800 },
             userAgent: 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36',
             locale: 'zh-TW',
-            timeout: 30000
+            storageState: this.storageStatePath
         });
 
-        console.log('[FB MBasic] ✅ 使用已保存的登入狀態');
+        console.log('[FB MBasic] ? ?? storageState ????');
     }
 
-    /**
-     * 將標準 Facebook URL 轉換為 mbasic URL
-     */
     convertToMBasicUrl(url) {
         // 標準化 URL
         let mbasicUrl = url

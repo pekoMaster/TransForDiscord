@@ -1,16 +1,16 @@
 /**
- * Ermiana 系統 - Facebook 提取器
+ * TFD 系統 - Facebook 提取器
  * 使用 Puppeteer 爬蟲提取 Facebook 貼文資料
  */
 
-let puppeteer; try { puppeteer = require('puppeteer'); } catch (_) { puppeteer = null; }
+const puppeteer = require('puppeteer');
 const path = require('path');
-const ErmianaEmbedBuilder = require('../utils/embed-builder');
+const TFDEmbedBuilder = require('../utils/embed-builder');
 const URLConverterLogger = require('../utils/url-converter-logger');
 
 class FacebookExtractor {
     constructor() {
-        this.embedBuilder = new ErmianaEmbedBuilder();
+        this.embedBuilder = new TFDEmbedBuilder();
         this.name = 'Facebook';
         this.USER_DATA_DIR = path.join(__dirname, '..', '..', 'data', 'chrome_userdata');
     }
@@ -25,7 +25,7 @@ class FacebookExtractor {
         const { originalURL, patternName } = matchResult;
 
         try {
-            console.log(`[Ermiana-Facebook] 開始提取: ${originalURL} (模式: ${patternName})`);
+            console.log(`[TFD-Facebook] 開始提取: ${originalURL} (模式: ${patternName})`);
 
             // 公開發文格式：需要先檢查是否為社團貼文
             // story.php 可能是公開貼文或社團貼文，需要動態檢測
@@ -33,7 +33,7 @@ class FacebookExtractor {
             const needGroupCheck = ['story']; // 需要檢查社團的格式
 
             if (publicPatterns.includes(patternName)) {
-                console.log(`[Ermiana-Facebook] 檢測到公開發文格式 (${patternName})，使用快速 URL 轉換`);
+                console.log(`[TFD-Facebook] 檢測到公開發文格式 (${patternName})，使用快速 URL 轉換`);
 
                 // 直接轉換 URL
                 const facebedURL = this.convertToFacebed(originalURL);
@@ -59,22 +59,22 @@ class FacebookExtractor {
 
             // story.php 格式：需要先檢查是否為社團貼文
             if (needGroupCheck.includes(patternName)) {
-                console.log(`[Ermiana-Facebook] 檢測到 story.php 格式，先檢查是否為社團貼文...`);
+                console.log(`[TFD-Facebook] 檢測到 story.php 格式，先檢查是否為社團貼文...`);
 
                 // 快速檢查是否為社團貼文
                 const isGroup = await this.quickGroupCheck(originalURL);
 
                 if (isGroup) {
-                    console.log(`[Ermiana-Facebook] ⚠️ 檢測到社團貼文，使用 Puppeteer 提取內容`);
+                    console.log(`[TFD-Facebook] ⚠️ 檢測到社團貼文，使用 Puppeteer 提取內容`);
                     // 社團貼文使用 Puppeteer 爬蟲處理，繼續往下執行
                 } else {
-                    console.log(`[Ermiana-Facebook] ✅ 公開貼文，使用 Playwright 提取 Open Graph 資料`);
+                    console.log(`[TFD-Facebook] ✅ 公開貼文，使用 Playwright 提取 Open Graph 資料`);
 
                     // 使用 Playwright 提取 Open Graph 資料
                     const ogData = await this.extractOpenGraphData(originalURL);
 
                     if (!ogData || !ogData.title) {
-                        console.log(`[Ermiana-Facebook] OG 提取失敗，改用 URL 轉換`);
+                        console.log(`[TFD-Facebook] OG 提取失敗，改用 URL 轉換`);
                         const facebedURL = this.convertToFacebed(originalURL);
                         URLConverterLogger.logConversion('facebook', message, originalURL, facebedURL, originalURL);
                         return {
@@ -115,7 +115,7 @@ class FacebookExtractor {
             }
 
             // 私人/社團內容：使用 Puppeteer 爬蟲
-            console.log(`[Ermiana-Facebook] 私人/社團內容 (${patternName})，使用 Puppeteer 提取`);
+            console.log(`[TFD-Facebook] 私人/社團內容 (${patternName})，使用 Puppeteer 提取`);
 
             const postData = await this.scrapeFacebookPost(originalURL);
 
@@ -124,7 +124,7 @@ class FacebookExtractor {
             }
 
             // 只記錄關鍵資訊，避免輸出大量頁面文字資料
-            console.log(`[Ermiana-Facebook] 提取成功: author=${postData.author || 'N/A'}, hasVideo=${postData.hasVideo}, contentLength=${postData.content?.length || 0}`);
+            console.log(`[TFD-Facebook] 提取成功: author=${postData.author || 'N/A'}, hasVideo=${postData.hasVideo}, contentLength=${postData.content?.length || 0}`);
 
             // 轉換為 facebed URL（類似 vxinstagram）
             const facebedURL = this.convertToFacebed(originalURL);
@@ -152,7 +152,7 @@ class FacebookExtractor {
             return result;
 
         } catch (error) {
-            console.error(`[Ermiana-Facebook] 提取失敗: ${error.message}`);
+            console.error(`[TFD-Facebook] 提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -169,9 +169,9 @@ class FacebookExtractor {
 
         try {
             if (retryCount > 0) {
-                console.log(`[Ermiana-Facebook] 第 ${retryCount} 次重試提取...`);
+                console.log(`[TFD-Facebook] 第 ${retryCount} 次重試提取...`);
             } else {
-                console.log(`[Ermiana-Facebook] 啟動 Puppeteer...`);
+                console.log(`[TFD-Facebook] 啟動 Puppeteer...`);
             }
 
             browser = await puppeteer.launch({
@@ -186,7 +186,7 @@ class FacebookExtractor {
             const page = await browser.newPage();
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-            console.log(`[Ermiana-Facebook] 正在訪問頁面...`);
+            console.log(`[TFD-Facebook] 正在訪問頁面...`);
             await page.goto(url, {
                 waitUntil: 'networkidle2',
                 timeout: 30000
@@ -201,7 +201,7 @@ class FacebookExtractor {
                 if (isWatchVideo) {
                     // Watch 影片：等待影片元素
                     await page.waitForSelector('video', { timeout: 8000 });
-                    console.log(`[Ermiana-Facebook] Watch 影片載入完成`);
+                    console.log(`[TFD-Facebook] Watch 影片載入完成`);
                 } else if (isGroupPost) {
                     // 社團文章：等待文章內容或標題
                     await Promise.race([
@@ -209,23 +209,23 @@ class FacebookExtractor {
                         page.waitForSelector('[role="article"]', { timeout: 8000 }),
                         page.waitForSelector('h2', { timeout: 8000 })
                     ]);
-                    console.log(`[Ermiana-Facebook] 社團文章載入完成`);
+                    console.log(`[TFD-Facebook] 社團文章載入完成`);
                 } else {
                     // 一般貼文：等待主要內容
                     await Promise.race([
                         page.waitForSelector('[data-ad-preview="message"]', { timeout: 8000 }),
                         page.waitForSelector('[role="article"]', { timeout: 8000 })
                     ]);
-                    console.log(`[Ermiana-Facebook] 一般貼文載入完成`);
+                    console.log(`[TFD-Facebook] 一般貼文載入完成`);
                 }
             } catch (waitError) {
-                console.log(`[Ermiana-Facebook] 元素等待超時，繼續處理...`);
+                console.log(`[TFD-Facebook] 元素等待超時，繼續處理...`);
                 // 繼續執行，嘗試提取任何可用資料
             }
 
             // 額外等待動態內容載入（社團文章需要更長時間等待圖片）
             const waitTime = isGroupPost ? 5000 : 2000;
-            console.log(`[Ermiana-Facebook] 等待 ${waitTime/1000} 秒讓動態內容載入...`);
+            console.log(`[TFD-Facebook] 等待 ${waitTime/1000} 秒讓動態內容載入...`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
 
             // 圖片提取功能已移除
@@ -631,17 +631,17 @@ class FacebookExtractor {
             if (data.hasLoginWall) {
                 // 檢查是否已達最大重試次數
                 if (retryCount >= MAX_RETRIES) {
-                    console.error(`[Ermiana-Facebook] ❌ 已達最大重試次數 (${MAX_RETRIES})，停止重試`);
+                    console.error(`[TFD-Facebook] ❌ 已達最大重試次數 (${MAX_RETRIES})，停止重試`);
                     throw new Error('Facebook 登入牆阻擋，已達最大重試次數');
                 }
 
-                console.log('[Ermiana-Facebook] ⚠️ 檢測到登入牆，嘗試自動登入...');
+                console.log('[TFD-Facebook] ⚠️ 檢測到登入牆，嘗試自動登入...');
 
                 // 嘗試自動登入
                 const loginSuccess = await this.autoLogin();
 
                 if (loginSuccess) {
-                    console.log('[Ermiana-Facebook] ✅ 自動登入成功，重試提取...');
+                    console.log('[TFD-Facebook] ✅ 自動登入成功，重試提取...');
                     // 重新啟動瀏覽器並重試（傳遞重試次數）
                     return await this.scrapeFacebookPost(url, retryCount + 1);
                 } else {
@@ -652,7 +652,7 @@ class FacebookExtractor {
             return data;
 
         } catch (error) {
-            console.error(`[Ermiana-Facebook] Puppeteer 錯誤:`, error);
+            console.error(`[TFD-Facebook] Puppeteer 錯誤:`, error);
             if (browser) {
                 await browser.close();
             }
@@ -670,8 +670,8 @@ class FacebookExtractor {
         let browser = null;
 
         try {
-            console.log('[Ermiana-Facebook-OG] 啟動完全隔離的 Playwright 提取 Open Graph 資料...');
-            console.log('[Ermiana-Facebook-OG] 目標 URL:', url);
+            console.log('[TFD-Facebook-OG] 啟動完全隔離的 Playwright 提取 Open Graph 資料...');
+            console.log('[TFD-Facebook-OG] 目標 URL:', url);
 
             // 🔥 完全隔離的瀏覽器環境（無快取污染）
             browser = await chromium.launch({
@@ -701,13 +701,13 @@ class FacebookExtractor {
 
             const page = await context.newPage();
 
-            console.log('[Ermiana-Facebook-OG] 正在訪問頁面...');
+            console.log('[TFD-Facebook-OG] 正在訪問頁面...');
             await page.goto(url, {
                 waitUntil: 'domcontentloaded',
                 timeout: 30000
             });
 
-            console.log('[Ermiana-Facebook-OG] 等待並滾動載入圖片...');
+            console.log('[TFD-Facebook-OG] 等待並滾動載入圖片...');
             await page.waitForTimeout(8000);
 
             // 🔥 滾動頁面以載入延遲載入的圖片
@@ -718,7 +718,7 @@ class FacebookExtractor {
             await page.evaluate(() => window.scrollTo(0, 0));
             await page.waitForTimeout(2000);
 
-            console.log('[Ermiana-Facebook-OG] 提取資料...');
+            console.log('[TFD-Facebook-OG] 提取資料...');
             const result = await page.evaluate(() => {
                 const data = {
                     title: null,
@@ -759,13 +759,13 @@ class FacebookExtractor {
 
             await browser.close();
 
-            console.log('[Ermiana-Facebook-OG] ✅ 資料提取成功');
-            console.log(`[Ermiana-Facebook-OG] 標題: ${result.title}`);
+            console.log('[TFD-Facebook-OG] ✅ 資料提取成功');
+            console.log(`[TFD-Facebook-OG] 標題: ${result.title}`);
 
             return result;
 
         } catch (error) {
-            console.error('[Ermiana-Facebook-OG] ❌ Open Graph 提取失敗:', error.message);
+            console.error('[TFD-Facebook-OG] ❌ Open Graph 提取失敗:', error.message);
             if (browser) {
                 await browser.close();
             }
@@ -941,14 +941,14 @@ class FacebookExtractor {
     async quickGroupCheck(url) {
         // 快速檢查：如果 URL 本身就包含 /groups/，肯定是社團
         if (url.includes('/groups/')) {
-            console.log('[Ermiana-Facebook] URL 包含 /groups/，確定為社團貼文');
+            console.log('[TFD-Facebook] URL 包含 /groups/，確定為社團貼文');
             return true;
         }
 
         // 如果 URL 是 story.php 但不包含 /groups/，99% 機率是公開貼文
         // 避免不必要的頁面載入和潛在的超時問題
         if (url.includes('story.php') && !url.includes('/groups/')) {
-            console.log('[Ermiana-Facebook] story.php 格式且不含 /groups/，判定為公開貼文');
+            console.log('[TFD-Facebook] story.php 格式且不含 /groups/，判定為公開貼文');
             return false;
         }
 
@@ -956,7 +956,7 @@ class FacebookExtractor {
         let browser = null;
 
         try {
-            console.log('[Ermiana-Facebook] 需要載入頁面進行深度檢查...');
+            console.log('[TFD-Facebook] 需要載入頁面進行深度檢查...');
 
             browser = await puppeteer.launch({
                 headless: true,
@@ -1035,16 +1035,16 @@ class FacebookExtractor {
 
             await browser.close();
 
-            console.log(`[Ermiana-Facebook] 社團檢查結果: ${checkResult.isGroup ? '是社團貼文' : '非社團貼文'}`);
-            console.log(`[Ermiana-Facebook] 判定理由: ${checkResult.reason}`);
+            console.log(`[TFD-Facebook] 社團檢查結果: ${checkResult.isGroup ? '是社團貼文' : '非社團貼文'}`);
+            console.log(`[TFD-Facebook] 判定理由: ${checkResult.reason}`);
             if (checkResult.canonicalURL) {
-                console.log(`[Ermiana-Facebook] Canonical URL: ${checkResult.canonicalURL}`);
+                console.log(`[TFD-Facebook] Canonical URL: ${checkResult.canonicalURL}`);
             }
 
             return checkResult.isGroup;
 
         } catch (error) {
-            console.error('[Ermiana-Facebook] 快速檢查失敗:', error.message);
+            console.error('[TFD-Facebook] 快速檢查失敗:', error.message);
             if (browser) {
                 await browser.close();
             }
@@ -1061,7 +1061,7 @@ class FacebookExtractor {
      */
     async searchKeywords(url, keywords) {
         try {
-            console.log(`[Ermiana-Facebook-Search] 開始搜尋關鍵字: ${keywords.join(', ')}`);
+            console.log(`[TFD-Facebook-Search] 開始搜尋關鍵字: ${keywords.join(', ')}`);
 
             // 使用現有的 scrapeFacebookPost 方法取得貼文資料
             const postData = await this.scrapeFacebookPost(url);
@@ -1124,12 +1124,12 @@ class FacebookExtractor {
                 }
             }
 
-            console.log(`[Ermiana-Facebook-Search] 搜尋完成: 找到 ${searchResults.summary.foundCount}/${searchResults.summary.totalKeywords} 個關鍵字`);
+            console.log(`[TFD-Facebook-Search] 搜尋完成: 找到 ${searchResults.summary.foundCount}/${searchResults.summary.totalKeywords} 個關鍵字`);
 
             return searchResults;
 
         } catch (error) {
-            console.error(`[Ermiana-Facebook-Search] 搜尋失敗: ${error.message}`);
+            console.error(`[TFD-Facebook-Search] 搜尋失敗: ${error.message}`);
             throw error;
         }
     }
@@ -1143,8 +1143,8 @@ class FacebookExtractor {
         let browser = null;
 
         try {
-            console.log('[Ermiana-Facebook-Login] 🌐 啟動登入流程...');
-            console.log('[Ermiana-Facebook-Login] 📢 瀏覽器視窗即將開啟，請手動完成登入');
+            console.log('[TFD-Facebook-Login] 🌐 啟動登入流程...');
+            console.log('[TFD-Facebook-Login] 📢 瀏覽器視窗即將開啟，請手動完成登入');
 
             browser = await puppeteer.launch({
                 headless: false,
@@ -1173,16 +1173,16 @@ class FacebookExtractor {
             console.log('   4. 等待 30 秒自動儲存登入狀態');
             console.log('════════════════════════════════════════════════════════════\n');
 
-            console.log('[Ermiana-Facebook-Login] ⏳ 等待 30 秒讓用戶完成登入...\n');
+            console.log('[TFD-Facebook-Login] ⏳ 等待 30 秒讓用戶完成登入...\n');
             await new Promise(resolve => setTimeout(resolve, 30000));
 
             // 🔍 改進的登入驗證邏輯
             const currentUrl = page.url();
-            console.log(`[Ermiana-Facebook-Login] 當前 URL: ${currentUrl}`);
+            console.log(`[TFD-Facebook-Login] 當前 URL: ${currentUrl}`);
 
             // 1. 檢查 URL 是否離開登入頁面
             const urlCheck = !currentUrl.includes('/login') && !currentUrl.includes('/checkpoint');
-            console.log(`[Ermiana-Facebook-Login] URL 檢查: ${urlCheck ? '✅ 已離開登入頁' : '❌ 仍在登入頁'}`);
+            console.log(`[TFD-Facebook-Login] URL 檢查: ${urlCheck ? '✅ 已離開登入頁' : '❌ 仍在登入頁'}`);
 
             // 2. 檢查頁面是否有用戶資訊（表示已登入）
             const hasUserInfo = await page.evaluate(() => {
@@ -1198,27 +1198,27 @@ class FacebookExtractor {
                 console.log('[FB-Login-Debug] 個人檔案元素:', hasProfile, '頭像:', hasAvatar);
                 return hasProfile || hasAvatar;
             });
-            console.log(`[Ermiana-Facebook-Login] 用戶資訊檢查: ${hasUserInfo ? '✅ 找到用戶資訊' : '❌ 未找到用戶資訊'}`);
+            console.log(`[TFD-Facebook-Login] 用戶資訊檢查: ${hasUserInfo ? '✅ 找到用戶資訊' : '❌ 未找到用戶資訊'}`);
 
             // 綜合判斷
             const isLoggedIn = urlCheck && hasUserInfo;
 
             if (isLoggedIn) {
-                console.log('[Ermiana-Facebook-Login] ✅ 登入成功！登入狀態已自動儲存');
-                console.log(`[Ermiana-Facebook-Login] 📁 儲存位置: ${this.USER_DATA_DIR}`);
+                console.log('[TFD-Facebook-Login] ✅ 登入成功！登入狀態已自動儲存');
+                console.log(`[TFD-Facebook-Login] 📁 儲存位置: ${this.USER_DATA_DIR}`);
             } else {
-                console.log('[Ermiana-Facebook-Login] ⚠️ 未檢測到登入成功');
-                console.log(`[Ermiana-Facebook-Login] 原因: URL=${urlCheck ? '正常' : '異常'}, 用戶資訊=${hasUserInfo ? '有' : '無'}`);
+                console.log('[TFD-Facebook-Login] ⚠️ 未檢測到登入成功');
+                console.log(`[TFD-Facebook-Login] 原因: URL=${urlCheck ? '正常' : '異常'}, 用戶資訊=${hasUserInfo ? '有' : '無'}`);
             }
 
-            console.log('[Ermiana-Facebook-Login] ⏳ 5 秒後自動關閉瀏覽器...');
+            console.log('[TFD-Facebook-Login] ⏳ 5 秒後自動關閉瀏覽器...');
             await new Promise(resolve => setTimeout(resolve, 5000));
 
             await browser.close();
             return isLoggedIn;
 
         } catch (error) {
-            console.error('[Ermiana-Facebook-Login] ❌ 自動登入失敗:', error.message);
+            console.error('[TFD-Facebook-Login] ❌ 自動登入失敗:', error.message);
             if (browser) {
                 await browser.close();
             }

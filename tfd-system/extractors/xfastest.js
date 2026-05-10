@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - XFastest 最速科技提取器
+ * TFD 系統 - XFastest 最速科技提取器
  * 提取 XFastest 新聞文章資訊並生成 Embed
  */
 
@@ -7,7 +7,7 @@ const { EmbedBuilder } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
 
-class ErmianaXFastestExtractor {
+class TFDXFastestExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.name = 'XFastest 最速科技';
@@ -415,7 +415,7 @@ class ErmianaXFastestExtractor {
 
         // Footer
         embed.setFooter({
-            text: 'XFastest 最速科技 | Original By Ermiana',
+            text: 'XFastest 最速科技 | Peko Embed',
             iconURL: this.iconURL
         });
 
@@ -443,7 +443,7 @@ class ErmianaXFastestExtractor {
             .setDescription(`錯誤: ${errorMessage}`)
             .setURL(originalURL)
             .setFooter({
-                text: 'Original By Ermiana',
+                text: 'Peko Embed',
                 iconURL: this.iconURL
             })
             .setTimestamp();
@@ -458,4 +458,4 @@ class ErmianaXFastestExtractor {
     }
 }
 
-module.exports = ErmianaXFastestExtractor;
+module.exports = TFDXFastestExtractor;

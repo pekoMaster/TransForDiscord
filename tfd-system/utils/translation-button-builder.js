@@ -29,13 +29,11 @@ class TranslationButtonBuilder {
                     new ButtonBuilder()
                         .setCustomId(`translate_google_${sourceId}`)
                         .setLabel('Google 翻譯')
-                        .setEmoji('🌐')
-                        .setStyle(ButtonStyle.Primary),
+                        .setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder()
                         .setCustomId(`translate_deepl_${sourceId}`)
                         .setLabel('DeepL 翻譯')
-                        .setEmoji('💎')
-                        .setStyle(ButtonStyle.Success)
+                        .setStyle(ButtonStyle.Secondary)
                 );
 
             return row;

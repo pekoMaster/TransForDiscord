@@ -1,7 +1,7 @@
 /**
  * Tunnel URL Provider
  *
- * 提供 ermiana-system 存取 Cloudflare Tunnel URL 的功能
+ * 提供 tfd-system 存取 Cloudflare Tunnel URL 的功能
  * 用於將 Twitter URL 轉換為自建的 Embed Proxy URL
  */
 

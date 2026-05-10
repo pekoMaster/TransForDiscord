@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - 巴哈姆特提取器
+ * TFD 系統 - 巴哈姆特提取器
  * 提取巴哈姆特論壇文章資訊，支援年齡限制內容
  */
 
@@ -404,7 +404,7 @@ class BahamutExtractor {
 
         // Footer
         embed.setFooter({
-            text: isSpoiler ? 'Original by Ermiana 🔒 防爆雷模式' : 'Original by Ermiana'
+            text: isSpoiler ? 'Peko Embed 🔒 防爆雷模式' : 'Peko Embed'
         });
 
         embed.setTimestamp();
@@ -425,7 +425,7 @@ class BahamutExtractor {
                 .setDescription(message)
                 .setURL(url)
                 .setFooter({
-                    text: 'Original by Ermiana'
+                    text: 'Peko Embed'
                 })
                 .setTimestamp(),
             siteName: 'bahamut'

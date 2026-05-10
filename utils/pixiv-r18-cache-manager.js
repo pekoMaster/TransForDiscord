@@ -13,9 +13,9 @@ const path = require('path');
 const axios = require('axios');
 const { AttachmentBuilder } = require('discord.js');
 
-// 隱密頻道設定
-const R18_CACHE_GUILD_ID = '169630179826597888';
-const R18_CACHE_CHANNEL_ID = '841915428665819136';
+// 隱密頻道設定（從環境變數讀取，未設定則停用上傳功能）
+const R18_CACHE_GUILD_ID = process.env.PIXIV_R18_GUILD_ID || '';
+const R18_CACHE_CHANNEL_ID = process.env.PIXIV_R18_CHANNEL_ID || '';
 
 class PixivR18CacheManager {
     constructor(client = null) {
@@ -105,6 +105,11 @@ class PixivR18CacheManager {
     async uploadImagesToDiscord(artworkId, imageUrls, metadata = {}) {
         if (!this.client) {
             console.error(`[Pixiv R18 Cache] Discord client 未設定`);
+            return null;
+        }
+
+        if (!R18_CACHE_CHANNEL_ID) {
+            console.warn(`[Pixiv R18 Cache] PIXIV_R18_CHANNEL_ID 未設定，跳過上傳，使用 SPOILER 模式`);
             return null;
         }
 

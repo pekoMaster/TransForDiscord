@@ -1,11 +1,11 @@
 /**
- * Ermiana 系統 - PTT 提取器
+ * TFD 系統 - PTT 提取器
  * 提取 PTT 文章和看板資訊
  */
 
 const HTTPClient = require('../utils/http-client');
 const DOMParser = require('../utils/dom-parser');
-const ErmianaEmbedBuilder = require('../utils/embed-builder');
+const TFDEmbedBuilder = require('../utils/embed-builder');
 const PTTCacheManager = require('../../utils/ptt-cache-manager');
 const BlacklistManager = require('../../utils/blacklist-manager');
 
@@ -13,8 +13,8 @@ class PTTExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.domParser = new DOMParser();
-        this.embedBuilder = new ErmianaEmbedBuilder();
-        this.cacheManager = new PTTCacheManager();
+        this.embedBuilder = new TFDEmbedBuilder();
+        this.cacheManager = PTTCacheManager.getInstance();
         this.blacklistManager = new BlacklistManager();
         this.name = 'PTT';
     }
@@ -39,69 +39,64 @@ class PTTExtractor {
     async extract(matchResult, message = null) {
         const { siteName, patternName, extractedData, originalURL } = matchResult;
 
-        // 🔄 直接使用原始 URL（不再自動轉換 pttweb → ptt）
-        // 經測試發現 pttweb.cc 比 ptt.cc 更穩定，優先使用原始 URL
-        let processURL = originalURL;
+        // 🔄 統一轉換為 pttweb.cc（ptt.cc 長期連線不穩定，ECONNRESET 頻發）
+        let processURL = this.convertToPttweb(originalURL);
 
         try {
             switch (patternName) {
                 case 'article':
-                    return await this.extractArticle(extractedData, processURL);
+                    return await this.extractArticle(extractedData, processURL, originalURL);
                 case 'board':
                     return await this.extractBoard(extractedData.board, processURL);
                 default:
                     throw new Error(`不支援的 PTT 模式: ${patternName}`);
             }
         } catch (error) {
-            console.error(`[Ermiana-PTT] 提取失敗: ${error.message}`);
-            return this.createErrorResponse(error.message, processURL);
+            console.error(`[TFD-PTT] 提取失敗: ${error.message}`);
+            return this.createErrorResponse(error.message, originalURL);
         }
     }
 
     /**
      * 提取文章資訊
      * @param {Object} extractedData
-     * @param {string} originalURL
+     * @param {string} fetchURL - 實際請求用的 URL（pttweb.cc）
+     * @param {string} displayURL - 顯示用的原始 URL（ptt.cc）
      * @returns {Promise<Object>}
      */
-    async extractArticle(extractedData, originalURL) {
+    async extractArticle(extractedData, fetchURL, displayURL = null) {
         const { board, timestamp, hash } = extractedData;
+        if (!displayURL) displayURL = fetchURL;
 
         // 🚀 優先檢查快取 - 提升翻頁效能
-        const cachedData = await this.cacheManager.getCachedData(originalURL);
+        const cachedData = await this.cacheManager.getCachedData(displayURL);
         if (cachedData) {
-            return this.createArticleResponseFromCache(cachedData, originalURL, 0);
+            return this.createArticleResponseFromCache(cachedData, displayURL, 0);
         }
 
-        // 🔄 嘗試從主要 URL 獲取 HTML
-        let html = await this.httpClient.fetchHTML(originalURL);
-        let usingFallbackURL = false;
+        // 🔄 嘗試從 pttweb.cc 獲取 HTML（帶 over18 cookie，否則 18+ 看板回 404）
+        const pttHeaders = { headers: { Cookie: 'over18=1' } };
+        let html = await this.httpClient.fetchHTML(fetchURL, pttHeaders);
         let fallbackURL = null;
 
-        // 🔍 檢查是否為錯誤回應（包含 HTTP 狀態碼）
+        // 🔍 檢查是否為錯誤回應
         if (html && typeof html === 'object' && html.error) {
-            // 🔧 特殊處理：404 錯誤直接回傳（文章確實不存在）
             if (html.status === 404) {
-                return this.create404Response(originalURL);
+                return this.create404Response(displayURL);
             }
 
-            // 🔄 自動備援機制：ptt.cc ↔ pttweb.cc 雙向備援
-            if (originalURL.includes('ptt.cc')) {
-                fallbackURL = originalURL.replace('ptt.cc', 'pttweb.cc').replace('.html', '');
-            } else if (originalURL.includes('pttweb.cc')) {
-                fallbackURL = originalURL.replace('pttweb.cc', 'ptt.cc') + '.html';
+            // 🔄 備援：pttweb.cc 失敗 → 改用 ptt.cc（反之亦然）
+            if (fetchURL.includes('pttweb.cc')) {
+                fallbackURL = this.convertToPtt(fetchURL);
             } else {
-                throw new Error('無法取得文章內容');
+                fallbackURL = this.convertToPttweb(fetchURL);
             }
 
-            html = await this.httpClient.fetchHTML(fallbackURL);
+            html = await this.httpClient.fetchHTML(fallbackURL, pttHeaders);
 
-            // 檢查備援 URL 是否成功
             if ((html && typeof html === 'object' && html.error) || !html) {
                 throw new Error('無法取得文章內容（主要和備援 URL 均失敗）');
             }
-
-            usingFallbackURL = true;
         }
 
         if (!html) {
@@ -134,10 +129,10 @@ class PTTExtractor {
 
         // 🏠 儲存到快取（如果有圖片）
         if (validImages.length > 0) {
-            await this.cacheManager.saveToCache(originalURL, articleData, validImages);
+            await this.cacheManager.saveToCache(displayURL, articleData, validImages);
         }
 
-        return this.createArticleResponse(articleData, originalURL, validImages, 0, blacklistEntry);
+        return this.createArticleResponse(articleData, displayURL, validImages, 0, blacklistEntry);
     }
 
     /**
@@ -147,7 +142,7 @@ class PTTExtractor {
      * @returns {Promise<Object>}
      */
     async extractBoard(board, originalURL) {
-        const html = await this.httpClient.fetchHTML(originalURL);
+        const html = await this.httpClient.fetchHTML(originalURL, { headers: { Cookie: 'over18=1' } });
         if (!html) {
             throw new Error('無法取得看板內容');
         }
@@ -856,6 +851,24 @@ class PTTExtractor {
             // 向下相容
             embed: embed
         };
+    }
+
+    /**
+     * ptt.cc URL → pttweb.cc URL
+     */
+    convertToPttweb(url) {
+        if (url.includes('pttweb.cc')) return url;
+        return url.replace('ptt.cc', 'pttweb.cc').replace(/\.html$/i, '');
+    }
+
+    /**
+     * pttweb.cc URL → ptt.cc URL
+     */
+    convertToPtt(url) {
+        if (url.includes('ptt.cc') && !url.includes('pttweb.cc')) return url;
+        let pttUrl = url.replace('pttweb.cc', 'ptt.cc');
+        if (!pttUrl.endsWith('.html')) pttUrl += '.html';
+        return pttUrl;
     }
 
     /**

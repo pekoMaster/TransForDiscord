@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - LINE TODAY 提取器
+ * TFD 系統 - LINE TODAY 提取器
  * 提取 LINE TODAY 新聞文章資訊並生成 Embed
  */
 
@@ -7,7 +7,7 @@ const { EmbedBuilder } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
 
-class ErmianaLineTodayExtractor {
+class TFDLineTodayExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.name = 'LINE TODAY';
@@ -192,7 +192,7 @@ class ErmianaLineTodayExtractor {
 
         // 設定 Footer
         embed.setFooter({
-            text: 'LINE TODAY | Original By Ermiana',
+            text: 'LINE TODAY | Peko Embed',
             iconURL: this.iconURL
         });
 
@@ -212,7 +212,7 @@ class ErmianaLineTodayExtractor {
             .setDescription(`錯誤: ${errorMessage}`)
             .setURL(originalURL)
             .setFooter({
-                text: 'Original By Ermiana',
+                text: 'Peko Embed',
                 iconURL: this.iconURL
             })
             .setTimestamp();
@@ -227,4 +227,4 @@ class ErmianaLineTodayExtractor {
     }
 }
 
-module.exports = ErmianaLineTodayExtractor;
+module.exports = TFDLineTodayExtractor;

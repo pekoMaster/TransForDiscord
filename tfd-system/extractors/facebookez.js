@@ -1,15 +1,15 @@
 /**
- * Ermiana 系統 - Facebook/Instagram 提取器
+ * TFD 系統 - Facebook/Instagram 提取器
  * 使用 facebed.com 服務處理 Facebook 和 EmbedEZ 風格處理 Instagram
  */
 
 const HTTPClient = require('../utils/http-client');
-const ErmianaEmbedBuilder = require('../utils/embed-builder');
+const TFDEmbedBuilder = require('../utils/embed-builder');
 
 class FacebookEZExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
-        this.embedBuilder = new ErmianaEmbedBuilder();
+        this.embedBuilder = new TFDEmbedBuilder();
         this.name = 'Facebook/Instagram';
     }
 
@@ -31,7 +31,7 @@ class FacebookEZExtractor {
                 throw new Error(`不支援的網站: ${siteName}`);
             }
         } catch (error) {
-            console.error(`[Ermiana-FacebookEZ] 提取失敗: ${error.message}`);
+            console.error(`[TFD-FacebookEZ] 提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -47,7 +47,7 @@ class FacebookEZExtractor {
         // 使用 facebed.com 服務：facebook.com -> facebed.com (最佳預覽效果)
         const convertedURL = this.convertToFacebed(originalURL);
 
-        console.log(`[Ermiana-Facebook] Facebook URL 轉換 (${patternName}): ${originalURL} -> ${convertedURL}`);
+        console.log(`[TFD-Facebook] Facebook URL 轉換 (${patternName}): ${originalURL} -> ${convertedURL}`);
 
         return {
             success: true,
@@ -74,7 +74,7 @@ class FacebookEZExtractor {
         // 使用 EmbedEZ 風格的轉換：instagram.com -> instagramez.com
         const convertedURL = this.convertToInstagramEZ(originalURL);
 
-        console.log(`[Ermiana-FacebookEZ] Instagram URL 轉換: ${originalURL} -> ${convertedURL}`);
+        console.log(`[TFD-FacebookEZ] Instagram URL 轉換: ${originalURL} -> ${convertedURL}`);
 
         return {
             success: true,
@@ -112,7 +112,7 @@ class FacebookEZExtractor {
             }
             return url;
         } catch (error) {
-            console.error(`[Ermiana-Facebook] Facebook URL 轉換失敗: ${error.message}`);
+            console.error(`[TFD-Facebook] Facebook URL 轉換失敗: ${error.message}`);
             return url;
         }
     }
@@ -133,7 +133,7 @@ class FacebookEZExtractor {
             const match = url.match(pattern);
             if (match) {
                 const id = match[1];
-                console.log(`[Ermiana-Facebook] 保持 ${name} 格式，ID: ${id}`);
+                console.log(`[TFD-Facebook] 保持 ${name} 格式，ID: ${id}`);
 
                 // 只替換域名，保持 share 格式不變
                 return url.replace(/(?:www\.)?facebook\.com/, 'facebed.com');
@@ -159,7 +159,7 @@ class FacebookEZExtractor {
             }
             return url;
         } catch (error) {
-            console.error(`[Ermiana-FacebookEZ] Instagram URL 轉換失敗: ${error.message}`);
+            console.error(`[TFD-FacebookEZ] Instagram URL 轉換失敗: ${error.message}`);
             return url;
         }
     }

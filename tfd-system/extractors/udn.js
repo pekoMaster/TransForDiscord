@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - UDN 聯合新聞網提取器
+ * TFD 系統 - UDN 聯合新聞網提取器
  * 提取 UDN 新聞文章資訊並生成 Embed
  */
 
@@ -7,7 +7,7 @@ const { EmbedBuilder } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
 
-class ErmianaUDNExtractor {
+class TFDUDNExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.name = 'UDN 聯合新聞網';
@@ -125,11 +125,13 @@ class ErmianaUDNExtractor {
                     // 作者
                     if (articleData.author) {
                         if (typeof articleData.author === 'string') {
-                            data.author = articleData.author;
+                            data.author = this.stripHtmlTags(articleData.author);
                         } else if (articleData.author.name) {
-                            data.author = articleData.author.name;
+                            data.author = this.stripHtmlTags(articleData.author.name);
                         } else if (Array.isArray(articleData.author)) {
-                            data.author = articleData.author.map(a => a.name || a).join('、');
+                            data.author = articleData.author
+                                .map(a => this.stripHtmlTags(a.name || a))
+                                .join('、');
                         }
                     }
 
@@ -185,7 +187,8 @@ class ErmianaUDNExtractor {
         // 提取描述
         const ogDescMatch = html.match(/<meta property="og:description" content="([^"]+)"/i);
         if (ogDescMatch) {
-            data.description = this.decodeHtmlEntities(ogDescMatch[1]);
+            // UDN description 可能含有 <a href> 等 HTML 標籤，需先剝離再解碼
+            data.description = this.stripHtmlTags(this.decodeHtmlEntities(ogDescMatch[1]));
         }
 
         // 提取圖片
@@ -304,6 +307,20 @@ class ErmianaUDNExtractor {
     }
 
     /**
+     * 移除 HTML 標籤，只保留純文字
+     * UDN 的 og:description / author 欄位可能內含 <a href> 等 HTML
+     * @param {string} text
+     * @returns {string}
+     */
+    stripHtmlTags(text) {
+        if (!text) return text;
+        return text
+            .replace(/<[^>]+>/g, '')  // 移除所有 HTML 標籤
+            .replace(/\s+/g, ' ')     // 合併多餘空白
+            .trim();
+    }
+
+    /**
      * 格式化日期
      * @param {string} dateStr - ISO 日期字串
      * @returns {string} 格式化後的日期
@@ -336,13 +353,13 @@ class ErmianaUDNExtractor {
         const embed = new EmbedBuilder();
         embed.setColor(0x003366); // UDN 深藍色
 
-        // 設定 Author: 顯示出版者和作者
+        // 設定 Author: 顯示出版者和作者（防護性剝除殘留 HTML）
         const authorParts = [];
         if (articleData.publisher) {
-            authorParts.push(articleData.publisher);
+            authorParts.push(this.stripHtmlTags(articleData.publisher));
         }
         if (articleData.author) {
-            authorParts.push(articleData.author);
+            authorParts.push(this.stripHtmlTags(articleData.author));
         }
 
         if (authorParts.length > 0) {
@@ -369,10 +386,10 @@ class ErmianaUDNExtractor {
             embed.setURL(originalURL);
         }
 
-        // 設定描述 (使用內文摘要或 description)
+        // 設定描述 (使用內文摘要或 description，防護性剝除殘留 HTML)
         const description = articleData.contentSummary || articleData.description;
         if (description) {
-            let desc = description;
+            let desc = this.stripHtmlTags(description);
             if (desc.length > 500) {
                 desc = desc.substring(0, 497) + '...';
             }
@@ -412,7 +429,7 @@ class ErmianaUDNExtractor {
 
         // 設定 Footer
         embed.setFooter({
-            text: 'UDN 聯合新聞網 | Original By Ermiana',
+            text: 'UDN 聯合新聞網 | Peko Embed',
             iconURL: this.iconURL
         });
 
@@ -440,7 +457,7 @@ class ErmianaUDNExtractor {
             .setDescription(`錯誤: ${errorMessage}`)
             .setURL(originalURL)
             .setFooter({
-                text: 'Original By Ermiana',
+                text: 'Peko Embed',
                 iconURL: this.iconURL
             })
             .setTimestamp();
@@ -455,4 +472,4 @@ class ErmianaUDNExtractor {
     }
 }
 
-module.exports = ErmianaUDNExtractor;
+module.exports = TFDUDNExtractor;

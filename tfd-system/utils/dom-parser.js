@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - DOM 解析器
+ * TFD 系統 - DOM 解析器
  * HTML 內容解析和資料提取
  */
 

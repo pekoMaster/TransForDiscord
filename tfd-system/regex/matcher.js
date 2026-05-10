@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - URL 匹配器
+ * TFD 系統 - URL 匹配器
  * URL 解析和網站類型識別
  */
 
@@ -106,28 +106,21 @@ class URLMatcher {
             return true;
         }
 
-        // 檢查 2: ```URL``` 三個反引號包裹（代碼區塊）
+        // 檢查 2: ```URL``` 三個反引號（同一行）
         if (beforeUrl.endsWith('```') && afterUrl.startsWith('```')) {
             return true;
         }
 
-        // 檢查 3: `URL` 單個反引號包裹（行內代碼）
-        // 需要更精確的檢查，避免誤判
-        const backtickBefore = beforeUrl.lastIndexOf('`');
-        const backtickAfter = afterUrl.indexOf('`');
+        // 檢查 3: 多行 code block（``` 換行 ... URL ... 換行 ```）
+        if (/```[^\n]*\n\s*$/.test(beforeUrl) && /^\s*\n\s*```/.test(afterUrl)) {
+            return true;
+        }
 
-        if (backtickBefore !== -1 && backtickAfter !== -1) {
-            // 確保是單個反引號，不是三個反引號的一部分
-            const beforeBacktickContext = beforeUrl.substring(Math.max(0, backtickBefore - 2), backtickBefore);
-            const afterBacktickContext = afterUrl.substring(backtickAfter + 1, Math.min(afterUrl.length, backtickAfter + 3));
-
-            // 檢查前後不是 ``` 的一部分
-            if (!beforeBacktickContext.includes('``') && !afterBacktickContext.includes('``')) {
-                // 確認前後都是單個反引號
-                if (beforeUrl.charAt(backtickBefore) === '`' && afterUrl.charAt(backtickAfter) === '`') {
-                    return true;
-                }
-            }
+        // 檢查 4: `URL` 單個反引號（不是三個反引號的一部分）
+        const endsWithSingleBacktick = beforeUrl.endsWith('`') && !beforeUrl.endsWith('``');
+        const startsWithSingleBacktick = afterUrl.startsWith('`') && !afterUrl.startsWith('``');
+        if (endsWithSingleBacktick && startsWithSingleBacktick) {
+            return true;
         }
 
         return false;
@@ -182,18 +175,11 @@ class URLMatcher {
                 reel: (m) => ({ reelId: m[1] }),
                 story: (m) => ({ username: m[1], storyId: m[2] })
             },
-            tiktok: {
-                video: (m) => ({ username: m[1], videoId: m[2] }),
-                shortUrl: (m) => ({ shortCode: m[1] })
-            },
-            plurk: {
-                post: (m) => ({ postId: m[1] }),
+            threads: {
+                post: (m) => ({ username: m[1], postId: m[2] }),
                 profile: (m) => ({ username: m[1] })
             },
-            bluesky: {
-                post: (m) => ({ handle: m[1], postId: m[2] }),
-                profile: (m) => ({ handle: m[1] })
-            },
+            // tiktok, plurk, bluesky: 已移除 (2026-04-12)
             ptt: {
                 article: (m) => ({ board: m[1], timestamp: m[2], hash: m[3] }),
                 board: (m) => ({ board: m[1] })
@@ -206,19 +192,13 @@ class URLMatcher {
                 home: (m) => ({ sn: m[1] }),
                 creationDetail: (m) => ({ sn: m[1] })
             },
-            dcard: {
-                post: (m) => ({ forum: m[1], postId: m[2] }),
-                forum: (m) => ({ forum: m[1] })
-            },
+            // dcard: 已移除 (2026-04-12)
             pixiv: {
                 artwork: (m) => ({ artworkId: m[1] }),
                 user: (m) => ({ userId: m[1] }),
                 novel: (m) => ({ novelId: m[1] })
             },
-            iwara: {
-                video: (m) => ({ videoId: m[1] }),
-                profile: (m) => ({ username: m[1] })
-            },
+            // iwara: 已移除 (2026-04-12)
             bilibili: {
                 video: (m) => ({ bvid: m[1] }),
                 column: (m) => ({ cvid: m[1] }),
@@ -247,19 +227,20 @@ class URLMatcher {
                 product: (m) => ({ productId: m[1] }),
                 store: (m) => ({ storeId: m[1] })
             },
-            ehentai: {
-                gallery: (m) => ({ galleryId: m[1], token: m[2] })
-            },
-            nhentai: {
-                gallery: (m) => ({ galleryId: m[1] })
-            },
+            // ehentai, nhentai: 已移除 (2026-04-12)
             linetoday: {
                 article: (m) => ({ language: m[1], articleId: m[2] })
+            },
+            msn: {
+                article: (m) => ({ locale: m[1], articleId: m[2] })
             },
             udn: {
                 article: (m) => ({ storyId: m[1], articleId: m[2] }),
                 ampArticle: (m) => ({ storyId: m[1], articleId: m[2] }),
                 video: (m) => ({ videoId: m[1] })
+            },
+            cts: {
+                article: (m) => ({ category: m[1], yearMonth: m[2], articleId: m[3] })
             },
             xfastest: {
                 article: (m) => ({ category: m[1], articleId: m[2], slug: m[3] })
@@ -267,10 +248,20 @@ class URLMatcher {
             mobile01: {
                 topic: (m) => ({ forumId: m[1], topicId: m[2], page: m[3] || null })
             },
+            '4gamers': {
+                shortUrl: (m) => ({ shortCode: m[1] }),
+                news: (m) => ({ newsId: m[1] })
+            },
             pornhub: {
                 video: (m) => ({ viewkey: m[1] }),
                 videoNew: (m) => ({ videoId: m[1] }),
                 embed: (m) => ({ videoId: m[1] })
+            },
+            pokewiki: {
+                page: (m) => ({ pageName: m[1] })
+            },
+            youtube: {
+                live: (m) => ({ videoId: m[1] })
             }
         };
 

@@ -1,6 +1,6 @@
 /**
  * TransForDiscord — 互動路由
- * 只處理 Ermiana 相關的按鈕與斜線指令
+ * 處理 TFD 相關的按鈕與斜線指令
  */
 
 const path = require('path');
@@ -45,23 +45,8 @@ async function execute(interaction, client) {
             return;
         }
 
-        // ── Modal 提交 ──
+        // ── Modal 提交（已移除舊的 apikey_set_modal，API Key 改由斜線指令直接處理）──
         if (interaction.isModalSubmit()) {
-            if (interaction.customId === 'apikey_set_modal') {
-                const apiKey = interaction.fields.getTextInputValue('gemini_api_key').trim();
-                if (!apiKey.startsWith('AIzaSy')) {
-                    return interaction.reply({
-                        content: '❌ API Key 格式不正確，應以 `AIzaSy` 開頭，請確認後重新設定。',
-                        ephemeral: true
-                    });
-                }
-                const { saveKey } = require('../utils/user-api-key-storage.js');
-                saveKey(interaction.user.id, apiKey);
-                return interaction.reply({
-                    content: '✅ 已儲存你的個人 Gemini API Key。\n翻譯功能將優先使用你的 Key，不會與他人共用。',
-                    ephemeral: true
-                });
-            }
             return;
         }
 
@@ -69,24 +54,36 @@ async function execute(interaction, client) {
 
         const customId = interaction.customId;
 
-        // ── Twitter 按鈕 ──
+        // ── Twitter V2 互動（翻譯、引用、回覆、全文展開）──
+        if (customId.startsWith('v2_')) {
+            const handler = require('../handlers/twitter-v2-interactions.js');
+            return await handler.handleV2Interaction(interaction);
+        }
+
+        // ── Twitter 展開/收起 ──
         if (customId.startsWith('twitter_expand_') || customId.startsWith('twitter_collapse_')) {
             const handler = require('../handlers/twitter-expand-interactions.js');
             return await handler.execute(interaction);
         }
 
-        if (customId.startsWith('twitter_translate_') || customId.startsWith('twitter_original_')) {
+        // ── Twitter 翻譯（包含 DeepL/AI 切換）──
+        if (customId.startsWith('twitter_translate_') ||
+            customId.startsWith('twitter_original_') ||
+            customId.startsWith('twitter_switch_ai_') ||
+            customId.startsWith('twitter_switch_deepl_')) {
             const handler = require('../handlers/twitter-translate-interactions.js');
             return await handler.execute(interaction);
         }
 
-        if (customId.startsWith('twitter_page_')) {
-            const handler = require('../handlers/twitter-pagination-interactions.js');
-            return await handler.execute(interaction);
+        // ── Twitter 重新整理 ──
+        if (customId.startsWith('twitter_reload_')) {
+            const handler = require('../handlers/twitter-reload-interactions.js');
+            return await handler.handleTwitterReloadInteraction(interaction);
         }
 
-        if (customId.startsWith('twitter_')) {
-            const handler = require('../handlers/twitter-interactions.js');
+        // ── Twitter 分頁 ──
+        if (customId.startsWith('twitter_page_')) {
+            const handler = require('../handlers/twitter-pagination-interactions.js');
             return await handler.execute(interaction);
         }
 
@@ -102,7 +99,7 @@ async function execute(interaction, client) {
             return await handler.execute(interaction);
         }
 
-        // ── 翻譯按鈕 ──
+        // ── 通用翻譯按鈕 ──
         if (customId.startsWith('translate_')) {
             const handler = require('../handlers/content-translation-interactions.js');
             return await handler.execute(interaction);

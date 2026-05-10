@@ -67,7 +67,7 @@ async function getOrCreateWebhook(channel) {
         if (!webhook) {
             webhook = await targetChannel.createWebhook({
                 name: WEBHOOK_NAME,
-                reason: '/mb 訊息氣泡系統使用'
+                reason: 'Ermiana URL 預覽系統使用'
             });
             console.log(`[Webhook] 已在頻道 ${targetChannel.name} 建立新的 Webhook`);
         }
@@ -126,11 +126,8 @@ function resetIdleTimer(channel) {
  * @returns {Promise<Message>} 發送的訊息
  */
 async function sendWithWebhook(channel, options) {
-    try {
-        const { webhook, threadId } = await getOrCreateWebhook(channel);
-
-        // 構建發送選項
-        const sendOptions = {
+    const buildSendOptions = (threadId) => {
+        const opts = {
             username: options.username || 'Message Bubble',
             avatarURL: options.avatarURL,
             content: options.content,
@@ -138,14 +135,13 @@ async function sendWithWebhook(channel, options) {
             embeds: options.embeds,
             components: options.components
         };
+        if (threadId) opts.threadId = threadId;
+        return opts;
+    };
 
-        // 如果是討論串，加入 threadId
-        if (threadId) {
-            sendOptions.threadId = threadId;
-        }
-
-        // 發送訊息
-        const message = await webhook.send(sendOptions);
+    try {
+        const { webhook, threadId } = await getOrCreateWebhook(channel);
+        const message = await webhook.send(buildSendOptions(threadId));
 
         // 重設閒置計時器（使用實際的頻道，不是討論串）
         const targetChannel = channel.parent || channel;
@@ -153,6 +149,22 @@ async function sendWithWebhook(channel, options) {
 
         return message;
     } catch (error) {
+        // Webhook 被外部刪除（10015 Unknown Webhook）：清除快取並重試一次
+        if (error.code === 10015) {
+            const cacheKey = ([10, 11, 12].includes(channel.type) ? channel.parent : channel).id;
+            webhookCache.delete(cacheKey);
+            console.warn(`[Webhook] Webhook 已失效（10015），清除快取重試...`);
+            try {
+                const { webhook: newWh, threadId: newThreadId } = await getOrCreateWebhook(channel);
+                const message = await newWh.send(buildSendOptions(newThreadId));
+                const targetChannel = channel.parent || channel;
+                resetIdleTimer(targetChannel);
+                return message;
+            } catch (retryErr) {
+                console.error('[Webhook] 重試後仍失敗:', retryErr);
+                throw new Error(`Webhook 發送失敗：${retryErr.message}`);
+            }
+        }
         console.error('[Webhook] 發送訊息失敗:', error);
         throw new Error(`Webhook 發送失敗：${error.message}`);
     }
@@ -211,25 +223,26 @@ function hasWebhookPermission(channel) {
  * @returns {Promise<Message>} 編輯後的訊息
  */
 async function editWebhookMessage(channel, messageId, options) {
-    try {
-        const { webhook, threadId } = await getOrCreateWebhook(channel);
-
-        // 構建編輯選項
-        const editOptions = {
+    const buildEditOptions = (threadId) => {
+        const opts = {
             content: options.content,
             embeds: options.embeds,
             components: options.components
         };
+        if (threadId) opts.threadId = threadId;
+        return opts;
+    };
 
-        // 如果是討論串，需要指定 threadId
-        if (threadId) {
-            editOptions.threadId = threadId;
-        }
-
-        // 使用 webhook 編輯訊息
-        const message = await webhook.editMessage(messageId, editOptions);
-        return message;
+    try {
+        const { webhook, threadId } = await getOrCreateWebhook(channel);
+        return await webhook.editMessage(messageId, buildEditOptions(threadId));
     } catch (error) {
+        // Webhook 被外部刪除（10015）：清除快取（無法重試，因為原訊息已消失）
+        if (error.code === 10015) {
+            const cacheKey = ([10, 11, 12].includes(channel.type) ? channel.parent : channel).id;
+            webhookCache.delete(cacheKey);
+            console.warn(`[Webhook] 編輯時 Webhook 失效（10015），已清除快取`);
+        }
         console.error('[Webhook] 編輯訊息失敗:', error);
         throw new Error(`Webhook 編輯失敗：${error.message}`);
     }

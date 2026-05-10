@@ -1,14 +1,13 @@
 /**
- * Ermiana 系統 - 主入口
+ * TFD 系統 - 主入口
  * 連結預覽增強系統
  */
 
-const MessageHandler = require('./core/message-handler-v2');
-const config = require('./config/ermiana-config.json');
+const config = require('./config/tfd-config.json');
 
-class ErmianaSystem {
+class TFDSystem {
     constructor() {
-        this.messageHandler = new MessageHandler();
+        this.messageHandler = null; // 延遲初始化，避免重複載入提取器
         this.config = config;
         this.initialized = false;
         this.stats = {
@@ -20,12 +19,12 @@ class ErmianaSystem {
     }
 
     /**
-     * 初始化 Ermiana 系統
+     * 初始化 TFD 系統
      * @returns {Promise<boolean>}
      */
     async initialize() {
         try {
-            console.log('[Ermiana] 🚀 正在初始化 Ermiana 連結預覽系統...');
+            console.log('[TFD] 正在初始化 TFD 連結預覽系統...');
 
             // 檢查配置
             if (!this.validateConfig()) {
@@ -36,12 +35,11 @@ class ErmianaSystem {
             await this.checkDependencies();
 
             this.initialized = true;
-            console.log('[Ermiana] ✅ Ermiana 系統初始化完成');
-            console.log(`[Ermiana] 📊 支援的網站: ${this.getSupportedSites().join(', ')}`);
+            console.log('[TFD] TFD 系統初始化完成');
 
             return true;
         } catch (error) {
-            console.error(`[Ermiana] ❌ 初始化失敗: ${error.message}`);
+            console.error(`[TFD] ❌ 初始化失敗: ${error.message}`);
             return false;
         }
     }
@@ -51,9 +49,17 @@ class ErmianaSystem {
      * @param {Object} message Discord 訊息物件
      * @returns {Promise<Object[]>}
      */
+    _getMessageHandler() {
+        if (!this.messageHandler) {
+            const MessageHandler = require('./core/message-handler-v2');
+            this.messageHandler = new MessageHandler();
+        }
+        return this.messageHandler;
+    }
+
     async processMessage(message) {
         if (!this.initialized) {
-            console.warn('[Ermiana] 系統尚未初始化');
+            console.warn('[TFD] 系統尚未初始化');
             return [];
         }
 
@@ -63,7 +69,7 @@ class ErmianaSystem {
 
         try {
             this.stats.processedMessages++;
-            const results = await this.messageHandler.handleMessage(message);
+            const results = await this._getMessageHandler().handleMessage(message);
 
             if (results.length > 0) {
                 this.stats.successfulPreviews += results.length;
@@ -72,7 +78,7 @@ class ErmianaSystem {
             return results;
         } catch (error) {
             this.stats.errors++;
-            console.error(`[Ermiana] 處理訊息失敗: ${error.message}`);
+            console.error(`[TFD] 處理訊息失敗: ${error.message}`);
             return [];
         }
     }
@@ -89,10 +95,10 @@ class ErmianaSystem {
         }
 
         try {
-            return await this.messageHandler.handleMessageUpdate(oldMessage, newMessage);
+            return await this._getMessageHandler().handleMessageUpdate(oldMessage, newMessage);
         } catch (error) {
             this.stats.errors++;
-            console.error(`[Ermiana] 處理訊息更新失敗: ${error.message}`);
+            console.error(`[TFD] 處理訊息更新失敗: ${error.message}`);
             return [];
         }
     }
@@ -103,14 +109,14 @@ class ErmianaSystem {
      */
     validateConfig() {
         if (!this.config) {
-            console.error('[Ermiana] 配置檔案未載入');
+            console.error('[TFD] 配置檔案未載入');
             return false;
         }
 
         const requiredFields = ['version', 'enabled', 'settings'];
         for (const field of requiredFields) {
             if (!(field in this.config)) {
-                console.error(`[Ermiana] 配置缺少必要欄位: ${field}`);
+                console.error(`[TFD] 配置缺少必要欄位: ${field}`);
                 return false;
             }
         }
@@ -133,7 +139,7 @@ class ErmianaSystem {
             }
         }
 
-        console.log('[Ermiana] ✅ 所有依賴檢查通過');
+        console.log('[TFD] ✅ 所有依賴檢查通過');
     }
 
     /**
@@ -141,7 +147,7 @@ class ErmianaSystem {
      * @returns {string[]}
      */
     getSupportedSites() {
-        return this.messageHandler.linkProcessor.extractorManager.getSupportedSites();
+        return this._getMessageHandler().linkProcessor.extractorManager.getSupportedSites();
     }
 
     /**
@@ -150,7 +156,7 @@ class ErmianaSystem {
      * @returns {boolean}
      */
     isURLSupported(url) {
-        const matchResult = this.messageHandler.linkProcessor.urlMatcher.matchURL(url);
+        const matchResult = this._getMessageHandler().linkProcessor.urlMatcher.matchURL(url);
         return matchResult !== null;
     }
 
@@ -159,7 +165,7 @@ class ErmianaSystem {
      */
     enable() {
         this.config.enabled = true;
-        console.log('[Ermiana] ✅ 系統已啟用');
+        console.log('[TFD] ✅ 系統已啟用');
     }
 
     /**
@@ -167,7 +173,7 @@ class ErmianaSystem {
      */
     disable() {
         this.config.enabled = false;
-        console.log('[Ermiana] ⏸️ 系統已停用');
+        console.log('[TFD] ⏸️ 系統已停用');
     }
 
     /**
@@ -176,13 +182,13 @@ class ErmianaSystem {
      */
     reloadConfig() {
         try {
-            delete require.cache[require.resolve('./config/ermiana-config.json')];
-            this.config = require('./config/ermiana-config.json');
-            this.messageHandler.reloadConfig();
-            console.log('[Ermiana] 🔄 配置已重新載入');
+            delete require.cache[require.resolve('./config/tfd-config.json')];
+            this.config = require('./config/tfd-config.json');
+            if (this.messageHandler) this.messageHandler.reloadConfig();
+            console.log('[TFD] 🔄 配置已重新載入');
             return true;
         } catch (error) {
-            console.error(`[Ermiana] 重新載入配置失敗: ${error.message}`);
+            console.error(`[TFD] 重新載入配置失敗: ${error.message}`);
             return false;
         }
     }
@@ -191,8 +197,8 @@ class ErmianaSystem {
      * 清空快取和處理記錄
      */
     clearCache() {
-        this.messageHandler.clearProcessedMessages();
-        console.log('[Ermiana] 🧹 快取已清空');
+        if (this.messageHandler) this.messageHandler.clearProcessedMessages();
+        console.log('[TFD] 🧹 快取已清空');
     }
 
     /**
@@ -200,7 +206,7 @@ class ErmianaSystem {
      * @returns {Object}
      */
     getStats() {
-        const messageHandlerStats = this.messageHandler.getStats();
+        const messageHandlerStats = this.messageHandler ? this.messageHandler.getStats() : {};
 
         return {
             system: {
@@ -222,7 +228,7 @@ class ErmianaSystem {
      */
     getStatus() {
         return {
-            name: 'Ermiana 連結預覽系統',
+            name: 'TFD 連結預覽系統',
             version: this.config.version,
             status: this.initialized ? (this.config.enabled ? 'running' : 'disabled') : 'not_initialized',
             supportedSites: this.getSupportedSites().length,
@@ -241,7 +247,7 @@ class ErmianaSystem {
      * @returns {Object}
      */
     healthCheck() {
-        const messageHandlerHealth = this.messageHandler.healthCheck();
+        const messageHandlerHealth = this.messageHandler ? this.messageHandler.healthCheck() : { status: 'not_loaded' };
 
         return {
             status: this.initialized && this.config.enabled ? 'healthy' : 'degraded',
@@ -261,16 +267,16 @@ class ErmianaSystem {
      * 優雅關閉系統
      */
     async shutdown() {
-        console.log('[Ermiana] 🔄 正在關閉 Ermiana 系統...');
+        console.log('[TFD] 🔄 正在關閉 TFD 系統...');
 
         this.clearCache();
         this.initialized = false;
 
-        console.log('[Ermiana] ✅ Ermiana 系統已關閉');
+        console.log('[TFD] ✅ TFD 系統已關閉');
     }
 }
 
 // 建立單例
-const ermianaSystem = new ErmianaSystem();
+const ermianaSystem = new TFDSystem();
 
 module.exports = ermianaSystem;

@@ -262,7 +262,7 @@ class PChomeExtractor {
 
         // Footer
         embed.setFooter({
-            text: `${this.icon} PCHome 24h購物 | Original by Ermiana`
+            text: `${this.icon} PCHome 24h購物 | Peko Embed`
         });
 
         embed.setTimestamp();

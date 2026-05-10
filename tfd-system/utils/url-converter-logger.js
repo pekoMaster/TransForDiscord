@@ -16,7 +16,6 @@ class URLConverterLogger {
         'youtube': 'YT',
         'facebook': 'FB',
         'iwara': 'Iwara',
-        'threads': 'Threads',
         'ptt': 'PTT'
     };
 
