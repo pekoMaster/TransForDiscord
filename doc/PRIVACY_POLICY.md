@@ -98,7 +98,7 @@ TFD 是一個 Discord 機器人，主要功能為偵測訊息中的特定 URL（
 ## 六、聯絡方式
 
 如有疑問或要求刪除資料，請聯繫：
-- GitHub Issues：[TBD - 待填入 repo URL]
+- GitHub Issues：https://github.com/pekoMaster/TransForDiscord/issues
 - Discord 支援伺服器 ID：`143689490156879872`（需要邀請連結請至 GitHub Issues 索取）
 
 ---

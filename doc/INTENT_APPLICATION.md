@@ -63,9 +63,9 @@ TFD 是 Discord 上的 URL 預覽機器人。當使用者貼出 Twitter/X、Pixi
 
 ## 6. 連結與證明文件
 
-- **GitHub Repository**：[TBD - 必須提供]
-- **隱私政策**：[線上發布的 URL，建議用 GitHub Pages 或 Vercel 託管]
-- **服務條款**：[線上發布的 URL]
+- **GitHub Repository**：https://github.com/pekoMaster/TransForDiscord
+- **隱私政策**：https://github.com/pekoMaster/TransForDiscord/blob/master/doc/PRIVACY_POLICY.md
+- **服務條款**：https://github.com/pekoMaster/TransForDiscord/blob/master/doc/TERMS_OF_SERVICE.md
 - **支援伺服器 ID**：`143689490156879872`
 
 ---
