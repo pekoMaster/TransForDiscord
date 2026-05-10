@@ -1,14 +1,14 @@
 /**
- * Ermiana 系統 - Iwara 簡化提取器
+ * TFD 系統 - Iwara 簡化提取器
  * 使用簡單的域名替換 (如同原始 embed-fixer)
  */
 
-const ErmianaEmbedBuilder = require('../utils/embed-builder');
+const TFDEmbedBuilder = require('../utils/embed-builder');
 const URLConverterLogger = require('../utils/url-converter-logger');
 
 class IwaraSimpleExtractor {
     constructor() {
-        this.embedBuilder = new ErmianaEmbedBuilder();
+        this.embedBuilder = new TFDEmbedBuilder();
         this.name = 'Iwara';
     }
 
@@ -32,7 +32,7 @@ class IwaraSimpleExtractor {
                     throw new Error(`不支援的 Iwara 模式: ${patternName}`);
             }
         } catch (error) {
-            console.error(`[Ermiana-Iwara] 提取失敗: ${error.message}`);
+            console.error(`[TFD-Iwara] 提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -71,7 +71,7 @@ class IwaraSimpleExtractor {
      * @returns {Object}
      */
     createNoConversionResponse(originalURL) {
-        console.log(`[Ermiana-Iwara] 個人資料不轉換: ${originalURL}`);
+        console.log(`[TFD-Iwara] 個人資料不轉換: ${originalURL}`);
 
         return {
             success: true,

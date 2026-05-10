@@ -1,12 +1,12 @@
 /**
- * Ermiana 系統 - Iwara 提取器 (Puppeteer 版本)
+ * TFD 系統 - Iwara 提取器 (Puppeteer 版本)
  * 使用 Puppeteer 爬蟲技術提取完整 IWARA 影片資訊
  */
 
 const IwaraExtractor = require('../../utils/iwara-extractor');
 const { EmbedBuilder } = require('discord.js');
 
-class IwaraErmianaExtractor {
+class IwaraTFDExtractor {
     constructor() {
         this.iwara = new IwaraExtractor();
         this.name = 'Iwara';
@@ -21,7 +21,7 @@ class IwaraErmianaExtractor {
         const { patternName, extractedData, originalURL } = matchResult;
 
         try {
-            console.log(`[IWARA Ermiana] 開始處理: ${originalURL}`);
+            console.log(`[IWARA TFD] 開始處理: ${originalURL}`);
 
             // 檢查是否為 IWARA 影片 URL
             if (!this.iwara.isIwaraURL(originalURL)) {
@@ -38,7 +38,7 @@ class IwaraErmianaExtractor {
             // 生成 Discord Embed
             const embed = this.createEnhancedEmbed(extractResult, originalURL);
 
-            console.log(`[IWARA Ermiana] 提取成功: ${extractResult.title}`);
+            console.log(`[IWARA TFD] 提取成功: ${extractResult.title}`);
 
             return {
                 success: true,
@@ -50,7 +50,7 @@ class IwaraErmianaExtractor {
             };
 
         } catch (error) {
-            console.error(`[IWARA Ermiana] 提取失敗: ${error.message}`);
+            console.error(`[IWARA TFD] 提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -144,4 +144,4 @@ class IwaraErmianaExtractor {
     }
 }
 
-module.exports = IwaraErmianaExtractor;
+module.exports = IwaraTFDExtractor;

@@ -476,16 +476,8 @@ class PixivExtractor {
 
         const illust = data.body;
 
-        // R18 內容處理
+        // R18 內容處理 - 完全複製測試成功的方法
         if (illust.xRestrict > 0) {
-            // 公開版預設停用 R18 預覽（避免將敏感內容上傳到陌生伺服器/cache 頻道）
-            // 啟用方式：設定環境變數 PIXIV_R18_ENABLED=1
-            const r18Enabled = process.env.PIXIV_R18_ENABLED === '1' || process.env.PIXIV_R18_ENABLED === 'true';
-            if (!r18Enabled) {
-                console.log(`[Pixiv] 偵測到 R18 內容（artwork ${artworkId}），公開版預設略過`);
-                return null;
-            }
-
             console.log(`🚀 開始測試 picsiv-master 方法...`);
             console.log(`📎 目標作品: https://www.pixiv.net/artworks/${artworkId}`);
             console.log('📡 調用 HibiAPI...');
@@ -516,6 +508,14 @@ class PixivExtractor {
             console.log(`  - 圖片數量: ${parsedResult.urls.length}`);
             console.log(`  - 觀看數: ${parsedResult.totalView}`);
             console.log(`  - 收藏數: ${parsedResult.totalBookmarks}`);
+
+            // 步驟 3: 發送到日誌頻道（完全複製測試方法）
+            const logChannelId = '754991473698668606';
+            let logChannel = null;
+
+            if (message && message.client) {
+                logChannel = await message.client.channels.fetch(logChannelId);
+            }
 
             // R18 日誌已移除，統一使用 embed 顯示
 

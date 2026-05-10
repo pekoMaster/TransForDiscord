@@ -1,16 +1,16 @@
 /**
- * Ermiana 系統 - Iwara V2 最佳化提取器
+ * TFD 系統 - Iwara V2 最佳化提取器
  * 使用官方 API + 雙訊息系統 + 三層品質顯示
  */
 
 const IwaraExtractorV2 = require('../../utils/iwara-extractor-v2');
-const ErmianaEmbedBuilder = require('../utils/embed-builder');
+const TFDEmbedBuilder = require('../utils/embed-builder');
 const URLConverterLogger = require('../utils/url-converter-logger');
 
-class IwaraV2ErmianaExtractor {
+class IwaraV2TFDExtractor {
     constructor() {
         this.iwaraV2 = new IwaraExtractorV2();
-        this.embedBuilder = new ErmianaEmbedBuilder();
+        this.embedBuilder = new TFDEmbedBuilder();
         this.name = 'Iwara V2 最佳化';
 
         // 初始化日誌已移除（減少啟動時輸出）
@@ -202,4 +202,4 @@ class IwaraV2ErmianaExtractor {
     }
 }
 
-module.exports = IwaraV2ErmianaExtractor;
+module.exports = IwaraV2TFDExtractor;
