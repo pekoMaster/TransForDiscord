@@ -11,7 +11,6 @@ const TwitterImageAttachmentOptimizer = require('./twitter-image-attachment-opti
 const MixedMediaHTMLBuilder = require('../render/mixed-media-html-builder');
 const TextTruncator = require('../utils/text-truncator');
 const URLConverterLogger = require('../utils/url-converter-logger');
-const BlacklistManager = require('../../utils/blacklist-manager');
 const TranslationButtonBuilder = require('../utils/translation-button-builder');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
@@ -37,7 +36,6 @@ class TFDTwitterExtractor {
         this.imageOptimizer = new TwitterImageAttachmentOptimizer();
         this.htmlBuilder = new MixedMediaHTMLBuilder();
         this.textTruncator = new TextTruncator();
-        this.blacklistManager = new BlacklistManager();
         this.translationButtonBuilder = TranslationButtonBuilder;
 
         // 2026-04-11: 自家 Vercel embed 影片 URL，取代 vxtwitter
@@ -89,33 +87,6 @@ class TFDTwitterExtractor {
             if (isThirdPartyUrl) {
                 // 第三方 URL：只檢查黑名單，不做內容處理
 
-                try {
-                    // 獲取推文資料以檢查作者
-                    const fxapiResp = await this.httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tid}`, {
-                        timeout: 2500
-                    });
-
-                    if (fxapiResp && fxapiResp.tweet) {
-                        const authorUsername = fxapiResp.tweet.author?.screen_name || '';
-                        const authorUid = fxapiResp.tweet.author?.id || null;
-                        const blacklistEntry = await this.blacklistManager.check('twitter', authorUsername, authorUid);
-
-                        if (blacklistEntry && blacklistEntry.level === 3) {
-                            return {
-                                success: false,
-                                blocked: true,
-                                level: 3,
-                                author: authorUsername,
-                                label: blacklistEntry.label,
-                                siteName: 'twitter'
-                            };
-                        }
-                    }
-                } catch (apiError) {
-                    // 黑名單檢查失敗，繼續處理
-                }
-
-                // 不在黑名單或等級 1/2，不做處理
                 return this.createPassthroughResponse(originalURL);
             }
 
@@ -132,28 +103,6 @@ class TFDTwitterExtractor {
             }
 
             const tweet = tweetResult.tweet;
-
-            // 🔍 檢查作者黑名單（使用 UID + username 雙重比對）
-            const authorUsername = tweet.author?.screen_name || '';
-            const authorUid = tweet.author?.id || null;
-            const blacklistEntry = await this.blacklistManager.check('twitter', authorUsername, authorUid);
-
-            if (blacklistEntry) {
-                // 等級 3：禁止發文
-                if (blacklistEntry.level === 3) {
-                    return {
-                        success: false,
-                        blocked: true,
-                        level: 3,
-                        author: authorUsername,
-                        label: blacklistEntry.label,
-                        siteName: 'twitter'
-                    };
-                }
-
-                // 將黑名單資訊附加到 tweet 物件中，供後續使用
-                tweet._blacklistEntry = blacklistEntry;
-            }
 
             // 分析推文類型
             const tweetType = this.analyzeTweetType(tweet);

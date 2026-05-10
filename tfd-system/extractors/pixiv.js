@@ -6,11 +6,7 @@
 const HTTPClient = require('../utils/http-client');
 const DOMParser = require('../utils/dom-parser');
 const TFDEmbedBuilder = require('../utils/embed-builder');
-const PixivUgoiraMp4Processor = require('../../utils/pixiv-ugoira-mp4-processor');
 const URLConverterLogger = require('../utils/url-converter-logger');
-const PixivCacheManager = require('../../utils/pixiv-cache-manager');
-const BlacklistManager = require('../../utils/blacklist-manager');
-const puppeteer = require('puppeteer');
 const axios = require('axios');
 
 // 可用的 Pixiv 圖片代理服務（按優先順序排列）
@@ -31,9 +27,6 @@ class PixivExtractor {
         this.httpClient = new HTTPClient();
         this.domParser = new DOMParser();
         this.embedBuilder = new TFDEmbedBuilder();
-        this.ugoiraMp4Processor = new PixivUgoiraMp4Processor();
-        this.cacheManager = new PixivCacheManager();
-        this.blacklistManager = new BlacklistManager();
         this.name = 'Pixiv';
         this.proxyServices = PIXIV_PROXY_SERVICES;
     }
@@ -105,57 +98,13 @@ class PixivExtractor {
      * @returns {Promise<Object>}
      */
     async extractArtwork(artworkId, originalURL, message = null, proxyIndex = 0) {
-        // 🔍 先檢查作品 ID 黑名單（不需要 API，直接比對）
-        const artworkEntry = await this.blacklistManager.check('pixiv', `artwork:${artworkId}`);
-        if (artworkEntry && artworkEntry.level === 3) {
-            return {
-                success: false,
-                blocked: true,
-                level: 3,
-                label: artworkEntry.label,
-                siteName: 'pixiv'
-            };
-        }
-
-        // 🚀 優先檢查快取 - 提升翻頁效能
-        const cachedData = await this.cacheManager.getCachedData(originalURL);
-        if (cachedData) {
-            console.log(`[Pixiv-Extractor] 使用快取資料: ${artworkId}`);
-            // 檢查作者用戶 ID 黑名單
-            const userId = cachedData.artworkData?.artist?.id;
-            const userEntry = userId ? await this.blacklistManager.check('pixiv', `user:${userId}`) : null;
-            const blacklistEntry = artworkEntry || userEntry;
-            if (blacklistEntry && blacklistEntry.level === 3) {
-                return {
-                    success: false,
-                    blocked: true,
-                    level: 3,
-                    label: blacklistEntry.label,
-                    siteName: 'pixiv'
-                };
-            }
-            // 🔄 若快取時使用的代理與本次請求不同，先 swap 圖片 URL
-            const cachedProxyIndex = typeof cachedData.proxyIndex === 'number' ? cachedData.proxyIndex : 0;
-            if (cachedProxyIndex !== proxyIndex && Array.isArray(cachedData.allImages)) {
-                cachedData.allImages = cachedData.allImages.map(u => this.applyProxy(u, proxyIndex));
-                cachedData.proxyIndex = proxyIndex;
-            }
-            const result = this.createArtworkResponseFromCache(cachedData, originalURL, 0, proxyIndex);
-            if (blacklistEntry && result.success && result.embed) {
-                this._applyBlacklistToEmbed(result.embed, blacklistEntry);
-            }
-            return result;
-        }
-
-        // 嘗試多種方法取得作品資料
         let artworkData = null;
 
-        // 方法1: 使用 Pixiv API (需要處理 CORS)
+        // 方法1: 使用 Pixiv API
         try {
             artworkData = await this.fetchArtworkFromAPI(artworkId, message);
-            // 檢查是否為已完成的結果（如 URL 轉換）
             if (artworkData && artworkData.success && artworkData.contentType === 'url_conversion') {
-                return artworkData; // 直接返回 URL 轉換結果
+                return artworkData;
             }
         } catch (error) {
             console.log(`[TFD-Pixiv] API 失敗: ${error.message}`);
@@ -165,9 +114,8 @@ class PixivExtractor {
         if (!artworkData) {
             try {
                 artworkData = await this.fetchArtworkFromHTML(originalURL);
-                // 檢查是否為已完成的結果（如 R18 URL 轉換）
                 if (artworkData && artworkData.success && artworkData.contentType === 'url_conversion') {
-                    return artworkData; // 直接返回 URL 轉換結果
+                    return artworkData;
                 }
             } catch (error) {
                 console.log(`[TFD-Pixiv] HTML 解析失敗: ${error.message}`);
@@ -178,37 +126,11 @@ class PixivExtractor {
             throw new Error('無法取得作品資料');
         }
 
-        // 🔍 檢查作者用戶 ID 黑名單（需要 artworkData 才知道作者）
-        const userId = artworkData.artist?.id;
-        const userEntry = userId ? await this.blacklistManager.check('pixiv', `user:${userId}`) : null;
-        const blacklistEntry = artworkEntry || userEntry;
-        if (blacklistEntry && blacklistEntry.level === 3) {
-            return {
-                success: false,
-                blocked: true,
-                level: 3,
-                label: blacklistEntry.label,
-                siteName: 'pixiv'
-            };
-        }
-
-        // 🔄 將新抓到的 artworkData 圖片 URL 切換到指定代理（若 proxyIndex !== 0）
         if (proxyIndex !== 0) {
             this.applyProxyToArtwork(artworkData, proxyIndex);
         }
 
-        // 🏠 儲存到快取 - 提升後續翻頁效能
-        const result = await this.createArtworkResponse(artworkData, originalURL, message, 0, proxyIndex);
-        if (result.success && artworkData.images && artworkData.images.allImages) {
-            await this.cacheManager.saveToCache(originalURL, artworkData, artworkData.images.allImages, proxyIndex);
-        }
-
-        // 套用黑名單警告（等級 1/2）
-        if (blacklistEntry && result.success && result.embed) {
-            this._applyBlacklistToEmbed(result.embed, blacklistEntry);
-        }
-
-        return result;
+        return await this.createArtworkResponse(artworkData, originalURL, message, 0, proxyIndex);
     }
 
     /**
@@ -218,29 +140,13 @@ class PixivExtractor {
      * @returns {Promise<Object>}
      */
     async extractUser(userId, originalURL) {
-        // 🔍 檢查用戶 ID 黑名單
-        const userEntry = await this.blacklistManager.check('pixiv', `user:${userId}`);
-        if (userEntry && userEntry.level === 3) {
-            return {
-                success: false,
-                blocked: true,
-                level: 3,
-                label: userEntry.label,
-                siteName: 'pixiv'
-            };
-        }
-
         const html = await this.httpClient.fetchHTML(originalURL);
         if (!html) {
             throw new Error('無法取得用戶頁面');
         }
 
         const userData = this.parseUserHTML(html, userId);
-        const result = this.createUserResponse(userData, originalURL);
-        if (userEntry && result.success && result.embed) {
-            this._applyBlacklistToEmbed(result.embed, userEntry);
-        }
-        return result;
+        return this.createUserResponse(userData, originalURL);
     }
 
     /**
@@ -883,29 +789,6 @@ class PixivExtractor {
     }
 
     /**
-     * 處理 Ugoira 動圖轉換為 MP4
-     * @param {Object} artworkData
-     * @param {string} originalURL
-     * @param {Object} channel Discord 頻道物件
-     * @returns {Promise<Object>} 轉換結果
-     */
-    async handleUgoiraMp4Processing(artworkData, originalURL, channel) {
-        try {
-            console.log(`[Pixiv-Ugoira-MP4] 開始處理動圖: ${artworkData.id}`);
-
-            const result = await this.ugoiraMp4Processor.processUgoiraToMp4(artworkData, originalURL, channel);
-
-            return result;
-        } catch (error) {
-            console.error(`[Pixiv-Ugoira-MP4] 處理過程發生錯誤: ${error.message}`);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
-
-    /**
      * 建立藝術作品回應
      * @param {Object} artworkData
      * @param {string} originalURL
@@ -916,23 +799,6 @@ class PixivExtractor {
     async createArtworkResponse(artworkData, originalURL, message = null, currentPage = 0, proxyIndex = 0) {
         const typeEmoji = artworkData.type === 2 ? '🎬' : '🎨';
         const typeText = artworkData.type === 2 ? '動圖' : '插畫';
-
-        // 處理 Ugoira 動圖轉換為 MP4（僅針對 type === 2）
-        if (artworkData.type === 2 && message && message.channel) {
-            console.log(`[Pixiv] 檢測到 Ugoira 動圖，使用 MP4 處理系統: ${artworkData.id}`);
-            const mp4Result = await this.handleUgoiraMp4Processing(artworkData, originalURL, message.channel);
-
-            // MP4 處理系統會直接處理 embed 和檔案上傳
-            // 返回特殊回應，表示已由 MP4 處理系統處理完成
-            return {
-                success: mp4Result.success,
-                processed: true,
-                mp4ProcessingResult: mp4Result,
-                siteName: 'pixiv',
-                contentType: 'ugoira_mp4',
-                data: artworkData
-            };
-        }
 
         // 處理多圖片情況 - 每頁 1 張圖（Pixiv 使用按鈕翻頁，圖片在 embed 內）
         const allImages = artworkData.images?.allImages || [artworkData.images?.medium || artworkData.images?.large].filter(Boolean);
@@ -1126,25 +992,6 @@ class PixivExtractor {
      * @param {string} url
      * @returns {Object}
      */
-    /**
-     * 將黑名單警告套用到 embed（等級 1/2）
-     * @param {EmbedBuilder} embed
-     * @param {{ level: number, label: string }} blacklistEntry
-     */
-    _applyBlacklistToEmbed(embed, blacklistEntry) {
-        const { level, label } = blacklistEntry;
-        const currentFooter = embed.data?.footer;
-        const baseText = currentFooter?.text || 'Pixiv';
-        const iconURL = currentFooter?.icon_url || 'https://www.pixiv.net/favicon.ico';
-
-        if (level === 1) {
-            embed.setFooter({ text: `⚠️ ${label}，觀看內容請自行斟酌 | ${baseText}`, iconURL });
-        } else if (level === 2) {
-            embed.setFooter({ text: `🔞 ${label}，觀看內容請自行斟酌 | ${baseText}`, iconURL });
-            embed.setImage('https://www.pixiv.net/favicon.ico'); // 隱藏原圖
-        }
-    }
-
     createErrorResponse(message, url) {
         return {
             success: false,
@@ -1353,113 +1200,6 @@ class PixivExtractor {
     extractIdFromURL(url) {
         const match = url.match(/artworks\/(\d+)/);
         return match ? match[1] : '';
-    }
-
-    /**
-     * 使用 Puppeteer 爬取 Pixiv 圖片 URL
-     * @param {string} artworkId - 作品 ID
-     * @returns {Promise<Array<string>>} - 圖片 URL 陣列
-     */
-    async extractImageURLsWithPuppeteer(artworkId) {
-        let browser = null;
-
-        try {
-            console.log(`[Pixiv Crawler] 啟動瀏覽器，作品 ID: ${artworkId}`);
-
-            // 啟動無頭瀏覽器
-            browser = await puppeteer.launch({
-                headless: true,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--disable-gpu'
-                ]
-            });
-
-            const page = await browser.newPage();
-
-            // 設定 User-Agent
-            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-
-            // 訪問 Pixiv 作品頁面
-            const url = `https://www.pixiv.net/artworks/${artworkId}`;
-            console.log(`[Pixiv Crawler] 訪問頁面: ${url}`);
-
-            await page.goto(url, {
-                waitUntil: 'networkidle2',
-                timeout: 30000
-            });
-
-            // 等待圖片元素載入
-            await page.waitForSelector('img', { timeout: 10000 });
-
-            // 提取圖片 URL
-            const imageURLs = await page.evaluate(() => {
-                const images = [];
-
-                // 方法1：尋找主要圖片容器（使用更精確的選擇器）
-                const mainImages = document.querySelectorAll('img[src*="img-original"], img[src*="img-master"], img[src*="/c/"]');
-
-                mainImages.forEach(img => {
-                    const src = img.src;
-
-                    // 只要包含作品圖片路徑（img-original, img-master, 或縮圖 /c/）
-                    if ((src.includes('/img-original/') ||
-                         src.includes('/img-master/') ||
-                         src.includes('/c/')) &&
-                        !src.includes('/profile/') &&
-                        !src.includes('/user-profile/')) {
-
-                        // 優先使用 img-master（master1200）格式
-                        let imageUrl = src;
-
-                        // 如果是縮圖 /c/，替換為 img-master
-                        if (src.includes('/c/')) {
-                            imageUrl = src.replace(/\/c\/\d+x\d+[^\/]+\/img-master/, '/img-master');
-                        }
-
-                        if (!images.includes(imageUrl)) {
-                            images.push(imageUrl);
-                        }
-                    }
-                });
-
-                // 方法2：如果沒找到，嘗試從 data 屬性提取
-                if (images.length === 0) {
-                    const dataImages = document.querySelectorAll('[data-gtm-value*="pximg.net"]');
-
-                    dataImages.forEach(elem => {
-                        const dataUrl = elem.getAttribute('data-gtm-value');
-                        if (dataUrl && !images.includes(dataUrl)) {
-                            images.push(dataUrl);
-                        }
-                    });
-                }
-
-                return images;
-            });
-
-            console.log(`[Pixiv Crawler] 成功提取 ${imageURLs.length} 張圖片`);
-
-            // 替換為代理服務
-            const proxyImages = imageURLs.map(url =>
-                url.replace('i.pximg.net', 'i.pixiv.cat')
-            );
-
-            await browser.close();
-            return proxyImages;
-
-        } catch (error) {
-            console.error(`[Pixiv Crawler] 爬取失敗:`, error.message);
-
-            if (browser) {
-                await browser.close();
-            }
-
-            throw error;
-        }
     }
 
     /**

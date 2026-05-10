@@ -5,9 +5,7 @@
 
 const TwitterExtractor = require('./twitter-v2');
 const InstagramExtractor = require('./instagram');
-const FacebookSmartExtractor = require('./facebook-smart');  // 智能版本，自動選擇最佳提取方式
-const FacebookExtractor = require('./facebook');  // 標準版本（作為備用）
-const FacebookEZExtractor = require('./facebookez');  // 保留舊版作為備用
+// Facebook 系列已移除（需 puppeteer/playwright，VPS 無法運行）
 const PTTExtractor = require('./ptt');
 const BahamutExtractor = require('./bahamut');
 const PixivExtractor = require('./pixiv');
@@ -40,8 +38,6 @@ class ExtractorManager {
         // 社交媒體
         this.extractors.set('twitter', new TwitterExtractor());
         this.extractors.set('instagram', new InstagramExtractor());
-        // 2026-02-23: 重構為 MBasic 版本（參考 kevinzg/facebook-scraper）
-        this.extractors.set('facebook', new FacebookSmartExtractor());
 
         // 社群論壇
         this.extractors.set('ptt', new PTTExtractor());
@@ -201,7 +197,6 @@ class ExtractorManager {
             const extractorPaths = {
                 twitter: './twitter-v2',
                 instagram: './instagram',
-                facebook: './facebook-smart',
                 ptt: './ptt',
                 bahamut: './bahamut',
                 pixiv: './pixiv',

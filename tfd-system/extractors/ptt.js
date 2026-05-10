@@ -6,16 +6,12 @@
 const HTTPClient = require('../utils/http-client');
 const DOMParser = require('../utils/dom-parser');
 const TFDEmbedBuilder = require('../utils/embed-builder');
-const PTTCacheManager = require('../../utils/ptt-cache-manager');
-const BlacklistManager = require('../../utils/blacklist-manager');
 
 class PTTExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.domParser = new DOMParser();
         this.embedBuilder = new TFDEmbedBuilder();
-        this.cacheManager = PTTCacheManager.getInstance();
-        this.blacklistManager = new BlacklistManager();
         this.name = 'PTT';
     }
 
@@ -28,6 +24,11 @@ class PTTExtractor {
         if (!authorString) return '';
         const match = authorString.match(/^([^\s(]+)/);
         return match ? match[1].trim() : authorString.trim();
+    }
+
+    extractArticleHash(url) {
+        const match = url.match(/\/([A-Za-z0-9._-]+)\.html/);
+        return match ? match[1] : url.replace(/[^a-zA-Z0-9]/g, '').slice(-20);
     }
 
     /**
@@ -68,12 +69,6 @@ class PTTExtractor {
         const { board, timestamp, hash } = extractedData;
         if (!displayURL) displayURL = fetchURL;
 
-        // 🚀 優先檢查快取 - 提升翻頁效能
-        const cachedData = await this.cacheManager.getCachedData(displayURL);
-        if (cachedData) {
-            return this.createArticleResponseFromCache(cachedData, displayURL, 0);
-        }
-
         // 🔄 嘗試從 pttweb.cc 獲取 HTML（帶 over18 cookie，否則 18+ 看板回 404）
         const pttHeaders = { headers: { Cookie: 'over18=1' } };
         let html = await this.httpClient.fetchHTML(fetchURL, pttHeaders);
@@ -106,33 +101,10 @@ class PTTExtractor {
         const $ = this.domParser.parse(html);
         const articleData = this.parseArticleHTML(html, board);
 
-        // 🔍 提取作者 ID 並檢查黑名單
-        const authorId = this.extractAuthorId(articleData.author);
-        const blacklistEntry = await this.blacklistManager.check('ptt', authorId);
-
-        if (blacklistEntry) {
-            // 等級 3：禁止發文
-            if (blacklistEntry.level === 3) {
-                return {
-                    success: false,
-                    blocked: true,
-                    level: 3,
-                    author: authorId,
-                    label: blacklistEntry.label,
-                    siteName: 'ptt'
-                };
-            }
-        }
-
         // 🖼️ 提取文章中的所有圖片（排除簽名檔）
         const validImages = this.extractImagesFromArticle($);
 
-        // 🏠 儲存到快取（如果有圖片）
-        if (validImages.length > 0) {
-            await this.cacheManager.saveToCache(displayURL, articleData, validImages);
-        }
-
-        return this.createArticleResponse(articleData, displayURL, validImages, 0, blacklistEntry);
+        return this.createArticleResponse(articleData, displayURL, validImages, 0);
     }
 
     /**
@@ -572,17 +544,12 @@ class PTTExtractor {
      * @param {string} originalURL
      * @param {Array} validImages - 有效圖片URL陣列
      * @param {number} pageIndex - 當前頁面索引（預設0）
-     * @param {Object|null} blacklistEntry - 黑名單項目（可選）
      * @returns {Object}
      */
-    createArticleResponse(articleData, originalURL, validImages = [], pageIndex = 0, blacklistEntry = null) {
+    createArticleResponse(articleData, originalURL, validImages = [], pageIndex = 0) {
         const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 
-        // 判斷是否為防爆雷模式
-        const isSpoiler = blacklistEntry && blacklistEntry.level === 2;
-
         try {
-            // 🔍 驗證必要資料
             if (!articleData || !articleData.title || !articleData.author || !articleData.content) {
                 console.error('[PTT-Extractor] articleData 資料不完整:', {
                     hasTitle: !!articleData?.title,
@@ -592,24 +559,10 @@ class PTTExtractor {
                 throw new Error('文章資料不完整');
             }
 
-            // 🔍 處理黑名單警告
             let contentToDisplay = articleData.content;
             let footerText = 'PTT 批踢踢實業坊';
-
-            if (blacklistEntry) {
-                if (blacklistEntry.level === 1) {
-                    // 等級 1：修改 Footer，不上防爆雷
-                    footerText = `${blacklistEntry.label}，觀看內文請自行斟酌`;
-                } else if (blacklistEntry.level === 2) {
-                    // 等級 2：修改 Footer + 內文防爆雷
-                    footerText = `${blacklistEntry.label}，觀看內文請自行斟酌`;
-                    contentToDisplay = `||${contentToDisplay}||`;
-                }
-            } else {
-                // 正常情況：顯示時間
-                if (articleData.publishTime && typeof articleData.publishTime === 'string' && articleData.publishTime.trim()) {
-                    footerText += ` • ${articleData.publishTime.trim()}`;
-                }
+            if (articleData.publishTime && typeof articleData.publishTime === 'string' && articleData.publishTime.trim()) {
+                footerText += ` • ${articleData.publishTime.trim()}`;
             }
 
             // 🔍 在 Description 開頭只顯示作者資訊
@@ -654,14 +607,7 @@ class PTTExtractor {
                 }
 
                 try {
-                    // 🔒 等級 2：圖片防爆雷
-                    if (blacklistEntry && blacklistEntry.level === 2) {
-                        // 使用 SPOILER_ 前綴
-                        const spoilerUrl = `SPOILER_${rawImageUrl}`;
-                        embed.setImage(spoilerUrl);
-                    } else {
-                        embed.setImage(rawImageUrl);
-                    }
+                    embed.setImage(rawImageUrl);
                 } catch (imageError) {
                     console.error('[PTT-Extractor] setImage 失敗:', imageError.message);
                     console.error('[PTT-Extractor] 圖片 URL:', rawImageUrl);
@@ -685,14 +631,9 @@ class PTTExtractor {
                         rawImageUrl = rawImageUrl.replace('http://', 'https://');
                     }
 
-                    // 🔒 等級 2：圖片防爆雷
-                    const imageUrl = (blacklistEntry && blacklistEntry.level === 2)
-                        ? `SPOILER_${rawImageUrl}`
-                        : rawImageUrl;
-
                     const imageEmbed = new EmbedBuilder()
                         .setURL(originalURL)
-                        .setImage(imageUrl);
+                        .setImage(rawImageUrl);
                     embeds.push(imageEmbed);
                 }
             }
@@ -701,12 +642,9 @@ class PTTExtractor {
             if (validImages.length > 4) {
                 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
                 const totalPages = Math.ceil(validImages.length / imagesPerPage);
-                const articleHash = this.cacheManager.extractArticleHash(originalURL);
+                const articleHash = this.extractArticleHash(originalURL);
 
                 let pageFooterText = 'PTT 批踢踢實業坊';
-                if (isSpoiler) {
-                    pageFooterText += ' 🔒 防爆雷模式';
-                }
                 pageFooterText += ` • 第 ${pageIndex + 1}/${totalPages} 頁 • 共 ${validImages.length} 張圖片`;
                 if (articleData.publishTime) {
                     pageFooterText += ` • ${articleData.publishTime}`;

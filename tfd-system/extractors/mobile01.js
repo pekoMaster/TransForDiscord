@@ -1,64 +1,19 @@
 /**
  * Mobile01 論壇提取器
- * 使用 Puppeteer 繞過 Akamai CDN 防護
+ * 使用 HTTP + cheerio 解析 HTML（無需 puppeteer）
  */
 
 const { EmbedBuilder } = require('discord.js');
-const puppeteer = require('puppeteer');
+const cheerio = require('cheerio');
+const HTTPClient = require('../utils/http-client');
 
 class Mobile01Extractor {
     constructor() {
         this.name = 'Mobile01';
         this.iconURL = 'https://attach2.mobile01.com/images/logo/logo.png';
-        this.browser = null;
-        this.browserTimeout = 60000; // 60秒後關閉瀏覽器
-        this.browserTimer = null;
+        this.httpClient = new HTTPClient();
     }
 
-    /**
-     * 獲取或創建瀏覽器實例
-     */
-    async getBrowser() {
-        // 重置關閉計時器
-        if (this.browserTimer) {
-            clearTimeout(this.browserTimer);
-        }
-
-        // 設定新的關閉計時器
-        this.browserTimer = setTimeout(async () => {
-            if (this.browser) {
-                console.log('[Mobile01] 瀏覽器閒置超時，關閉中...');
-                await this.browser.close();
-                this.browser = null;
-            }
-        }, this.browserTimeout);
-
-        // 如果瀏覽器已存在且連接中，直接返回
-        if (this.browser && this.browser.isConnected()) {
-            return this.browser;
-        }
-
-        // 創建新的瀏覽器實例
-        console.log('[Mobile01] 啟動瀏覽器...');
-        this.browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu'
-            ]
-        });
-
-        return this.browser;
-    }
-
-    /**
-     * 提取 Mobile01 文章資訊
-     * @param {Object} matchResult
-     * @param {Object} message - Discord 訊息物件 (可選)
-     * @returns {Promise<Object>}
-     */
     async extract(matchResult, message = null) {
         const { originalURL, extractedData } = matchResult;
         const { topicId, forumId, page } = extractedData;
@@ -66,87 +21,62 @@ class Mobile01Extractor {
         console.log(`[Mobile01] 開始提取: topicId=${topicId}, forumId=${forumId}, page=${page || 1}`);
 
         try {
-            const browser = await this.getBrowser();
-            const pageInstance = await browser.newPage();
-
-            try {
-                // 設定 User-Agent
-                await pageInstance.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
-                // 訪問頁面
-                await pageInstance.goto(originalURL, {
-                    waitUntil: 'networkidle2',
-                    timeout: 20000
-                });
-
-                // 提取資訊
-                const data = await pageInstance.evaluate(() => {
-                    // 文章標題
-                    const titleEl = document.querySelector('h1');
-                    const title = titleEl ? titleEl.innerText.trim() : null;
-
-                    // 作者 - 從第一個文章區塊提取
-                    let author = null;
-                    const authorLink = document.querySelector('.l-articlePage__author a[href*="userinfo"]');
-                    if (authorLink) {
-                        author = authorLink.innerText.trim();
-                    } else {
-                        // 備用：從 meta 標籤提取
-                        const authorMeta = document.querySelector('meta[property="dable:author"]');
-                        if (authorMeta) {
-                            author = authorMeta.getAttribute('content');
-                        }
-                    }
-
-                    // 圖片 - 文章內的圖片
-                    const images = [];
-                    const articleImages = document.querySelectorAll('article img');
-                    articleImages.forEach(img => {
-                        const src = img.src || img.dataset.src;
-                        if (src &&
-                            src.includes('attach.mobile01.com') &&
-                            !src.includes('avatar') &&
-                            !src.includes('icon')) {
-                            images.push(src);
-                        }
-                    });
-
-                    // 文章內容摘要（第一篇文章）
-                    let content = null;
-                    const firstArticle = document.querySelector('article');
-                    if (firstArticle) {
-                        // 移除引用區塊
-                        const clone = firstArticle.cloneNode(true);
-                        clone.querySelectorAll('blockquote').forEach(el => el.remove());
-                        content = clone.innerText.trim().substring(0, 300);
-                    }
-
-                    // 發布時間
-                    const timeMeta = document.querySelector('meta[property="article:published_time"]');
-                    const publishTime = timeMeta ? timeMeta.getAttribute('content') : null;
-
-                    // 分類
-                    const sectionMeta = document.querySelector('meta[property="article:section"]');
-                    const section = sectionMeta ? sectionMeta.getAttribute('content') : null;
-
-                    return { title, author, images, content, publishTime, section };
-                });
-
-                await pageInstance.close();
-
-                if (!data.title) {
-                    throw new Error('無法獲取文章標題');
+            const result = await this.httpClient.get(originalURL, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8'
                 }
+            });
 
-                console.log(`[Mobile01] 提取成功: ${data.title}`);
-
-                // 構建 Embed
-                return this.createResponse(data, originalURL, page);
-
-            } catch (error) {
-                await pageInstance.close();
-                throw error;
+            if (!result.success || !result.data) {
+                throw new Error(`HTTP 請求失敗: ${result.status || 'unknown'}`);
             }
+
+            const html = typeof result.data === 'string' ? result.data : String(result.data);
+            const $ = cheerio.load(html);
+
+            const title = $('h1').first().text().trim() ||
+                          $('meta[property="og:title"]').attr('content') ||
+                          null;
+
+            if (!title) {
+                throw new Error('無法獲取文章標題');
+            }
+
+            let author = null;
+            const authorLink = $('.l-articlePage__author a[href*="userinfo"]');
+            if (authorLink.length) {
+                author = authorLink.first().text().trim();
+            }
+            if (!author) {
+                author = $('meta[property="dable:author"]').attr('content') || null;
+            }
+
+            const images = [];
+            $('article img').each((_, img) => {
+                const src = $(img).attr('src') || $(img).attr('data-src');
+                if (src && src.includes('attach.mobile01.com') && !src.includes('avatar') && !src.includes('icon')) {
+                    images.push(src);
+                }
+            });
+
+            let content = null;
+            const firstArticle = $('article').first();
+            if (firstArticle.length) {
+                const clone = firstArticle.clone();
+                clone.find('blockquote').remove();
+                content = clone.text().trim().substring(0, 300);
+            }
+            if (!content) {
+                content = $('meta[property="og:description"]').attr('content') || null;
+            }
+
+            const publishTime = $('meta[property="article:published_time"]').attr('content') || null;
+            const section = $('meta[property="article:section"]').attr('content') || null;
+
+            console.log(`[Mobile01] 提取成功: ${title}`);
+            return this.createResponse({ title, author, images, content, publishTime, section }, originalURL, page);
 
         } catch (error) {
             console.error(`[Mobile01] 提取失敗: ${error.message}`);
@@ -158,9 +88,6 @@ class Mobile01Extractor {
         }
     }
 
-    /**
-     * 創建回應
-     */
     createResponse(data, originalURL, page) {
         const embed = new EmbedBuilder()
             .setColor(0x0066CC)
@@ -172,7 +99,6 @@ class Mobile01Extractor {
                 url: 'https://www.mobile01.com'
             });
 
-        // 描述
         if (data.content) {
             let description = data.content;
             if (description.length > 250) {
@@ -181,56 +107,36 @@ class Mobile01Extractor {
             embed.setDescription(description);
         }
 
-        // 欄位
         const fields = [];
-
         if (data.author) {
-            fields.push({
-                name: '作者',
-                value: data.author,
-                inline: true
-            });
+            fields.push({ name: '作者', value: data.author, inline: true });
         }
-
         if (data.section) {
-            fields.push({
-                name: '分類',
-                value: data.section,
-                inline: true
-            });
+            fields.push({ name: '分類', value: data.section, inline: true });
         }
-
         if (page && page > 1) {
-            fields.push({
-                name: '頁數',
-                value: `第 ${page} 頁`,
-                inline: true
-            });
+            fields.push({ name: '頁數', value: `第 ${page} 頁`, inline: true });
         }
-
         if (fields.length > 0) {
             embed.addFields(fields);
         }
 
-        // 圖片
         if (data.images && data.images.length > 0) {
             embed.setImage(data.images[0]);
         }
 
-        // Footer
         let footerText = 'Mobile01 論壇';
         if (data.publishTime) {
             const date = new Date(data.publishTime);
             footerText += ` • ${date.toLocaleDateString('zh-TW')}`;
         }
-        if (data.images.length > 1) {
+        if (data.images && data.images.length > 1) {
             footerText += ` • 共 ${data.images.length} 張圖片`;
         }
         embed.setFooter({ text: footerText });
 
-        // 多圖片支援
         let multipleImages = null;
-        if (data.images.length >= 2 && data.images.length <= 4) {
+        if (data.images && data.images.length >= 2 && data.images.length <= 4) {
             multipleImages = data.images;
         }
 
