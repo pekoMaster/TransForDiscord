@@ -1198,23 +1198,6 @@ class TFDMessageHandler {
                 return [];
             }
 
-            // 濫用偵測（spam URL / burst）— 只在每個訊息第一個 URL 上做
-            const abuseDetector = require('../../utils/abuse-detector.js');
-            const firstUrl = (message.content || '').match(/https?:\/\/[^\s<>"]+/)?.[0];
-            if (firstUrl && message.guild) {
-                const abuseResult = abuseDetector.recordUrl({
-                    userId: message.author.id,
-                    guildId: message.guild.id,
-                    channelId: message.channel.id,
-                    url: firstUrl
-                });
-                if (abuseResult.blocked) {
-                    return [];
-                }
-                // 評估長期累積的濫用（達門檻會自動加排除清單）
-                abuseDetector.evaluateLongTerm(message.author.id, message.guild.id);
-            }
-
             // 防止重複處理
             if (this.processedMessages.has(message.id)) {
                 return [];
@@ -1720,50 +1703,26 @@ class TFDMessageHandler {
             return false;
         }
 
-        // 檢查 per-guild 設定（從 SQLite 讀取，已隔離各伺服器）
-        const guildId = message.guild.id;
-        const db = require('../../db');
-
-        // 此伺服器是否啟用 TFD
-        const guildSettings = db.guilds.get(guildId);
-        if (guildSettings && guildSettings.enabled === 0) {
-            return false;
-        }
-
-        // 檢查使用者是否被排除（per-guild）
-        if (db.excludedUsers.has(guildId, message.author.id)) {
+        // 檢查用戶是否被排除
+        if (this.config.settings.excludedUsers && this.config.settings.excludedUsers.includes(message.author.id)) {
             return false;
         }
 
         // 檢查頻道是否被排除（子頻道、討論串、論壇貼文會繼承父/祖父頻道的排除狀態）
-        const ch = message.channel;
-        if (
-            db.blockedChannels.has(guildId, ch.id) ||
-            (ch.parentId && db.blockedChannels.has(guildId, ch.parentId)) ||
-            (ch.parent?.parentId && db.blockedChannels.has(guildId, ch.parent.parentId))
-        ) {
-            return false;
+        const blockedChannels = this.config.settings.blockedChannels || [];
+        if (blockedChannels.length > 0) {
+            const ch = message.channel;
+            if (
+                blockedChannels.includes(ch.id) ||
+                (ch.parentId && blockedChannels.includes(ch.parentId)) ||
+                (ch.parent?.parentId && blockedChannels.includes(ch.parent.parentId))
+            ) {
+                return false;
+            }
         }
 
         // 檢查訊息是否包含支援的 URL
         if (!this.containsSupportedURL(message.content)) {
-            return false;
-        }
-
-        // Rate limit 檢查（per-user / per-guild / per-user-per-guild）
-        const rateLimiter = require('../../utils/rate-limiter.js');
-        const rateResult = rateLimiter.check(message.author.id, guildId);
-        if (!rateResult.allowed) {
-            // 記錄濫用（被限速的次數累積到一定值會觸發 abuse detector）
-            db.abuse.record({
-                userId: message.author.id,
-                guildId,
-                channelId: ch.id,
-                abuseType: 'rate_exceeded',
-                severity: 1,
-                details: { reason: rateResult.reason, limit: rateResult.limit, current: rateResult.current }
-            });
-            // 不發訊息提醒（避免被 abuse 的人也收到回應），靜默略過
             return false;
         }
 

@@ -134,16 +134,26 @@ class LinkProcessor {
     }
 
     /**
-     * 檢查頻道是否允許處理（per-guild）
+     * 檢查頻道是否允許處理
      * @param {string} channelId
-     * @param {string} [guildId] - 必填於公開版；舊版相容性保留為 optional
      * @returns {boolean}
      */
-    isChannelAllowed(channelId, guildId = null) {
-        // 公開版：只用 per-guild blocked channels（不再支援全域 allowedChannels）
-        if (!guildId) return true;
-        const db = require('../../db');
-        return !db.blockedChannels.has(guildId, channelId);
+    isChannelAllowed(channelId) {
+        const allowedChannels = this.config.settings.allowedChannels;
+        const blockedChannels = this.config.settings.blockedChannels;
+
+        // 如果有允許清單，只處理清單中的頻道
+        if (allowedChannels.length > 0) {
+            return allowedChannels.includes(channelId);
+        }
+
+        // 如果有封鎖清單，不處理清單中的頻道
+        if (blockedChannels.length > 0) {
+            return !blockedChannels.includes(channelId);
+        }
+
+        // 默認允許所有頻道
+        return true;
     }
 
     /**

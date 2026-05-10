@@ -4,22 +4,11 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { getInstance: getGeminiTranslator } = require('../utils/gemini-translator.js');
-const db = require('../db');
-
-/**
- * 檢查互動使用者是否為本伺服器的 TFD owner
- * 公開版設計：無 owner 設定的伺服器 = 此功能停用
- */
-function isGuildOwner(interaction) {
-    if (!interaction.guildId) return false;
-    const settings = db.guilds.get(interaction.guildId);
-    const ownerId = settings?.owner_user_id;
-    return ownerId && interaction.user.id === ownerId;
-}
 
 class TwitterInteractionHandler {
     constructor() {
         this.twitterClient = null;
+        this.adminUserId = '143030764777373696'; // 管理員 ID
         this.geminiTranslator = getGeminiTranslator(); // GEMINI 翻譯器
         this.initTwitterClient();
     }
@@ -54,9 +43,9 @@ class TwitterInteractionHandler {
     async handlePrepareButton(interaction) {
         try {
             // 檢查管理員權限
-            if (!isGuildOwner(interaction)) {
+            if (interaction.user.id !== this.adminUserId) {
                 await interaction.reply({
-                    content: '❌ 此功能僅限本伺服器 TFD owner 使用（請伺服器管理員以 `/tfd owner` 指定）。',
+                    content: '❌ 只有管理員可以使用推特發文功能。',
                     flags: MessageFlags.Ephemeral
                 });
                 return;
@@ -144,9 +133,9 @@ class TwitterInteractionHandler {
     async handleModalSubmit(interaction) {
         try {
             // 檢查管理員權限
-            if (!isGuildOwner(interaction)) {
+            if (interaction.user.id !== this.adminUserId) {
                 await interaction.reply({
-                    content: '❌ 此功能僅限本伺服器 TFD owner 使用（請伺服器管理員以 `/tfd owner` 指定）。',
+                    content: '❌ 只有管理員可以使用推特發文功能。',
                     flags: MessageFlags.Ephemeral
                 });
                 return;
@@ -300,9 +289,9 @@ class TwitterInteractionHandler {
     async handleConfirmButton(interaction) {
         try {
             // 檢查管理員權限
-            if (!isGuildOwner(interaction)) {
+            if (interaction.user.id !== this.adminUserId) {
                 await interaction.reply({
-                    content: '❌ 此功能僅限本伺服器 TFD owner 使用（請伺服器管理員以 `/tfd owner` 指定）。',
+                    content: '❌ 只有管理員可以使用推特發文功能。',
                     flags: MessageFlags.Ephemeral
                 });
                 return;

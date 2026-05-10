@@ -1,49 +1,122 @@
 /**
  * user-api-key-storage.js
- * 儲存用戶個人 Gemini API Key（存在本地 JSON，不上傳 git）
- * Key 只有儲存時本人輸入可見，之後無法讀回顯示
+ *
+ * 使用者個人 AI API Key 儲存層
+ * 後端：SQLite (db/index.js) + AES-256-GCM 加密 (utils/crypto-helper.js)
+ *
+ * API 與舊版 JSON 版相容：saveKey / getKey / removeKey / hasKey / getKeyStatus / getAllKeys / hasAnyKey
  */
 
-const fs = require('fs');
-const path = require('path');
+const db = require('../db');
+const { encrypt, decrypt } = require('./crypto-helper.js');
 
-const STORAGE_FILE = path.join(__dirname, '../data/user-api-keys.json');
+// 支援的 AI 廠商（保留與舊版一致）
+const PROVIDERS = {
+    openai: { name: 'OpenAI', prefix: 'sk-', placeholder: 'sk-proj-...' },
+    claude: { name: 'Claude (Anthropic)', prefix: 'sk-ant-', placeholder: 'sk-ant-...' },
+    gemini: { name: 'Gemini (Google)', prefix: 'AIza', placeholder: 'AIzaSy...' }
+};
 
-function _load() {
-    try {
-        if (!fs.existsSync(STORAGE_FILE)) return {};
-        return JSON.parse(fs.readFileSync(STORAGE_FILE, 'utf8'));
-    } catch {
-        return {};
+const VALID_PROVIDERS = new Set(Object.keys(PROVIDERS));
+
+function _ensureProvider(provider) {
+    if (!VALID_PROVIDERS.has(provider)) {
+        throw new Error(`未知的 provider: ${provider}（合法值：${[...VALID_PROVIDERS].join(', ')}）`);
     }
 }
 
-function _save(data) {
-    const dir = path.dirname(STORAGE_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(STORAGE_FILE, JSON.stringify(data), 'utf8');
+/**
+ * 儲存使用者的 API Key（自動加密）
+ */
+function saveKey(userId, provider, apiKey) {
+    _ensureProvider(provider);
+    if (typeof apiKey !== 'string' || !apiKey) {
+        throw new Error('apiKey 必須是非空字串');
+    }
+    const encrypted = encrypt(apiKey);
+    db.apiKeys.upsert(userId, provider, encrypted, 1);
 }
 
-function saveKey(userId, apiKey) {
-    const keys = _load();
-    keys[userId] = apiKey;
-    _save(keys);
+/**
+ * 取得使用者指定廠商的 API Key（解密後回傳）
+ * @returns {string|null} 明文 key，未設定時回傳 null
+ */
+function getKey(userId, provider) {
+    _ensureProvider(provider);
+    const row = db.apiKeys.get(userId, provider);
+    if (!row) return null;
+    try {
+        const plain = decrypt(row.encrypted_key);
+        // 順手更新 last_used_at
+        db.apiKeys.touchUsed(userId, provider);
+        return plain;
+    } catch (e) {
+        console.error(`[user-api-key] 解密失敗 user=${userId} provider=${provider}:`, e.message);
+        return null;
+    }
 }
 
-function getKey(userId) {
-    return _load()[userId] || null;
+/**
+ * 取得使用者所有已設定的 API Keys（明文，僅供翻譯引擎使用）
+ * @returns {Object} { openai?: string, claude?: string, gemini?: string }
+ */
+function getAllKeys(userId) {
+    const result = {};
+    const providers = db.apiKeys.listProviders(userId);
+    for (const p of providers) {
+        const k = getKey(userId, p);
+        if (k) result[p] = k;
+    }
+    return result;
 }
 
-function removeKey(userId) {
-    const keys = _load();
-    if (!keys[userId]) return false;
-    delete keys[userId];
-    _save(keys);
-    return true;
+/**
+ * 取得使用者的 Key 設定狀態（不回傳值）
+ * @returns {Object} { openai: boolean, claude: boolean, gemini: boolean }
+ */
+function getKeyStatus(userId) {
+    const providers = new Set(db.apiKeys.listProviders(userId));
+    return {
+        openai: providers.has('openai'),
+        claude: providers.has('claude'),
+        gemini: providers.has('gemini')
+    };
 }
 
-function hasKey(userId) {
-    return !!_load()[userId];
+/**
+ * 移除使用者指定廠商的 API Key
+ * @returns {boolean} 是否成功移除
+ */
+function removeKey(userId, provider) {
+    _ensureProvider(provider);
+    return db.apiKeys.delete(userId, provider);
 }
 
-module.exports = { saveKey, getKey, removeKey, hasKey };
+/**
+ * 檢查使用者是否有任何 API Key
+ */
+function hasAnyKey(userId) {
+    return db.apiKeys.listProviders(userId).length > 0;
+}
+
+/**
+ * 檢查使用者是否有指定廠商的 Key（provider 可省略 = 任一）
+ */
+function hasKey(userId, provider) {
+    if (provider) {
+        _ensureProvider(provider);
+        return !!db.apiKeys.get(userId, provider);
+    }
+    return hasAnyKey(userId);
+}
+
+module.exports = {
+    PROVIDERS,
+    saveKey,
+    getKey,
+    getKeyStatus,
+    getAllKeys,
+    removeKey,
+    hasAnyKey,
+    hasKey
+};
