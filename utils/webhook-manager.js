@@ -133,7 +133,8 @@ async function sendWithWebhook(channel, options) {
             content: options.content,
             files: options.files,
             embeds: options.embeds,
-            components: options.components
+            components: options.components,
+            flags: options.flags
         };
         if (threadId) opts.threadId = threadId;
         return opts;
