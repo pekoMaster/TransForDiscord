@@ -5,6 +5,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const { MessageFlags } = require('discord.js');
 
 // 斜線指令快取
 const commands = new Map();
@@ -120,7 +121,7 @@ async function execute(interaction, client) {
     } catch (err) {
         console.error(`[InteractionCreate] 處理錯誤 (${interaction.customId || interaction.commandName}):`, err.message);
         try {
-            const msg = { content: '❌ 處理請求時發生錯誤，請稍後再試。', ephemeral: true };
+            const msg = { content: '❌ 處理請求時發生錯誤，請稍後再試。', flags: MessageFlags.Ephemeral };
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply(msg);
             }

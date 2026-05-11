@@ -12,7 +12,7 @@
  * - 記憶體快取熱門作品減少磁碟讀取
  */
 
-const { Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const PixivExtractor = require('../tfd-system/extractors/pixiv.js');
 const PixivCacheManager = require('../utils/pixiv-cache-manager.js');
 
@@ -95,7 +95,7 @@ module.exports = {
             if (!fullCachedData) {
                 return interaction.followUp({
                     content: '⏰ **快取資料已過期**\n\n請重新張貼 Pixiv 網址以載入最新資料。',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -155,12 +155,12 @@ module.exports = {
                     if (!interaction.replied && !interaction.deferred) {
                         await interaction.reply({
                             content: '❌ 翻頁時發生錯誤，請稍後再試。',
-                            ephemeral: true
+                            flags: MessageFlags.Ephemeral
                         });
                     } else {
                         await interaction.followUp({
                             content: '❌ 翻頁時發生錯誤，請稍後再試。',
-                            ephemeral: true
+                            flags: MessageFlags.Ephemeral
                         });
                     }
                 } catch (replyError) {

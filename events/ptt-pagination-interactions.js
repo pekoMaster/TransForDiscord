@@ -4,7 +4,7 @@
  * 完全參考 Pixiv 翻頁處理器的架構
  */
 
-const { Events } = require('discord.js');
+const { Events, MessageFlags } = require('discord.js');
 const PTTExtractor = require('../tfd-system/extractors/ptt.js');
 const PTTCacheManager = require('../utils/ptt-cache-manager.js');
 
@@ -61,7 +61,7 @@ module.exports = {
                 // 快取已過期，要求用戶重新張貼網址
                 return interaction.reply({
                     content: '⏰ **頁面資料已過期**\n\n為了最佳效能，翻頁資料只保存24小時。\n請重新張貼 PTT 網址以載入最新資料。',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -99,7 +99,7 @@ module.exports = {
                     if (!interaction.replied && !interaction.deferred) {
                         await interaction.reply({
                             content: '翻頁時發生錯誤，請稍後再試。',
-                            ephemeral: true
+                            flags: MessageFlags.Ephemeral
                         });
                     } else if (interaction.deferred && !interaction.replied) {
                         await interaction.editReply({

@@ -18,7 +18,8 @@
 const {
     SlashCommandBuilder,
     PermissionFlagsBits,
-    ChannelType
+    ChannelType,
+    MessageFlags
 } = require('discord.js');
 
 const db = require('../db');
@@ -108,11 +109,11 @@ module.exports = {
             const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator)
                 || interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
             if (!isAdmin) {
-                return interaction.reply({ content: '❌ 此指令需要 `管理伺服器` 或 `管理員` 權限', ephemeral: true });
+                return interaction.reply({ content: '❌ 此指令需要 `管理伺服器` 或 `管理員` 權限', flags: MessageFlags.Ephemeral });
             }
 
             if (!guildId) {
-                return interaction.reply({ content: '❌ 此指令僅能在伺服器內使用', ephemeral: true });
+                return interaction.reply({ content: '❌ 此指令僅能在伺服器內使用', flags: MessageFlags.Ephemeral });
             }
 
             // 確保此 guild 已登錄
@@ -132,7 +133,7 @@ module.exports = {
 
         } catch (error) {
             console.error('[/pe] 指令執行失敗:', error);
-            const reply = { content: '❌ 執行指令時發生錯誤，請稍後再試。', ephemeral: true };
+            const reply = { content: '❌ 執行指令時發生錯誤，請稍後再試。', flags: MessageFlags.Ephemeral };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(reply).catch(() => {});
             } else {
@@ -155,7 +156,7 @@ async function handleApi(interaction, sub, userId) {
         if (prefix && !apiKey.startsWith(prefix)) {
             return interaction.reply({
                 content: `⚠️ ${providerName} 的 API Key 格式可能不正確（預期以 \`${prefix}\` 開頭）。\n仍要儲存請重新執行指令並重新確認。`,
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -163,7 +164,7 @@ async function handleApi(interaction, sub, userId) {
         const action = sub === 'add' ? '新增' : '更新';
         return interaction.reply({
             content: `✅ 已${action}你的 ${providerName} API Key（**已加密儲存**）。\n翻譯時點擊「改使用 AI 翻譯」即可使用。\n\n⚠️ 提醒：建議不要在公開頻道使用此指令；對話結束後請手動刪除你輸入指令的訊息。`,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -173,7 +174,7 @@ async function handleApi(interaction, sub, userId) {
         const removed = removeKey(userId, provider);
         return interaction.reply({
             content: removed ? `✅ 已移除你的 ${providerName} API Key。` : `❌ 你尚未設定 ${providerName} API Key。`,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -189,7 +190,7 @@ async function handleApi(interaction, sub, userId) {
                 ? '翻譯時可點擊「改使用 AI 翻譯」按鈕使用你的 Key。'
                 : '使用 `/pe api add` 設定至少一組 Key 後，即可使用 AI 翻譯功能。'
         ];
-        return interaction.reply({ content: lines.join('\n'), ephemeral: true });
+        return interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });
     }
 }
 
@@ -202,7 +203,7 @@ async function handleLog(interaction, sub, guildId) {
         const ch = g?.log_channel_id;
         return interaction.reply({
             content: ch ? `📋 目前日誌頻道：<#${ch}>` : '📋 本伺服器尚未設定日誌頻道（不會發 log）',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -210,16 +211,16 @@ async function handleLog(interaction, sub, guildId) {
         const channel = interaction.options.getChannel('channel');
         db.guilds.setLogChannel(guildId, channel.id);
         const action = sub === 'add' ? '設定' : '更換';
-        return interaction.reply({ content: `✅ 已${action}本伺服器日誌頻道為 <#${channel.id}>`, ephemeral: true });
+        return interaction.reply({ content: `✅ 已${action}本伺服器日誌頻道為 <#${channel.id}>`, flags: MessageFlags.Ephemeral });
     }
 
     if (sub === 'del') {
         const g = db.guilds.get(guildId);
         if (!g?.log_channel_id) {
-            return interaction.reply({ content: '❌ 本伺服器尚未設定日誌頻道', ephemeral: true });
+            return interaction.reply({ content: '❌ 本伺服器尚未設定日誌頻道', flags: MessageFlags.Ephemeral });
         }
         db.guilds.setLogChannel(guildId, null);
-        return interaction.reply({ content: '✅ 已移除日誌頻道設定（停止發 log）', ephemeral: true });
+        return interaction.reply({ content: '✅ 已移除日誌頻道設定（停止發 log）', flags: MessageFlags.Ephemeral });
     }
 }
 
@@ -231,27 +232,27 @@ async function handleNoUser(interaction, guildId, addedBy) {
 
     if (action === 'list') {
         const list = db.excludedUsers.list(guildId);
-        if (list.length === 0) return interaction.reply({ content: '📋 本伺服器目前沒有排除任何使用者', ephemeral: true });
+        if (list.length === 0) return interaction.reply({ content: '📋 本伺服器目前沒有排除任何使用者', flags: MessageFlags.Ephemeral });
         const lines = list.slice(0, 25).map(r => `• <@${r.user_id}>`);
         if (list.length > 25) lines.push(`...另有 ${list.length - 25} 位`);
-        return interaction.reply({ content: `📋 本伺服器排除使用者（${list.length}）：\n${lines.join('\n')}`, ephemeral: true });
+        return interaction.reply({ content: `📋 本伺服器排除使用者（${list.length}）：\n${lines.join('\n')}`, flags: MessageFlags.Ephemeral });
     }
 
     const user = interaction.options.getUser('user');
     if (action === 'add') {
         if (db.excludedUsers.has(guildId, user.id)) {
-            return interaction.reply({ content: `⚠️ ${user.tag} 已在排除清單中`, ephemeral: true });
+            return interaction.reply({ content: `⚠️ ${user.tag} 已在排除清單中`, flags: MessageFlags.Ephemeral });
         }
         db.excludedUsers.add(guildId, user.id, addedBy);
-        return interaction.reply({ content: `✅ 已將 ${user.tag} 加入本伺服器排除清單`, ephemeral: true });
+        return interaction.reply({ content: `✅ 已將 ${user.tag} 加入本伺服器排除清單`, flags: MessageFlags.Ephemeral });
     }
 
     if (action === 'remove') {
         if (!db.excludedUsers.has(guildId, user.id)) {
-            return interaction.reply({ content: `⚠️ ${user.tag} 不在本伺服器排除清單中`, ephemeral: true });
+            return interaction.reply({ content: `⚠️ ${user.tag} 不在本伺服器排除清單中`, flags: MessageFlags.Ephemeral });
         }
         db.excludedUsers.remove(guildId, user.id);
-        return interaction.reply({ content: `✅ 已將 ${user.tag} 從本伺服器排除清單移除`, ephemeral: true });
+        return interaction.reply({ content: `✅ 已將 ${user.tag} 從本伺服器排除清單移除`, flags: MessageFlags.Ephemeral });
     }
 }
 
@@ -263,27 +264,27 @@ async function handleNoChannel(interaction, guildId, addedBy) {
 
     if (action === 'list') {
         const list = db.blockedChannels.list(guildId);
-        if (list.length === 0) return interaction.reply({ content: '📋 本伺服器目前沒有排除任何頻道', ephemeral: true });
+        if (list.length === 0) return interaction.reply({ content: '📋 本伺服器目前沒有排除任何頻道', flags: MessageFlags.Ephemeral });
         const lines = list.slice(0, 25).map(r => `• <#${r.channel_id}>`);
         if (list.length > 25) lines.push(`...另有 ${list.length - 25} 個`);
-        return interaction.reply({ content: `📋 本伺服器排除頻道（${list.length}）：\n${lines.join('\n')}`, ephemeral: true });
+        return interaction.reply({ content: `📋 本伺服器排除頻道（${list.length}）：\n${lines.join('\n')}`, flags: MessageFlags.Ephemeral });
     }
 
     const channel = interaction.options.getChannel('channel');
     if (action === 'add') {
         if (db.blockedChannels.has(guildId, channel.id)) {
-            return interaction.reply({ content: `⚠️ ${channel.name} 已在排除清單中`, ephemeral: true });
+            return interaction.reply({ content: `⚠️ ${channel.name} 已在排除清單中`, flags: MessageFlags.Ephemeral });
         }
         db.blockedChannels.add(guildId, channel.id, addedBy);
-        return interaction.reply({ content: `✅ 已將 ${channel.name} 加入本伺服器排除清單`, ephemeral: true });
+        return interaction.reply({ content: `✅ 已將 ${channel.name} 加入本伺服器排除清單`, flags: MessageFlags.Ephemeral });
     }
 
     if (action === 'remove') {
         if (!db.blockedChannels.has(guildId, channel.id)) {
-            return interaction.reply({ content: `⚠️ ${channel.name} 不在本伺服器排除清單中`, ephemeral: true });
+            return interaction.reply({ content: `⚠️ ${channel.name} 不在本伺服器排除清單中`, flags: MessageFlags.Ephemeral });
         }
         db.blockedChannels.remove(guildId, channel.id);
-        return interaction.reply({ content: `✅ 已將 ${channel.name} 從本伺服器排除清單移除`, ephemeral: true });
+        return interaction.reply({ content: `✅ 已將 ${channel.name} 從本伺服器排除清單移除`, flags: MessageFlags.Ephemeral });
     }
 }
 
@@ -297,7 +298,7 @@ async function handleOwner(interaction, guildId) {
         content: user
             ? `✅ 已設定本伺服器 Peko Embed 活動 owner 為 ${user.tag}（<@${user.id}>）`
             : '✅ 已清除本伺服器 Peko Embed 活動 owner 設定',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
     });
 }
 
@@ -321,5 +322,5 @@ async function handleStatus(interaction, guildId) {
         '• 引擎：Google Gemini AI（用戶自備 Key）',
         '• 設定：`/pe api add provider:Gemini apikey:你的金鑰`'
     ];
-    return interaction.reply({ content: lines.join('\n'), ephemeral: true });
+    return interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });
 }
