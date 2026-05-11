@@ -19,7 +19,7 @@ const tfdHandler = new TFDMessageHandler(client);
 client.once(Events.ClientReady, () => {
     console.log(`✅ Bot 已上線：${client.user.tag}`);
     console.log(`📡 監控 ${client.guilds.cache.size} 個伺服器`);
-    console.log('✅ TFD URL 轉換系統已就緒');
+    console.log('✅ Peko Embed URL 轉換系統已就緒');
 
     // 初始化共享翻譯快取（從磁碟載入 + 清理過期）
     const sharedCache = require('./utils/shared-translation-cache');

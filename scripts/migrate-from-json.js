@@ -173,7 +173,7 @@ async function main() {
     console.log('後續手動步驟：');
     console.log('  1. 確認 data/tfd.db 已產生');
     console.log('  2. 確認 data/.encryption-key 已產生（或設定 TFD_ENCRYPTION_KEY 環境變數）');
-    console.log('  3. 在每個伺服器執行 /tfd 指令重新設定 log channel 與排除清單');
+    console.log('  3. 在每個伺服器執行 /pe 指令重新設定 log channel 與排除清單');
     console.log(`  4. 確認舊資料無誤後，可刪除 ${CONFIG_PATH}`);
     console.log(`  5. 確認舊資料無誤後，可刪除 ${API_KEYS_PATH}`);
 }

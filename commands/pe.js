@@ -1,14 +1,14 @@
 /**
- * TFD 系統管理指令（公開版 v2 — SQLite 多租戶）
+ * Peko Embed 系統管理指令（公開版 v2 — SQLite 多租戶）
  *
  * 子指令群：
- *   /tfd api add|edit|del|status   — 管理個人 AI API Key（所有用戶；加密儲存）
- *   /tfd log add|edit|del          — 管理本伺服器日誌頻道（管理員）
- *   /tfd log show                  — 查看本伺服器日誌頻道設定（管理員）
- *   /tfd nouser                    — 排除使用者（管理員，per-guild）
- *   /tfd noch                      — 排除頻道（管理員，per-guild）
- *   /tfd owner                     — 設定本伺服器活動 owner（管理員）
- *   /tfd status                    — 查看本伺服器 TFD 狀態（管理員）
+ *   /pe api add|edit|del|status   — 管理個人 AI API Key（所有用戶；加密儲存）
+ *   /pe log add|edit|del          — 管理本伺服器日誌頻道（管理員）
+ *   /pe log show                  — 查看本伺服器日誌頻道設定（管理員）
+ *   /pe nouser                    — 排除使用者（管理員，per-guild）
+ *   /pe noch                      — 排除頻道（管理員，per-guild）
+ *   /pe owner                     — 設定本伺服器活動 owner（管理員）
+ *   /pe status                    — 查看本伺服器 Peko Embed 狀態（管理員）
  *
  * 多租戶設計：
  *   - log_channel / blocked_channels / excluded_users / owner 全部 per-guild
@@ -32,11 +32,11 @@ const PROVIDER_CHOICES = [
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('tfd')
-        .setDescription('TFD 連結預覽系統管理')
+        .setName('pe')
+        .setDescription('Peko Embed 連結預覽系統管理')
         .setDMPermission(false)
 
-        // ── /tfd api（所有人）──
+        // ── /pe api（所有人）──
         .addSubcommandGroup(g => g
             .setName('api')
             .setDescription('管理你的個人 AI 翻譯 API Key（加密儲存）')
@@ -54,10 +54,10 @@ module.exports = {
             .addSubcommand(s => s.setName('status').setDescription('查看你的 API Key 設定狀態'))
         )
 
-        // ── /tfd log（管理員，per-guild）──
+        // ── /pe log（管理員，per-guild）──
         .addSubcommandGroup(g => g
             .setName('log')
-            .setDescription('管理本伺服器的 TFD 日誌頻道（管理員）')
+            .setDescription('管理本伺服器的日誌頻道（管理員）')
             .addSubcommand(s => s.setName('add').setDescription('設定日誌頻道')
                 .addChannelOption(o => o.setName('channel').setDescription('日誌頻道').setRequired(true).addChannelTypes(ChannelType.GuildText))
             )
@@ -68,29 +68,29 @@ module.exports = {
             .addSubcommand(s => s.setName('show').setDescription('查看目前日誌頻道設定'))
         )
 
-        // ── /tfd nouser（管理員，per-guild）──
-        .addSubcommand(s => s.setName('nouser').setDescription('排除/恢復某使用者在本伺服器觸發 TFD（管理員）')
+        // ── /pe nouser（管理員，per-guild）──
+        .addSubcommand(s => s.setName('nouser').setDescription('排除/恢復某使用者在本伺服器觸發預覽（管理員）')
             .addUserOption(o => o.setName('user').setDescription('要排除/恢復的使用者').setRequired(true))
             .addStringOption(o => o.setName('action').setDescription('操作').setRequired(true)
                 .addChoices({ name: '新增排除', value: 'add' }, { name: '移除排除', value: 'remove' }, { name: '列表', value: 'list' })
             )
         )
 
-        // ── /tfd noch（管理員，per-guild）──
-        .addSubcommand(s => s.setName('noch').setDescription('排除/恢復某頻道在本伺服器觸發 TFD（管理員）')
+        // ── /pe noch（管理員，per-guild）──
+        .addSubcommand(s => s.setName('noch').setDescription('排除/恢復某頻道在本伺服器觸發預覽（管理員）')
             .addChannelOption(o => o.setName('channel').setDescription('要排除/恢復的頻道').setRequired(true).addChannelTypes(ChannelType.GuildText))
             .addStringOption(o => o.setName('action').setDescription('操作').setRequired(true)
                 .addChoices({ name: '新增排除', value: 'add' }, { name: '移除排除', value: 'remove' }, { name: '列表', value: 'list' })
             )
         )
 
-        // ── /tfd owner（管理員，per-guild）──
-        .addSubcommand(s => s.setName('owner').setDescription('設定本伺服器的 TFD 活動 owner（管理員專屬功能用）')
+        // ── /pe owner（管理員，per-guild）──
+        .addSubcommand(s => s.setName('owner').setDescription('設定本伺服器的 Peko Embed 活動 owner（管理員專屬功能用）')
             .addUserOption(o => o.setName('user').setDescription('owner 使用者；不填則清除').setRequired(false))
         )
 
-        // ── /tfd status（管理員）──
-        .addSubcommand(s => s.setName('status').setDescription('查看本伺服器 TFD 狀態（管理員）')),
+        // ── /pe status（管理員）──
+        .addSubcommand(s => s.setName('status').setDescription('查看本伺服器 Peko Embed 狀態（管理員）')),
 
     async execute(interaction) {
         const group = interaction.options.getSubcommandGroup(false);
@@ -99,7 +99,7 @@ module.exports = {
         const guildId = interaction.guildId;
 
         try {
-            // /tfd api — 所有使用者
+            // /pe api — 所有使用者
             if (group === 'api') {
                 return await handleApi(interaction, sub, userId);
             }
@@ -131,7 +131,7 @@ module.exports = {
             }
 
         } catch (error) {
-            console.error('[/tfd] 指令執行失敗:', error);
+            console.error('[/pe] 指令執行失敗:', error);
             const reply = { content: '❌ 執行指令時發生錯誤，請稍後再試。', ephemeral: true };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(reply).catch(() => {});
@@ -143,7 +143,7 @@ module.exports = {
 };
 
 // ────────────────────────────────────────────────────────────
-// /tfd api
+// /pe api
 // ────────────────────────────────────────────────────────────
 async function handleApi(interaction, sub, userId) {
     if (sub === 'add' || sub === 'edit') {
@@ -187,14 +187,14 @@ async function handleApi(interaction, sub, userId) {
             '',
             hasAnyKey(userId)
                 ? '翻譯時可點擊「改使用 AI 翻譯」按鈕使用你的 Key。'
-                : '使用 `/tfd api add` 設定至少一組 Key 後，即可使用 AI 翻譯功能。'
+                : '使用 `/pe api add` 設定至少一組 Key 後，即可使用 AI 翻譯功能。'
         ];
         return interaction.reply({ content: lines.join('\n'), ephemeral: true });
     }
 }
 
 // ────────────────────────────────────────────────────────────
-// /tfd log（per-guild）
+// /pe log（per-guild）
 // ────────────────────────────────────────────────────────────
 async function handleLog(interaction, sub, guildId) {
     if (sub === 'show') {
@@ -224,7 +224,7 @@ async function handleLog(interaction, sub, guildId) {
 }
 
 // ────────────────────────────────────────────────────────────
-// /tfd nouser（per-guild）
+// /pe nouser（per-guild）
 // ────────────────────────────────────────────────────────────
 async function handleNoUser(interaction, guildId, addedBy) {
     const action = interaction.options.getString('action');
@@ -256,7 +256,7 @@ async function handleNoUser(interaction, guildId, addedBy) {
 }
 
 // ────────────────────────────────────────────────────────────
-// /tfd noch（per-guild）
+// /pe noch（per-guild）
 // ────────────────────────────────────────────────────────────
 async function handleNoChannel(interaction, guildId, addedBy) {
     const action = interaction.options.getString('action');
@@ -288,21 +288,21 @@ async function handleNoChannel(interaction, guildId, addedBy) {
 }
 
 // ────────────────────────────────────────────────────────────
-// /tfd owner（per-guild）
+// /pe owner（per-guild）
 // ────────────────────────────────────────────────────────────
 async function handleOwner(interaction, guildId) {
-    const user = interaction.options.getUser('user'); // 可能是 null（表示清除）
+    const user = interaction.options.getUser('user');
     db.guilds.setOwner(guildId, user ? user.id : null);
     return interaction.reply({
         content: user
-            ? `✅ 已設定本伺服器 TFD 活動 owner 為 ${user.tag}（<@${user.id}>）`
-            : '✅ 已清除本伺服器 TFD 活動 owner 設定',
+            ? `✅ 已設定本伺服器 Peko Embed 活動 owner 為 ${user.tag}（<@${user.id}>）`
+            : '✅ 已清除本伺服器 Peko Embed 活動 owner 設定',
         ephemeral: true
     });
 }
 
 // ────────────────────────────────────────────────────────────
-// /tfd status（per-guild）
+// /pe status（per-guild）
 // ────────────────────────────────────────────────────────────
 async function handleStatus(interaction, guildId) {
     const g = db.guilds.get(guildId) || {};
@@ -310,7 +310,7 @@ async function handleStatus(interaction, guildId) {
     const excluded = db.excludedUsers.list(guildId).length;
 
     const lines = [
-        '**🔧 TFD 本伺服器狀態**\n',
+        '**🔧 Peko Embed 本伺服器狀態**\n',
         `**啟用狀態：** ${g.enabled ? '✅ 啟用' : '❌ 停用'}`,
         `**日誌頻道：** ${g.log_channel_id ? `<#${g.log_channel_id}>` : '_未設定（不發 log）_'}`,
         `**活動 Owner：** ${g.owner_user_id ? `<@${g.owner_user_id}>` : '_未設定_'}`,
@@ -319,7 +319,7 @@ async function handleStatus(interaction, guildId) {
         '',
         '**🌐 翻譯系統：**',
         '• 預設引擎：DeepL / OpenRouter',
-        '• AI 翻譯：用戶自備 Key（`/tfd api add` 設定，加密儲存）'
+        '• AI 翻譯：用戶自備 Key（`/pe api add` 設定，加密儲存）'
     ];
     return interaction.reply({ content: lines.join('\n'), ephemeral: true });
 }

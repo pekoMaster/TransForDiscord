@@ -235,27 +235,27 @@ function buildApiKeyTutorialEmbed() {
         .addFields(
             {
                 name: '🟢 OpenAI (GPT-4o-mini)',
-                value: '1. 前往 [platform.openai.com](https://platform.openai.com/api-keys)\n2. 建立新的 API Key\n3. 使用 `/tfd api add` 指令設定\n\n金鑰格式：`sk-proj-...`',
+                value: '1. 前往 [platform.openai.com](https://platform.openai.com/api-keys)\n2. 建立新的 API Key\n3. 使用 `/pe api add` 指令設定\n\n金鑰格式：`sk-proj-...`',
                 inline: false
             },
             {
                 name: '🟣 Claude (Anthropic)',
-                value: '1. 前往 [console.anthropic.com](https://console.anthropic.com/settings/keys)\n2. 建立新的 API Key\n3. 使用 `/tfd api add` 指令設定\n\n金鑰格式：`sk-ant-...`',
+                value: '1. 前往 [console.anthropic.com](https://console.anthropic.com/settings/keys)\n2. 建立新的 API Key\n3. 使用 `/pe api add` 指令設定\n\n金鑰格式：`sk-ant-...`',
                 inline: false
             },
             {
                 name: '🔵 Gemini (Google)',
-                value: '1. 前往 [aistudio.google.com](https://aistudio.google.com/app/apikey)\n2. 建立新的 API Key\n3. 使用 `/tfd api add` 指令設定\n\n金鑰格式：`AIzaSy...`',
+                value: '1. 前往 [aistudio.google.com](https://aistudio.google.com/app/apikey)\n2. 建立新的 API Key\n3. 使用 `/pe api add` 指令設定\n\n金鑰格式：`AIzaSy...`',
                 inline: false
             },
             {
                 name: '📝 設定指令',
-                value: '```\n/tfd api add provider:OpenAI apikey:你的金鑰\n/tfd api add provider:Claude apikey:你的金鑰\n/tfd api add provider:Gemini apikey:你的金鑰\n```\n設定多組 Key 時，翻譯會自動在可用的服務間輪調。',
+                value: '```\n/pe api add provider:OpenAI apikey:你的金鑰\n/pe api add provider:Claude apikey:你的金鑰\n/pe api add provider:Gemini apikey:你的金鑰\n```\n設定多組 Key 時，翻譯會自動在可用的服務間輪調。',
                 inline: false
             }
         )
         .setColor(0x5865F2)
-        .setFooter({ text: 'API Key 僅存儲於伺服器本地，不會外洩。使用 /tfd api status 查看設定狀態。' });
+        .setFooter({ text: 'API Key 僅存儲於伺服器本地，不會外洩。使用 /pe api status 查看設定狀態。' });
 }
 
 module.exports = {

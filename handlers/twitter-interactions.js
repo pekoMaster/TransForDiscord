@@ -56,7 +56,7 @@ class TwitterInteractionHandler {
             // 檢查管理員權限
             if (!isGuildOwner(interaction)) {
                 await interaction.reply({
-                    content: '❌ 此功能僅限本伺服器 TFD owner 使用（請伺服器管理員以 `/tfd owner` 指定）。',
+                    content: '❌ 此功能僅限本伺服器 Peko Embed owner 使用（請伺服器管理員以 `/pe owner` 指定）。',
                     flags: MessageFlags.Ephemeral
                 });
                 return;
@@ -146,7 +146,7 @@ class TwitterInteractionHandler {
             // 檢查管理員權限
             if (!isGuildOwner(interaction)) {
                 await interaction.reply({
-                    content: '❌ 此功能僅限本伺服器 TFD owner 使用（請伺服器管理員以 `/tfd owner` 指定）。',
+                    content: '❌ 此功能僅限本伺服器 Peko Embed owner 使用（請伺服器管理員以 `/pe owner` 指定）。',
                     flags: MessageFlags.Ephemeral
                 });
                 return;
@@ -302,7 +302,7 @@ class TwitterInteractionHandler {
             // 檢查管理員權限
             if (!isGuildOwner(interaction)) {
                 await interaction.reply({
-                    content: '❌ 此功能僅限本伺服器 TFD owner 使用（請伺服器管理員以 `/tfd owner` 指定）。',
+                    content: '❌ 此功能僅限本伺服器 Peko Embed owner 使用（請伺服器管理員以 `/pe owner` 指定）。',
                     flags: MessageFlags.Ephemeral
                 });
                 return;

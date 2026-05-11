@@ -285,7 +285,7 @@ class TFDEmbedBuilder {
         }
 
         embed.setFooter({
-            text: 'TFD 連結預覽系統',
+            text: 'Peko Embed 連結預覽系統',
             iconURL: null
         });
 
