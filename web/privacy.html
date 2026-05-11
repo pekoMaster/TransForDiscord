@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隱私政策 — Peko Embed</title>
+    <meta name="description" content="Peko Embed 隱私政策">
+    <meta name="theme-color" content="#f59e42">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+    <div class="inner">
+        <a href="index.html" class="logo">🥕 <span>Peko</span> Embed</a>
+        <button class="hamburger" aria-label="選單" onclick="document.querySelector('nav ul').classList.toggle('open')">
+            <span></span><span></span><span></span>
+        </button>
+        <ul>
+            <li><a href="index.html">首頁</a></li>
+            <li><a href="terms.html">服務條款</a></li>
+        </ul>
+    </div>
+</nav>
+
+<main class="legal-page">
+    <div class="container">
+        <h1>隱私政策</h1>
+        <p class="updated">最後更新：2026-05-10</p>
+
+        <p>本隱私政策說明 Peko Embed（前稱 TFD / TransForDiscord，以下稱「本服務」）在 Discord 平台上運作時，如何收集、使用、儲存與保護您的資料。使用本服務即表示您同意本政策內容。</p>
+
+        <h2>一、本服務簡介</h2>
+        <p>Peko Embed 是一個 Discord 機器人，主要功能為偵測訊息中的特定 URL（如 Twitter/X、Pixiv、PTT、Threads 等），並產生增強的預覽 Embed。它需要 Discord 的 <strong>Message Content Intent</strong> 才能讀取訊息內容以偵測 URL。</p>
+
+        <h2>二、我們收集的資料</h2>
+
+        <h3>2.1 自動處理但不儲存</h3>
+        <p>本服務在偵測到支援的 URL 時會讀取以下資料以即時處理，<strong>處理完成後不留存</strong>：</p>
+        <ul>
+            <li>訊息文字內容（僅用於 URL 偵測與引用）</li>
+            <li>訊息附件（僅用於重新發送至 Webhook）</li>
+            <li>使用者顯示名稱與頭像（僅用於 Webhook 模擬發送）</li>
+        </ul>
+
+        <h3>2.2 短期儲存（伺服器端）</h3>
+        <table>
+            <tr><th>資料</th><th>用途</th><th>保留期限</th></tr>
+            <tr><td>URL 統計（規範化後的 URL key、出現次數、伺服器/頻道 ID）</td><td>顯示「同一 URL 在本伺服器/頻道出現 N 次」於 footer</td><td>7 天滾動 + 條目級 TTL</td></tr>
+            <tr><td>Rate-limit 計數（使用者 ID、伺服器 ID）</td><td>防止單一使用者/伺服器濫用本服務</td><td>5 分鐘滾動</td></tr>
+            <tr><td>濫用記錄（使用者 ID、頻道 ID、事件類型）</td><td>偵測 spam 行為</td><td>30 天</td></tr>
+            <tr><td>翻譯快取（譯文文字 hash）</td><td>避免重複翻譯耗用 API 配額</td><td>7 天</td></tr>
+        </table>
+
+        <h3>2.3 長期儲存</h3>
+        <table>
+            <tr><th>資料</th><th>用途</th><th>保留期限</th></tr>
+            <tr><td>您主動透過 <code>/pe api add</code> 提供的 AI API Key</td><td>翻譯按鈕的 AI 翻譯來源</td><td>直到您執行 <code>/pe api del</code>；<strong>AES-256-GCM 加密儲存</strong></td></tr>
+            <tr><td>伺服器設定（log channel、排除清單）</td><td>維持管理員設定的行為</td><td>直到管理員修改或機器人離開伺服器</td></tr>
+        </table>
+
+        <h3>2.4 我們不會收集</h3>
+        <ul>
+            <li>訊息歷史紀錄</li>
+            <li>私訊內容</li>
+            <li>您的真實姓名、Email、IP 位址</li>
+            <li>Discord OAuth Token</li>
+            <li>不含支援 URL 的一般訊息內容</li>
+        </ul>
+
+        <h2>三、資料儲存與安全</h2>
+
+        <h3>3.1 加密</h3>
+        <ul>
+            <li>使用者 API Key 在儲存前以 <strong>AES-256-GCM</strong> 加密</li>
+            <li>加密金鑰僅存於主機端的環境變數</li>
+            <li>即使資料庫檔案外洩，攻擊者無法解出 API Key</li>
+        </ul>
+
+        <h3>3.2 儲存位置</h3>
+        <ul>
+            <li>所有資料儲存於服務主機的本地檔案系統（SQLite + JSON）</li>
+            <li><strong>不會傳送到任何第三方分析平台</strong></li>
+            <li>翻譯請求會經過您指定的 AI 服務商 — 這些請求受對應服務商的隱私政策約束</li>
+        </ul>
+
+        <h3>3.3 第三方服務</h3>
+        <table>
+            <tr><th>服務</th><th>用途</th><th>觸發時機</th></tr>
+            <tr><td>Discord API</td><td>接收訊息、發送預覽</td><td>全程</td></tr>
+            <tr><td>各支援平台（Twitter、Pixiv 等）</td><td>抓取公開內容資料</td><td>偵測到對應 URL 時</td></tr>
+            <tr><td>DeepL / OpenRouter / OpenAI / Anthropic / Google Gemini</td><td>翻譯文字</td><td>使用者點擊翻譯按鈕時</td></tr>
+        </table>
+
+        <h2>四、您的權利</h2>
+
+        <h3>4.1 查看</h3>
+        <ul>
+            <li><code>/pe api status</code> — 查看您已設定哪些 AI provider</li>
+            <li><code>/pe status</code> — 伺服器管理員可查看設定</li>
+        </ul>
+
+        <h3>4.2 刪除</h3>
+        <ul>
+            <li><code>/pe api del</code> — 刪除您的 AI API Key</li>
+            <li>伺服器管理員可隨時透過 <code>/pe</code> 指令修改設定</li>
+            <li>移除機器人後，伺服器設定會在下一次 GC 清除</li>
+        </ul>
+
+        <h3>4.3 不參與</h3>
+        <ul>
+            <li>伺服器管理員可使用 <code>/pe nouser &lt;你&gt; add</code> 將你排除於處理</li>
+            <li>將 URL 用 <code>&lt;...&gt;</code> 包起來，Peko Embed 將不會處理</li>
+        </ul>
+
+        <h2>五、政策變更</h2>
+        <p>本政策可能不定期更新。重大變更會在 GitHub repository 與機器人公告中公告至少 7 天。</p>
+
+        <h2>六、聯絡方式</h2>
+        <ul>
+            <li>GitHub Issues：<a href="https://github.com/pekoMaster/TransForDiscord/issues" target="_blank" rel="noopener">pekoMaster/TransForDiscord</a></li>
+            <li>Discord 支援伺服器 ID：<code>143689490156879872</code></li>
+        </ul>
+
+        <h2>七、適用法律</h2>
+        <p>本服務之資料處理盡力符合 GDPR、CCPA、台灣個資法等主要隱私法規之精神。如有衝突，以您所在地區之法律為準。</p>
+    </div>
+</main>
+
+<footer>
+    <div class="container">
+        <div class="links">
+            <a href="index.html">首頁</a>
+            <a href="terms.html">服務條款</a>
+            <a href="https://github.com/pekoMaster/TransForDiscord" target="_blank" rel="noopener">GitHub</a>
+        </div>
+        <p>&copy; 2026 Peko Embed.</p>
+    </div>
+</footer>
+
+</body>
+</html>

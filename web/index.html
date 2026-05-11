@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peko Embed — Discord 網址預覽修正機器人</title>
+    <meta name="description" content="專為 Vtuber 社群打造的 Discord 網址預覽修正機器人。支援 Twitter/X、Pixiv、Threads 等 20+ 平台，一鍵翻譯推文為中文。">
+    <meta name="theme-color" content="#f59e42">
+
+    <!-- OG -->
+    <meta property="og:title" content="Peko Embed — Discord 網址預覽修正">
+    <meta property="og:description" content="專為 Vtuber 社群打造的 Discord 網址預覽修正機器人。支援 20+ 平台，一鍵中文翻譯。">
+    <meta property="og:type" content="website">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+    <div class="inner">
+        <a href="#" class="logo">🥕 <span>Peko</span> Embed</a>
+        <button class="hamburger" aria-label="選單" onclick="document.querySelector('nav ul').classList.toggle('open')">
+            <span></span><span></span><span></span>
+        </button>
+        <ul>
+            <li><a href="#features">功能</a></li>
+            <li><a href="#translate">翻譯</a></li>
+            <li><a href="#sites">支援站台</a></li>
+            <li><a href="#donate">支持我們</a></li>
+            <li><a href="privacy.html">隱私政策</a></li>
+            <li><a href="terms.html">服務條款</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ── Hero ── -->
+<header class="hero">
+    <div class="container">
+        <h1>🥕 <span>Peko Embed</span></h1>
+        <p class="tagline">
+            專為 Vtuber 社群打造的 Discord 網址預覽修正機器人<br>
+            讓破圖的連結、消失的預覽通通復活
+        </p>
+        <div class="cta-group">
+            <a href="https://discord.com/oauth2/authorize?client_id=1483257652812320998&permissions=536955904&scope=bot" class="btn btn-discord" target="_blank" rel="noopener">
+                ＋ 加入你的伺服器
+            </a>
+            <a href="#donate" class="btn btn-donate">
+                ☕ 請我喝咖啡
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- ── Features ── -->
+<section id="features">
+    <div class="container">
+        <h2>為什麼選擇 <span>Peko Embed</span>？</h2>
+        <p class="subtitle">Discord 內建預覽經常壞掉、缺圖、不顯示影片。Peko Embed 幫你把每條連結都變成完美的預覽卡片。</p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="icon">🔗</div>
+                <h3>網址預覽修正</h3>
+                <p>自動偵測訊息中的 URL，產生增強的預覽 Embed。圖片、影片、文字一個不漏。告別 Discord 內建的破碎預覽。</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">🌐</div>
+                <h3>一鍵推文翻譯</h3>
+                <p>看到日文推文不用再切分頁！按一下翻譯按鈕，AI 幫你翻成中文。支援 DeepL 及多種 AI 翻譯引擎。</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">🖼️</div>
+                <h3>多圖分頁瀏覽</h3>
+                <p>Pixiv 多圖作品、PTT 多圖文章，不用點進去就能在 Discord 裡翻頁瀏覽。支援動圖(Ugoira)轉 MP4。</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">🎬</div>
+                <h3>影片直接播放</h3>
+                <p>Twitter 影片、Bilibili 影片直接在 Discord 內嵌播放，不用另開瀏覽器。支援 V2 Components 原生媒體展示。</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">🛡️</div>
+                <h3>防爆雷系統</h3>
+                <p>一鍵將預覽內容隱藏為防爆雷模式，保護還沒看到最新回的同好。適合追番、追劇、追 Vtuber 企劃的伺服器。</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">⚡</div>
+                <h3>輕量無負擔</h3>
+                <p>純 URL 預覽功能，不需要複雜設定。加入伺服器後自動運作，不干擾其他機器人，不儲存你的訊息內容。</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Translate Highlight ── -->
+<section id="translate" class="translate-section">
+    <div class="container">
+        <h2>🌐 推文<span>一鍵翻譯</span>為中文</h2>
+        <p class="subtitle">Vtuber 粉絲最需要的功能 — 推主發了新推、切了新片，按一下就能看懂內容。</p>
+
+        <div class="translate-showcase">
+            <div class="translate-text">
+                <h3>為中文使用者而生</h3>
+                <p>追 Hololive、Nijisanji、個人勢？再也不用等有愛翻譯。Peko Embed 讓你的伺服器即時看懂日文推文。</p>
+                <ul>
+                    <li>支援 DeepL 高品質翻譯</li>
+                    <li>支援 Gemini / GPT / Claude 等 AI 翻譯</li>
+                    <li>可綁定自己的 API Key，翻譯不限量</li>
+                    <li>翻譯結果跨頻道共享快取，省 API 用量</li>
+                    <li>翻譯按鈕內建於預覽卡片，一鍵切換原文/譯文</li>
+                </ul>
+            </div>
+            <div class="translate-demo">
+                <div class="original">
+                    <div class="label">原文 (日本語)</div>
+                    今日もお疲れぺこ～！配信来てくれたみんなありがとう！明日はコラボだから楽しみにしててぺこよ🐰
+                </div>
+                <div class="translated">
+                    <div class="label">翻譯 (繁體中文)</div>
+                    今天也辛苦了peko～！感謝來看直播的大家！明天有聯動所以請期待一下peko喔🐰
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Supported Sites ── -->
+<section id="sites">
+    <div class="container">
+        <h2>支援 <span>20+</span> 平台</h2>
+        <p class="subtitle">不只是 Twitter。從社群平台到新聞、論壇、電商，通通幫你修好預覽。</p>
+
+        <div class="sites-categories">
+            <div class="site-category">
+                <h3>📱 社群平台</h3>
+                <ul>
+                    <li>Twitter / X</li>
+                    <li>Threads</li>
+                    <li>Instagram</li>
+                    <li>Facebook</li>
+                </ul>
+            </div>
+            <div class="site-category">
+                <h3>🎨 創作平台</h3>
+                <ul>
+                    <li>Pixiv（多圖分頁 + 動圖）</li>
+                    <li>Bilibili</li>
+                    <li>YouTube（/live 轉換）</li>
+                </ul>
+            </div>
+            <div class="site-category">
+                <h3>💬 論壇 / 社區</h3>
+                <ul>
+                    <li>PTT（多圖分頁）</li>
+                    <li>巴哈姆特</li>
+                    <li>Mobile01</li>
+                </ul>
+            </div>
+            <div class="site-category">
+                <h3>📰 新聞 / 資訊</h3>
+                <ul>
+                    <li>LINE TODAY</li>
+                    <li>UDN 聯合新聞</li>
+                    <li>MSN 新聞</li>
+                    <li>華視新聞 CTS</li>
+                    <li>4Gamers</li>
+                    <li>XFastest 滄者極限</li>
+                </ul>
+            </div>
+            <div class="site-category">
+                <h3>🎮 ACG / 遊戲</h3>
+                <ul>
+                    <li>神奇寶貝百科 (52Poke)</li>
+                    <li>勝利女神：妮姬 官網</li>
+                </ul>
+            </div>
+            <div class="site-category">
+                <h3>🛒 電商</h3>
+                <ul>
+                    <li>PChome 24h</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Donate ── -->
+<section id="donate" class="donate-section">
+    <div class="container">
+        <h2>☕ <span>支持</span>開發者</h2>
+        <p class="subtitle">Peko Embed 完全免費使用。如果它讓你的 Discord 體驗更好，可以請我喝杯咖啡 :)</p>
+
+        <div class="donate-card">
+            <p>你的支持是持續開發的最大動力！</p>
+            <a href="https://paypal.me/mastersix" class="btn btn-donate" target="_blank" rel="noopener">
+                💛 透過 PayPal 贊助
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ── CTA ── -->
+<section style="text-align:center; padding: 60px 0 80px;">
+    <div class="container">
+        <h2>準備好了嗎？</h2>
+        <p class="subtitle">只需要一個按鈕，就能讓你的伺服器擁有完美的網址預覽。</p>
+        <a href="https://discord.com/oauth2/authorize?client_id=1483257652812320998&permissions=536955904&scope=bot" class="btn btn-discord" target="_blank" rel="noopener">
+            ＋ 將 Peko Embed 加入伺服器
+        </a>
+    </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+    <div class="container">
+        <div class="links">
+            <a href="privacy.html">隱私政策</a>
+            <a href="terms.html">服務條款</a>
+            <a href="https://github.com/pekoMaster/TransForDiscord" target="_blank" rel="noopener">GitHub</a>
+        </div>
+        <p>&copy; 2026 Peko Embed. Built with 🥕 for the Vtuber community.</p>
+    </div>
+</footer>
+
+</body>
+</html>
