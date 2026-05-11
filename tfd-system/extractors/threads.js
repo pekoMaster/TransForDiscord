@@ -198,7 +198,7 @@ class ThreadsExtractor {
             },
             description: description || null,
             url: r.url,
-            footer: { text: '🧵 Threads' }
+            footer: { text: '🧵 Threads | Peko Embed' }
         };
 
         if (r.hasRealImg && r.images.length > 0) {
@@ -212,7 +212,7 @@ class ThreadsExtractor {
     }
 
     /**
-     * 建立 V2 container（影片貼文）
+     * 建立 V2 container（影片貼文，含圖片混合媒體）
      */
     _buildV2Container(r) {
         const authorLine = (r.realName && r.realName !== r.username)
@@ -223,15 +223,24 @@ class ThreadsExtractor {
         container.addTextDisplayComponents(
             new TextDisplayBuilder().setContent(authorLine + (r.rawText ? '\n' + r.rawText : ''))
         );
+
+        const galleryItems = [];
         if (r.videoUrl) {
+            galleryItems.push(new MediaGalleryItemBuilder().setURL(r.videoUrl).setDescription('🎬 影片'));
+        }
+        if (r.images && r.images.length > 0) {
+            for (let i = 0; i < r.images.length; i++) {
+                galleryItems.push(new MediaGalleryItemBuilder().setURL(r.images[i]).setDescription(`🖼️ 圖片 ${i + 1}`));
+            }
+        }
+        if (galleryItems.length > 0) {
             container.addMediaGalleryComponents(
-                new MediaGalleryBuilder().addItems(
-                    new MediaGalleryItemBuilder().setURL(r.videoUrl).setDescription('🎬 影片')
-                )
+                new MediaGalleryBuilder().addItems(...galleryItems)
             );
         }
+
         container.addTextDisplayComponents(
-            new TextDisplayBuilder().setContent('-# 🧵 Threads')
+            new TextDisplayBuilder().setContent('-# 🧵 Threads | Peko Embed')
         );
         return container;
     }
@@ -430,7 +439,7 @@ class ThreadsExtractor {
                     url: originalURL,
                     thumbnail: profileData.ogImage || null,
                     color: THREADS_COLOR,
-                    footer: { text: '🧵 Threads' }
+                    footer: { text: '🧵 Threads | Peko Embed' }
                 });
 
                 return { success: true, siteName: 'threads', embed };
@@ -457,7 +466,7 @@ class ThreadsExtractor {
                 iconURL: THREADS_ICON,
                 url: `https://www.threads.com/@${username}`
             },
-            footer: { text: '🧵 Threads' }
+            footer: { text: '🧵 Threads | Peko Embed' }
         });
 
         return { success: true, siteName: 'threads', embed };
@@ -473,7 +482,7 @@ class ThreadsExtractor {
             title: `@${username} • Threads`,
             url: originalURL,
             color: THREADS_COLOR,
-            footer: { text: '🧵 Threads' }
+            footer: { text: '🧵 Threads | Peko Embed' }
         });
 
         return { success: true, siteName: 'threads', embed };
