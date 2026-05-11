@@ -198,7 +198,7 @@ class ThreadsExtractor {
             },
             description: description || null,
             url: r.url,
-            footer: { text: '\uD83E\uDDF5 Threads' }
+            footer: { text: '🧵 Threads' }
         };
 
         if (r.hasRealImg && r.images.length > 0) {
@@ -226,18 +226,18 @@ class ThreadsExtractor {
         if (r.videoUrl) {
             container.addMediaGalleryComponents(
                 new MediaGalleryBuilder().addItems(
-                    new MediaGalleryItemBuilder().setURL(r.videoUrl).setDescription('\uD83C\uDFAC \u5F71\u7247')
+                    new MediaGalleryItemBuilder().setURL(r.videoUrl).setDescription('🎬 影片')
                 )
             );
         }
         container.addTextDisplayComponents(
-            new TextDisplayBuilder().setContent('-# \uD83E\uDDF5 Threads')
+            new TextDisplayBuilder().setContent('-# 🧵 Threads')
         );
         return container;
     }
 
     /**
-     * 舊版 fallback：proxy 轉址（原有邏輯）
+     * 舊版 fallback：proxy 轉址
      */
     async _extractPostLegacy(username, postId, originalURL) {
         try {
@@ -262,7 +262,7 @@ class ThreadsExtractor {
     }
 
     /**
-     * 使用 Puppeteer 抓取頁面 Meta 資料
+     * 使用 Lightpanda / Playwright / Puppeteer 抓取頁面 OG meta
      */
     async fetchPageMeta(url, options = {}) {
         const timeout = options.timeout || 30000;
@@ -293,7 +293,7 @@ class ThreadsExtractor {
                 }
             }
         } catch (e) {
-            // ignore and fallback to local render
+            // ignore and fallback
         }
 
         // 2) Playwright local render fallback
@@ -362,7 +362,7 @@ class ThreadsExtractor {
                 try { if (browser) await browser.close(); } catch (e) {}
             }
         } catch (pwErr) {
-            // 3) 最後 fallback：puppeteer minimal
+            // 3) 最後 fallback：Puppeteer minimal
             try {
                 const puppeteer = require('puppeteer');
                 const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
@@ -443,7 +443,7 @@ class ThreadsExtractor {
     }
 
     /**
-     * 建立基本貼文 embed
+     * 建立基本貼文 embed（轉址失敗時的最後備援）
      */
     buildBasicPostEmbed(username, postId, originalURL) {
         console.log(`[TFD-Threads] 建立基本貼文 embed: @${username}`);

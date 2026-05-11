@@ -117,12 +117,6 @@ async function execute(interaction, client) {
             return await handler.execute(interaction);
         }
 
-        // ── 通用翻譯按鈕 ──
-        if (customId.startsWith('translate_')) {
-            const handler = require('../handlers/content-translation-interactions.js');
-            return await handler.execute(interaction);
-        }
-
     } catch (err) {
         console.error(`[InteractionCreate] 處理錯誤 (${interaction.customId || interaction.commandName}):`, err.message);
         try {

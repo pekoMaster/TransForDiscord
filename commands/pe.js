@@ -317,9 +317,9 @@ async function handleStatus(interaction, guildId) {
         `**排除使用者：** ${excluded} 位`,
         `**排除頻道：** ${blocked} 個`,
         '',
-        '**🌐 翻譯系統：**',
-        '• 一般內容：Google Translate / DeepL',
-        '• Twitter 翻譯：用戶自備 Gemini Key（`/pe api add` 設定，加密儲存）'
+        '**🌐 翻譯系統（僅限 Twitter）：**',
+        '• 引擎：Google Gemini AI（用戶自備 Key）',
+        '• 設定：`/pe api add provider:Gemini apikey:你的金鑰`'
     ];
     return interaction.reply({ content: lines.join('\n'), ephemeral: true });
 }

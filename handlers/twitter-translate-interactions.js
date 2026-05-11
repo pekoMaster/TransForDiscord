@@ -219,7 +219,7 @@ async function handleTranslateButton(interaction) {
                 const loadingEmbed = EmbedBuilder.from(originalEmbed)
                     .setDescription('🔄 正在翻譯中，請稍候...')
                     .setFooter({
-                        text: `${originalEmbed.footer?.text || ''} | 🌐 翻譯中...`,
+                        text: `${(originalEmbed.footer?.text || '').replace(/ \| 🌐 翻譯中\.\.\./g, '').replace(/ \| 🌐 AI 翻譯/g, '')} | 🌐 翻譯中...`,
                         iconURL: originalEmbed.footer?.iconURL
                     });
                 const loadingEmbeds = [loadingEmbed];
@@ -345,7 +345,7 @@ async function handleTranslateButton(interaction) {
         const translatedEmbed = EmbedBuilder.from(originalEmbed)
             .setDescription(displayText)
             .setFooter({
-                text: `${originalEmbed.footer?.text || ''} | 🌐 AI 翻譯`,
+                text: `${(originalEmbed.footer?.text || '').replace(/ \| 🌐 翻譯中\.\.\./g, '').replace(/ \| 🌐 AI 翻譯/g, '')} | 🌐 AI 翻譯`,
                 iconURL: originalEmbed.footer?.iconURL
             });
 

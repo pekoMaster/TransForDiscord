@@ -11,7 +11,6 @@ const TwitterImageAttachmentOptimizer = require('./twitter-image-attachment-opti
 const MixedMediaHTMLBuilder = require('../render/mixed-media-html-builder');
 const TextTruncator = require('../utils/text-truncator');
 const URLConverterLogger = require('../utils/url-converter-logger');
-const TranslationButtonBuilder = require('../utils/translation-button-builder');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -36,7 +35,6 @@ class TFDTwitterExtractor {
         this.imageOptimizer = new TwitterImageAttachmentOptimizer();
         this.htmlBuilder = new MixedMediaHTMLBuilder();
         this.textTruncator = new TextTruncator();
-        this.translationButtonBuilder = TranslationButtonBuilder;
 
         // 2026-04-11: 自家 Vercel embed 影片 URL，取代 vxtwitter
         try {
