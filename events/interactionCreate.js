@@ -86,11 +86,9 @@ async function execute(interaction, client) {
             return await handler.execute(interaction);
         }
 
-        // ── Twitter 翻譯（包含 DeepL/AI 切換）──
+        // ── Twitter 翻譯 ──
         if (customId.startsWith('twitter_translate_') ||
-            customId.startsWith('twitter_original_') ||
-            customId.startsWith('twitter_switch_ai_') ||
-            customId.startsWith('twitter_switch_deepl_')) {
+            customId.startsWith('twitter_original_')) {
             const handler = require('../handlers/twitter-translate-interactions.js');
             return await handler.execute(interaction);
         }

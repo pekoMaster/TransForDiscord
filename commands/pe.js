@@ -318,8 +318,8 @@ async function handleStatus(interaction, guildId) {
         `**排除頻道：** ${blocked} 個`,
         '',
         '**🌐 翻譯系統：**',
-        '• 預設引擎：DeepL / OpenRouter',
-        '• AI 翻譯：用戶自備 Key（`/pe api add` 設定，加密儲存）'
+        '• 一般內容：Google Translate / DeepL',
+        '• Twitter 翻譯：用戶自備 Gemini Key（`/pe api add` 設定，加密儲存）'
     ];
     return interaction.reply({ content: lines.join('\n'), ephemeral: true });
 }

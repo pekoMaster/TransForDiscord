@@ -69,7 +69,7 @@ async function handleTranslateButton(interaction) {
 
 ### 📝 設定步驟：
 1. 前往 [Google AI Studio](https://aistudio.google.com/app/apikey) 取得免費 API Key
-2. 使用 \`/translate_api\` 指令登記你的 API Key
+2. 使用 \`/pe api add\` 指令登記你的 API Key
 
 ### 💡 免費額度：
 - 每分鐘 15 次請求
@@ -267,7 +267,7 @@ async function handleTranslateButton(interaction) {
                         errorMessage = '⚠️ 翻譯服務目前無法使用，請和開發者聯絡。';
                         break;
                     case 'INVALID_API_KEY':
-                        errorMessage = '❌ API Key 無效\n\n請使用 `/translate_api` 重新設定正確的 API Key。';
+                        errorMessage = '❌ API Key 無效\n\n請使用 `/pe api add` 重新設定正確的 API Key。';
                         break;
                     case 'TIMEOUT':
                         errorMessage = '⏰ 翻譯超時，請稍後再試';

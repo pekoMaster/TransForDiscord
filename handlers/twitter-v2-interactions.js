@@ -159,7 +159,7 @@ async function handleV2Translate(interaction) {
 
     if (!userApiKey) {
         await interaction.followUp({
-            content: `## 🌐 翻譯功能需要設定 API Key\n\n此功能使用 **Google Gemini AI** 進行翻譯，需要你提供自己的 API Key。\n\n### 📝 設定步驟：\n1. 前往 [Google AI Studio](https://aistudio.google.com/app/apikey) 取得免費 API Key\n2. 使用 \`/translate_api\` 指令登記你的 API Key`,
+            content: `## 🌐 翻譯功能需要設定 API Key\n\n此功能使用 **Google Gemini AI** 進行翻譯，需要你提供自己的 API Key。\n\n### 📝 設定步驟：\n1. 前往 [Google AI Studio](https://aistudio.google.com/app/apikey) 取得免費 API Key\n2. 使用 \`/pe api add\` 指令登記你的 API Key`,
             flags: MessageFlags.Ephemeral
         });
         return;
@@ -209,7 +209,7 @@ async function handleV2Translate(interaction) {
     if (!result.success) {
         const errorMap = {
             'QUOTA_EXHAUSTED': '⚠️ 翻譯服務目前無法使用，請和開發者聯絡。',
-            'INVALID_API_KEY': '❌ API Key 無效，請使用 `/translate_api` 重新設定。',
+            'INVALID_API_KEY': '❌ API Key 無效，請使用 `/pe api add` 重新設定。',
             'TIMEOUT': '⏰ 翻譯超時，請稍後再試',
         };
         await interaction.followUp({
