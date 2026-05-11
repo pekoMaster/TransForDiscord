@@ -6,6 +6,7 @@
 const { MessageFlags, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { buildV2Container, getCachedTweetData, cacheTweetData, deriveStateFromComponents } = require('./twitter-v2-container-builder');
 const { lookupUrl } = require('../tfd-system/utils/url-stats');
+const db = require('../db');
 
 function getTimePrefix() {
     const now = new Date();
@@ -361,23 +362,27 @@ async function handleV2SpoilerModalSubmit(interaction) {
         return;
     }
 
-    // 送 log
+    // 送 log（per-guild 日誌頻道）
     try {
-        const logChannel = await interaction.client.channels.fetch('754991473698668606');
-        if (logChannel) {
-            await logChannel.send({
-                embeds: [{
-                    color: 0x5865F2,
-                    description: `🕶️ 對推文 \`${tweetId}\` 使用了防爆雷`,
-                    fields: [
-                        { name: '操作者', value: `<@${operatorId}>`, inline: true },
-                        { name: '頻道', value: `<#${interaction.channelId}>`, inline: true },
-                        { name: '理由', value: reason || '（無）', inline: false },
-                    ],
-                    timestamp: new Date().toISOString(),
-                }],
-                allowedMentions: { parse: [] }
-            });
+        const guildSettings = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
+        const logChannelId = guildSettings?.log_channel_id;
+        if (logChannelId) {
+            const logChannel = await interaction.client.channels.fetch(logChannelId).catch(() => null);
+            if (logChannel) {
+                await logChannel.send({
+                    embeds: [{
+                        color: 0x5865F2,
+                        description: `🕶️ 對推文 \`${tweetId}\` 使用了防爆雷`,
+                        fields: [
+                            { name: '操作者', value: `<@${operatorId}>`, inline: true },
+                            { name: '頻道', value: `<#${interaction.channelId}>`, inline: true },
+                            { name: '理由', value: reason || '（無）', inline: false },
+                        ],
+                        timestamp: new Date().toISOString(),
+                    }],
+                    allowedMentions: { parse: [] }
+                });
+            }
         }
     } catch (e) {
         console.error('[V2-Spoiler] 送 log 失敗:', e.message);

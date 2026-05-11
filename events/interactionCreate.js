@@ -45,8 +45,22 @@ async function execute(interaction, client) {
             return;
         }
 
-        // ── Modal 提交（已移除舊的 apikey_set_modal，API Key 改由斜線指令直接處理）──
+        // ── Modal 提交 ──
         if (interaction.isModalSubmit()) {
+            const modalId = interaction.customId;
+
+            // V2 防爆雷 Modal
+            if (modalId.startsWith('v2_spoiler_modal_')) {
+                const { handleV2SpoilerModalSubmit } = require('../handlers/twitter-v2-interactions.js');
+                return await handleV2SpoilerModalSubmit(interaction);
+            }
+
+            // 通用防爆雷 Modal
+            if (modalId.startsWith('spoiler_modal_')) {
+                const { handleSpoilerModalSubmit } = require('../handlers/spoiler-button-interactions.js');
+                return await handleSpoilerModalSubmit(interaction);
+            }
+
             return;
         }
 
@@ -54,7 +68,13 @@ async function execute(interaction, client) {
 
         const customId = interaction.customId;
 
-        // ── Twitter V2 互動（翻譯、引用、回覆、全文展開）──
+        // ── 通用防爆雷按鈕 ──
+        if (customId === 'spoiler_btn') {
+            const { handleSpoilerButtonInteraction } = require('../handlers/spoiler-button-interactions.js');
+            return await handleSpoilerButtonInteraction(interaction);
+        }
+
+        // ── Twitter V2 互動（翻譯、引用、回覆、全文展開、防爆雷）──
         if (customId.startsWith('v2_')) {
             const handler = require('../handlers/twitter-v2-interactions.js');
             return await handler.handleV2Interaction(interaction);
