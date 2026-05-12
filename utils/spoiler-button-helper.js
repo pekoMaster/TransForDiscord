@@ -45,7 +45,7 @@ function hasSpoilerButton(components) {
  * @param {string} [options.label] - 按鈕文字（預設 📋 回報）
  * @returns {Array} 新的 components 陣列（深複製）
  */
-function appendReportButton(components, { label = '📋 回報' } = {}) {
+function appendReportButton(components, { label = '回報' } = {}) {
     const existing = components || [];
     if (hasReportButton(existing)) {
         return existing.map(row => ActionRowBuilder.from(row));

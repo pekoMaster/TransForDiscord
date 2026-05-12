@@ -5,6 +5,10 @@ const { getInstance: getGBM } = require('../utils/guild-blacklist-manager');
 
 const cooldowns = new Map();
 const COOLDOWN_MS = 60_000;
+const recallCounts = new Map();
+const RECALL_LIMIT_MS = 600_000;
+const RECALL_LIMIT_COUNT = 3;
+setInterval(() => { const now = Date.now(); for (const [k, arr] of recallCounts) { const f = arr.filter(e => now - e.ts < RECALL_LIMIT_MS); if (f.length === 0) recallCounts.delete(k); else recallCounts.set(k, f); } }, 60_000).unref();
 
 module.exports = {
     data: new ContextMenuCommandBuilder()
@@ -34,6 +38,7 @@ module.exports = {
         const id = interaction.customId;
         if (id.startsWith('ctx_delete_')) return handleContextDelete(interaction);
         if (id.startsWith('ctx_spoiler_')) return handleContextSpoiler(interaction);
+        if (id.startsWith('ctx_report_nowarn_')) return handleContextReportNoWarn(interaction);
         if (id.startsWith('ctx_report_')) return handleContextReport(interaction);
     },
 
@@ -50,10 +55,29 @@ function extractAuthorFromMsg(c) { if (!c) return null; const ls = c.split('\n')
 
 async function handleContextDelete(interaction) {
     const { channelId, messageId } = parseCtxId(interaction.customId);
+
+    // Recall rate limit
+    const userId = interaction.user.id;
+    let arr = recallCounts.get(userId) || [];
+    const now = Date.now();
+    arr = arr.filter(e => now - e.ts < RECALL_LIMIT_MS);
+    if (arr.length >= RECALL_LIMIT_COUNT) return interaction.reply({ content: '你已達收回次數上限（每 10 分鐘 3 次）', flags: MessageFlags.Ephemeral });
+    arr.push({ ts: now });
+    recallCounts.set(userId, arr);
+
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
     if (!t) return interaction.reply({ content: '目標訊息已不存在', flags: MessageFlags.Ephemeral });
-    const modal = new ModalBuilder().setCustomId('ctx_delete_modal_' + channelId + '_' + messageId).setTitle('移除訊息')
-        .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('請輸入移除理由（可空白）').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(100)));
+
+    // Check if user is original author
+    const originalAuthorId = extractAuthorFromMsg(t.content);
+    if (originalAuthorId && originalAuthorId === interaction.user.id) {
+        await t.delete().catch(() => {});
+        return interaction.reply({ content: '已收回訊息', flags: MessageFlags.Ephemeral });
+    }
+
+    // Not original author: show reason modal
+    const modal = new ModalBuilder().setCustomId('ctx_delete_modal_' + channelId + '_' + messageId).setTitle('收回訊息理由')
+        .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('請輸入收回理由（可空白）').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(200)));
     return interaction.showModal(modal);
 }
 
@@ -106,7 +130,21 @@ async function handleContextReport(interaction) {
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
     if (!t) return interaction.reply({ content: '目標訊息已不存在', flags: MessageFlags.Ephemeral });
     const gs = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
-    if (!gs || !gs.log_channel_id) return interaction.reply({ content: '此伺服器未設定日誌頻道，請先使用 /pe log add 設定', flags: MessageFlags.Ephemeral });
+    if (!gs || !gs.log_channel_id) {
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('ctx_report_nowarn_' + channelId + '_' + messageId).setLabel('確認送出').setStyle(ButtonStyle.Secondary));
+        return interaction.reply({ content: '此伺服器未設定日誌頻道，回報內容（含作者帳號、理由）將顯示在當前頻道，所有人可見。確定繼續？', components: [row], flags: MessageFlags.Ephemeral });
+    }
+    const modal = new ModalBuilder().setCustomId('ctx_report_modal_' + channelId + '_' + messageId).setTitle('黑名單回報')
+        .addComponents(
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('level').setLabel('請輸入等級 (1=僅提示, 2=防爆雷, 3=封鎖)').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(1).setPlaceholder('1 / 2 / 3')),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('回報理由（可空白）').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(200))
+        );
+    return interaction.showModal(modal);
+}
+
+
+async function handleContextReportNoWarn(interaction) {
+    const { channelId, messageId } = parseCtxId(interaction.customId);
     const modal = new ModalBuilder().setCustomId('ctx_report_modal_' + channelId + '_' + messageId).setTitle('黑名單回報')
         .addComponents(
             new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('level').setLabel('請輸入等級 (1=僅提示, 2=防爆雷, 3=封鎖)').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(1).setPlaceholder('1 / 2 / 3')),

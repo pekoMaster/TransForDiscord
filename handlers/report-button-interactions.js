@@ -402,7 +402,7 @@ async function logRecall(interaction, targetMsg, originalAuthorId, reason) {
     const logChannelId = guildSettings?.log_channel_id;
     const targetChannel = logChannelId
         ? await interaction.client.channels.fetch(logChannelId).catch(() => null)
-        : interaction.channel;
+        : null; if (!targetChannel) return;
 
     if (targetChannel) {
         const authorDesc = originalAuthorId ? `<@${originalAuthorId}>` : '未知用戶';
