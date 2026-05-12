@@ -8,9 +8,13 @@ const config = require('../config/tfd-config.json');
 const { EmbedBuilder, AttachmentBuilder, MessageFlags, TextDisplayBuilder, SeparatorBuilder } = require('discord.js');
 const { cacheContent } = require('../../handlers/content-translation-interactions.js');
 const axios = require('axios');
+const tlog = require('../../utils/tfd-logger');
 
 // Webhook 管理器 - 用於以使用者身份發送訊息
 const { sendWithWebhook, editWebhookMessage, canUseWebhook, hasWebhookPermission } = require('../../utils/webhook-manager');
+const { normalizeAuthorForBlacklist } = require('../../utils/normalize-author.js');
+const { getInstance: getGBM } = require('../../utils/guild-blacklist-manager.js');
+
 // URL 統計（footer N/M/O 顯示用）
 const { recordUrl } = require('../utils/url-stats');
 
@@ -93,8 +97,8 @@ class TFDMessageHandler {
 
         // 🕶️ 附加防爆雷按鈕（非 V2 Components 訊息）
         if (!isV2Components && options.addSpoilerButton !== false) {
-            const { appendSpoilerButton } = require('../../utils/spoiler-button-helper.js');
-            options.components = appendSpoilerButton(options.components);
+            const { appendReportButton } = require('../../utils/spoiler-button-helper.js');
+            options.components = appendReportButton(options.components);
         }
 
         let sentMsg = null;
@@ -352,11 +356,10 @@ class TFDMessageHandler {
      * @param {string} level - 'info' 或 'error'
      */
     log(message, level = 'info') {
-        const prefix = `${this.getTimePrefix()} [TFD-MessageHandler]`;
         if (level === 'error') {
-            console.error(`${prefix} ${message}`);
+            tlog.sysError('TFD', message);
         } else {
-            console.log(`${prefix} ${message}`);
+            tlog.sys('TFD', message);
         }
     }
 
@@ -406,7 +409,7 @@ class TFDMessageHandler {
             const gasResult = result.gasResult;
 
             // 直接發送 GAS URL，讓 Discord 爬取並嵌入影片
-            const content = `🌐 **${gasResult.tweetType}** - Enhanced TFD 影片播放\n${gasResult.gasURL}`;
+            const content = `🌐 **${gasResult.tweetType}** - PekoEmbed 影片播放\n${gasResult.gasURL}`;
 
             // 🌐 使用 Webhook 發送
             await this.sendViaWebhook(message, { content });
@@ -431,7 +434,7 @@ class TFDMessageHandler {
     async sendPixivWithMultipleEmbeds(message, result) {
         try {
             const isR18 = result.contentType === 'r18_artwork' || result.data?.isR18;
-            this.log(`發送 Pixiv 多嵌入式訊息: ${result.multipleImages.length} 張圖片, R18=${isR18}`);
+            tlog.log('Pixiv', message, `多圖 ${result.multipleImages.length} 張, R18=${isR18}`);
 
             const originalURL = result.pagination.originalURL || 'https://www.pixiv.net';
 
@@ -523,7 +526,7 @@ class TFDMessageHandler {
             const totalImages = result.multipleImages.length;
             const imagesToShow = result.multipleImages.slice(0, 4);
 
-            this.log(`發送 Facebook 多嵌入式訊息: 顯示 ${imagesToShow.length} 張圖片 (共 ${totalImages} 張)`);
+            tlog.log('Facebook', message, `多圖 ${imagesToShow.length}/${totalImages} 張`);
 
             // 準備多個嵌入式訊息
             const embeds = [];
@@ -694,10 +697,7 @@ class TFDMessageHandler {
      */
     async sendTwitterV2(message, result) {
         try {
-            const displayName = message.member?.displayName || message.author.globalName || message.author.username;
-            console.log(
-                `${this.getTimePrefix()} [TFD] [Twitter-V2] ${displayName} ${result.originalURL || '(URL 未知)'}`
-            );
+            tlog.log('Twitter-V2', message, result.originalURL || '(URL 未知)');
 
             // 快取原始文字供翻譯按鈕使用
             if (result.originalText && result.tweetId) {
@@ -784,10 +784,7 @@ class TFDMessageHandler {
      */
     async sendTwitterWithPagination(message, result) {
         try {
-            const displayName = message.member?.displayName || message.author.globalName || message.author.username;
-            console.log(
-                `${this.getTimePrefix()} [TFD] [Twitter] ${displayName} ${result.originalURL || result.url || '(URL 未知)'}`
-            );
+            tlog.log('Twitter', message, result.originalURL || result.url || '(URL 未知)');
 
             // 🌐 使用 Webhook 發送回應：嵌入式訊息 + 分頁按鈕
             await this.sendViaWebhook(message, {
@@ -950,7 +947,7 @@ class TFDMessageHandler {
                 .setTitle('🎬 混合媒體影片播放 (HTML 模式)')
                 .setDescription(`這個推文包含 **${result.videosCount}** 個影片和 **${result.imagesCount}** 張圖片\n\n⚠️ HTML 影片播放模式正在開發中...`)
                 .setColor(0x1DA1F2)
-                .setFooter({ text: 'Enhanced TFD - HTML Video Mode', iconURL: this.getSiteIcon(result.siteName) })
+                .setFooter({ text: 'PekoEmbed - HTML Video Mode', iconURL: this.getSiteIcon(result.siteName) })
                 .setTimestamp();
 
             if (result.originalURL) {
@@ -982,7 +979,7 @@ class TFDMessageHandler {
                 .setTitle('❌ HTML 影片播放失敗')
                 .setDescription('很抱歉，HTML 影片播放功能出現錯誤。')
                 .setColor(0xFF0000)
-                .setFooter({ text: 'Enhanced TFD', iconURL: this.getSiteIcon(result.siteName) });
+                .setFooter({ text: 'PekoEmbed', iconURL: this.getSiteIcon(result.siteName) });
 
             if (result.originalURL) {
                 errorEmbed.setURL(result.originalURL);
@@ -1106,6 +1103,7 @@ class TFDMessageHandler {
         try {
             const embeds = [];
             const originalURL = result.originalURL || 'https://www.threads.com';
+            tlog.log('Threads', message, originalURL);
 
             // 📊 Footer 統計注入
             try {
@@ -1381,32 +1379,104 @@ class TFDMessageHandler {
                 }
                 message._currentOriginalUrl = currentUrl;
 
-                // 🔒 處理黑名單等級 3（禁止發文）- 支援 PTT 和 Twitter
-                if (result.blocked && result.level === 3) {
-                    const platformName = result.siteName === 'ptt' ? 'PTT' : result.siteName === 'twitter' ? 'Twitter' : result.siteName;
-                    const authorDisplay = result.siteName === 'twitter' ? `@${result.author}` : result.author;
-                    this.log(`${platformName} 作者 ${authorDisplay} 被禁止 (等級 3)`);
+                // 🔒 Per-server blacklist enforcement (level 1/2/3)
+                if (message.guild) {
+                    const gbm = getGBM();
+                    const { author, uid, platform } = normalizeAuthorForBlacklist(result, message);
+                    const entry = author || uid ? gbm.check(message.guild.id, platform, author, uid) : null;
 
-                    try {
-                        // 🌐 使用 Webhook 標記使用者並發送警告訊息
-                        // 注意：這裡仍需使用 message.reply 因為需要 mention 使用者
-                        await message.reply({
-                            content: `-# <@${message.author.id}> 本兔兔不喜歡這個作者`,
-                            allowedMentions: { users: [message.author.id] }
-                        });
-
-                        // 立即抑制原始預覽
-                        try {
-                            await this.embedSuppresser(message);
-                            this.log(`${platformName} 黑名單訊息預覽已抑制`);
-                        } catch (suppressError) {
-                            this.log(`抑制預覽失敗: ${suppressError.message}`, 'error');
+                    if (entry) {
+                        if (entry.level === 3) {
+                            // Level 3: Block entirely
+                            this.log(`${platform} 作者 ${author || 'unknown'} 被禁止 (等級 3)`);
+                            try {
+                                await message.reply({
+                                    content: `-# <@${message.author.id}> 兔兔不轉發這個作者的內容（本伺服器管理員設定）`,
+                                    allowedMentions: { users: [message.author.id] }
+                                });
+                                await this.embedSuppresser(message);
+                            } catch (error) {
+                                this.log(`處理黑名單禁止訊息失敗: ${error.message}`, 'error');
+                            }
+                            continue;
                         }
-                    } catch (error) {
-                        this.log(`處理黑名單禁止訊息失敗: ${error.message}`, 'error');
-                    }
 
-                    continue; // 跳過後續處理
+                        if (entry.level === 2) {
+                            // Level 2: Auto-spoiler
+                            const label = entry.label || '防爆雷';
+
+                            // V2 Container: modify TextDisplay content + MediaGallery
+                            if (result.isV2 && result.v2Container) {
+                                try {
+                                    const container = result.v2Container;
+                                    const comps = container.components || [];
+                                    for (const comp of comps) {
+                                        // TextDisplay: wrap content in spoiler
+                                        if (comp.data && comp.data.content && comp.data.type === 1) {
+                                            const txt = comp.data.content;
+                                            // Skip header lines (start with -#)
+                                            const lines = txt.split('\n');
+                                            const headerLines = [];
+                                            const bodyLines = [];
+                                            for (const line of lines) {
+                                                if (line.startsWith('-#')) headerLines.push(line);
+                                                else bodyLines.push(line);
+                                            }
+                                            if (bodyLines.length > 0) {
+                                                comp.data.content = [...headerLines, '||' + bodyLines.join('\n') + '||'].join('\n');
+                                            }
+                                        }
+                                        // MediaGallery: setSpoiler on items
+                                        if (comp.components) {
+                                            for (const item of comp.components) {
+                                                if (item.data) item.data.spoiler = true;
+                                            }
+                                        }
+                                    }
+                                    // Add spoiler footer
+                                    container.addTextDisplayComponents(
+                                        new TextDisplayBuilder().setContent(`🕶️ 本伺服器已對此作者自動防爆雷【${label}】`)
+                                    );
+                                } catch (e) {
+                                    this.log(`V2 防爆雷失敗: ${e.message}`, 'error');
+                                }
+                            }
+
+                            // Traditional embed: wrap text content
+                            if (result.embed) {
+                                if (result.embed.data && result.embed.data.description) {
+                                    result.embed.data.description = '||' + result.embed.data.description + '||';
+                                }
+                                if (result.embed.data && result.embed.data.title) {
+                                    result.embed.data.title = '||🕶️ ' + result.embed.data.title + '||';
+                                }
+                                if (result.embed.data && result.embed.data.fields) {
+                                    for (const field of result.embed.data.fields) {
+                                        field.value = '||' + field.value + '||';
+                                    }
+                                }
+                                const existingFooter = (result.embed.data && result.embed.data.footer && result.embed.data.footer.text) || '';
+                                const footerText = existingFooter
+                                    ? `🕶️ 本伺服器已對此作者自動防爆雷【${label}】| ${existingFooter}`
+                                    : `🕶️ 本伺服器已對此作者自動防爆雷【${label}】`;
+                                try { result.embed.setFooter({ text: footerText }); } catch (_) {}
+                            }
+
+                            this.log(`${platform} 作者 ${author || 'unknown'} 自動防爆雷(等級 2)`);
+                        }
+
+                        if (entry.level === 1) {
+                            // Level 1: Warning footer
+                            if (result.embed && typeof result.embed.setFooter === 'function') {
+                                const label = entry.label || '未指定';
+                                const existingFooter = result.embed.data?.footer?.text || '';
+                                const warningText = existingFooter
+                                    ? `⚠️ 此作者有 [提示] 標記：${label} | ${existingFooter}`
+                                    : `⚠️ 此作者在本伺服器有 [提示] 等級標記：${label}`;
+                                result.embed.setFooter({ text: warningText });
+                            }
+                        }
+                    }
                 }
 
                 if (result.success) {
@@ -1422,7 +1492,7 @@ class TFDMessageHandler {
                                 contentTypeName = 'Instagram Reels (含資料)';
                             }
                             this.log(`處理 ${contentTypeName} 特殊格式化`);
-                            console.log(`[TFD-MessageHandler-Debug] Embed 標題:`, result.embed.data.title);
+                            tlog.sys('TFD-Debug', `Embed 標題: ${result.embed.data.title}`);
 
                             // 🌐 使用 Webhook 發送 embed 訊息
                             try {
@@ -1469,7 +1539,7 @@ class TFDMessageHandler {
 
                             // 如果 MP4 處理失敗，則不異制嵌入式訊息，讓原始 Pixiv 預覽顯示
                             if (!result.mp4ProcessingResult?.success) {
-                                console.log('[TFD-MessageHandler] MP4 處理失敗，保留原始 Pixiv 預覽');
+                                tlog.sys('TFD', 'MP4 處理失敗，保留原始 Pixiv 預覽');
                                 // 不抑制嵌入式訊息，讓原始預覽顯示
                             } else {
                                 // MP4 處理成功，立即抑制原始預覽
@@ -1884,7 +1954,7 @@ class TFDMessageHandler {
     clearProcessedMessages() {
         this.processedMessages.clear();
         this.linkProcessor.clearCache();
-        console.log('[TFD-MessageHandler] 處理記錄已清空');
+        tlog.sys('TFD', '處理記錄已清空');
     }
 
     /**
@@ -1911,7 +1981,7 @@ class TFDMessageHandler {
             delete require.cache[require.resolve('../config/tfd-config.json')];
             this.config = require('../config/tfd-config.json');
             this.linkProcessor.reloadConfig();
-            console.log('[TFD-MessageHandler] 配置已重新載入');
+            tlog.sys('TFD', '配置已重新載入');
             return true;
         } catch (error) {
             this.log(`重新載入配置失敗: ${error.message}`);
@@ -2137,8 +2207,7 @@ class TFDMessageHandler {
      */
     async sendPTTWithPagination(message, result) {
         try {
-            const displayName = message.member?.displayName || message.author.globalName || message.author.username;
-            this.log(`[PTT] ${displayName} 使用了 PTT 轉換: ${result.url || result.originalUrl || '(URL 未知)'}`);
+            tlog.log('PTT', message, result.url || result.originalUrl || '(URL 未知)');
 
             const embeds = result.embeds || [result.embed];
             const components = result.components || [];
@@ -2160,8 +2229,7 @@ class TFDMessageHandler {
      */
     async sendPTTWithMultipleEmbeds(message, result) {
         try {
-            const displayName = message.member?.displayName || message.author.globalName || message.author.username;
-            this.log(`[PTT] ${displayName} 使用了 PTT 轉換: ${result.url || result.originalUrl || '(URL 未知)'}`);
+            tlog.log('PTT', message, result.url || result.originalUrl || '(URL 未知)');
 
             const embeds = result.embeds || [result.embed];
 
@@ -2182,8 +2250,7 @@ class TFDMessageHandler {
      */
     async sendPTTWithSpoiler(message, result) {
         try {
-            const displayName = message.member?.displayName || message.author.globalName || message.author.username;
-            this.log(`[PTT] ${displayName} 使用了 PTT 轉換 (防爆雷): ${result.url || result.originalUrl || '(URL 未知)'}`);
+            tlog.log('PTT-防爆雷', message, result.url || result.originalUrl || '(URL 未知)');
 
             // 取得主要 embed
             const mainEmbed = result.embeds ? result.embeds[0] : result.embed;

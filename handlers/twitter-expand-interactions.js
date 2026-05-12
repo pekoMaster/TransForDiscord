@@ -10,6 +10,7 @@ const { getCachedContent } = require('./content-translation-interactions.js');
 
 // 從翻譯處理器引入翻譯狀態快取
 const { getTranslationState } = require('./twitter-translate-interactions.js');
+const tlog = require('../utils/tfd-logger');
 
 /**
  * 處理 Twitter 文字展開/收起按鈕互動
@@ -31,7 +32,7 @@ async function handleTwitterExpandInteraction(interaction) {
             isExpanding = false;
             tweetId = customId.replace('twitter_collapse_', '');
         } else {
-            console.warn(`[TwitterExpandInteraction] 未知的 customId: ${customId}`);
+            tlog.sys('TwitterExpandInteraction', `⚠️ 未知的 customId: ${customId}`);
             return false;
         }
 
@@ -109,7 +110,7 @@ async function handleTwitterExpandInteraction(interaction) {
                     textToUse = fxapiResp.tweet.text;
                 }
             } catch (fetchError) {
-                console.error(`[TwitterExpandInteraction] 從 API 獲取失敗:`, fetchError.message);
+                tlog.sysError('TwitterExpandInteraction', `從 API 獲取失敗: ${fetchError.message}`);
             }
         }
 
@@ -222,7 +223,7 @@ async function handleTwitterExpandInteraction(interaction) {
         return true;
 
     } catch (error) {
-        console.error('[TwitterExpandInteraction] 處理失敗:', error);
+        tlog.sysError('TwitterExpandInteraction', `處理失敗: ${error}`);
 
         try {
             if (interaction.deferred || interaction.replied) {
@@ -237,7 +238,7 @@ async function handleTwitterExpandInteraction(interaction) {
                 });
             }
         } catch (replyError) {
-            console.error('[TwitterExpandInteraction] 回應失敗:', replyError);
+            tlog.sysError('TwitterExpandInteraction', `回應失敗: ${replyError}`);
         }
 
         return false;

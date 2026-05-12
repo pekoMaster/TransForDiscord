@@ -7,6 +7,7 @@
 const { ActionRowBuilder, MessageFlags } = require('discord.js');
 const { getTranslationState } = require('./twitter-translate-interactions.js');
 const { getCachedContent } = require('./content-translation-interactions.js');
+const tlog = require('../utils/tfd-logger');
 
 /**
  * 處理 Twitter 統一展開/收回按鈕互動
@@ -47,7 +48,7 @@ async function handleTwitterAllToggleInteraction(interaction) {
             const resp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, { timeout: 5000 });
             if (resp && resp.tweet) tweet = resp.tweet;
         } catch (e) {
-            console.error(`[TwitterAllToggle] API 獲取失敗:`, e.message);
+            tlog.sysError('TwitterAllToggle', `API 獲取失敗: ${e.message}`);
         }
 
         const TFDTwitterExtractor = require('../tfd-system/extractors/twitter-v2.js');
@@ -268,7 +269,7 @@ async function handleTwitterAllToggleInteraction(interaction) {
         return true;
 
     } catch (error) {
-        console.error('[TwitterAllToggle] 處理失敗:', error);
+        tlog.sysError('TwitterAllToggle', `處理失敗: ${error}`);
         try {
             if (interaction.deferred || interaction.replied) {
                 await interaction.followUp({
@@ -282,7 +283,7 @@ async function handleTwitterAllToggleInteraction(interaction) {
                 });
             }
         } catch (e) {
-            console.error('[TwitterAllToggle] 回應失敗:', e);
+            tlog.sysError('TwitterAllToggle', `回應失敗: ${e}`);
         }
         return false;
     }

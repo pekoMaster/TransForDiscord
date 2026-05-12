@@ -16,6 +16,7 @@ const PixivExtractor = require('../tfd-system/extractors/pixiv.js');
 const PixivCacheManager = require('../utils/pixiv-cache-manager.js');
 const { editWebhookMessage } = require('../utils/webhook-manager.js');
 const { appendSpoilerButton } = require('../utils/spoiler-button-helper.js');
+const tlog = require('../utils/tfd-logger');
 
 function getTimePrefix() {
     const now = new Date();
@@ -80,13 +81,13 @@ module.exports = {
             const originalURL = `https://www.pixiv.net/artworks/${artworkId}`;
             const extractor = new PixivExtractor();
 
-            console.log(`${getTimePrefix()} [Pixiv-Reload] 用戶 ${interaction.user.tag} 重試 ${artworkId} → proxy[${safeProxyIndex}] (${PixivExtractor.PROXY_SERVICES?.[safeProxyIndex] || '?'})`);
+            tlog.sys('Pixiv-Reload', `用戶 ${interaction.user.tag} 重試 ${artworkId} → proxy[${safeProxyIndex}] (${PixivExtractor.PROXY_SERVICES?.[safeProxyIndex] || '?'})`);
 
             let result;
             try {
                 result = await extractor.extractArtwork(artworkId, originalURL, null, safeProxyIndex);
             } catch (err) {
-                console.error(`${getTimePrefix()} [Pixiv-Reload] 重新抓取失敗:`, err.message);
+                tlog.sysError('Pixiv-Reload', `重新抓取失敗: ${err.message}`);
                 return interaction.followUp({
                     content: `❌ 重新抓取失敗：${err.message}`,
                     flags: MessageFlags.Ephemeral
@@ -153,18 +154,18 @@ module.exports = {
             const updatePayload = { embeds, components };
             try {
                 await editWebhookMessage(interaction.channel, interaction.message.id, updatePayload);
-                console.log(`${getTimePrefix()} [Pixiv-Reload] 已重新載入 ${artworkId} (proxy[${safeProxyIndex}])`);
+                tlog.sys('Pixiv-Reload', `已重新載入 ${artworkId} (proxy[${safeProxyIndex}])`);
             } catch (editError) {
-                console.warn(`${getTimePrefix()} [Pixiv-Reload] Webhook 編輯失敗 (${editError.message})，改用 followUp`);
+                tlog.sys('Pixiv-Reload', `⚠️ Webhook 編輯失敗 (${editError.message})，改用 followUp`);
                 try {
                     await interaction.followUp(updatePayload);
                 } catch (followErr) {
-                    console.error(`${getTimePrefix()} [Pixiv-Reload] followUp 也失敗:`, followErr.message);
+                    tlog.sysError('Pixiv-Reload', `followUp 也失敗: ${followErr.message}`);
                 }
             }
 
         } catch (error) {
-            console.error(`${getTimePrefix()} [Pixiv-Reload] 處理互動時發生錯誤:`, error);
+            tlog.sysError('Pixiv-Reload', `處理互動時發生錯誤: ${error}`);
             if (error.code === 10062) return; // Unknown interaction (已超時)
             try {
                 if (!interaction.replied && !interaction.deferred) {

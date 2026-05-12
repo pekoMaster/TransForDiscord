@@ -15,6 +15,7 @@
 const { Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const PixivExtractor = require('../tfd-system/extractors/pixiv.js');
 const PixivCacheManager = require('../utils/pixiv-cache-manager.js');
+const tlog = require('../utils/tfd-logger');
 
 // 🚀 效能優化：模組級別單例（避免每次點擊都創建新實例）
 const pixivExtractor = new PixivExtractor();
@@ -53,7 +54,7 @@ module.exports = {
             if (clickCooldown.has(cooldownKey)) {
                 const lastClick = clickCooldown.get(cooldownKey);
                 if (now - lastClick < cooldownTime) {
-                    console.log(`[Pixiv翻頁] 用戶 ${interaction.user.tag} 點擊過於頻繁，跳過處理`);
+                    tlog.sys('Pixiv翻頁', `用戶 ${interaction.user.tag} 點擊過於頻繁，跳過處理`);
                     return;
                 }
             }
@@ -66,7 +67,7 @@ module.exports = {
                 await interaction.deferUpdate();
             }
 
-            console.log(`[Pixiv翻頁] 用戶 ${interaction.user.tag} 點擊: ${action} → 第 ${pageNumber + 1} 張`);
+            tlog.sys('Pixiv翻頁', `用戶 ${interaction.user.tag} 點擊: ${action} → 第 ${pageNumber + 1} 張`);
 
             const originalURL = `https://www.pixiv.net/artworks/${artworkId}`;
 
@@ -77,7 +78,7 @@ module.exports = {
             if (memoryCacheEntry && (Date.now() - memoryCacheEntry.timestamp < MEMORY_CACHE_TTL)) {
                 // 記憶體快取命中
                 fullCachedData = memoryCacheEntry.data;
-                console.log(`[Pixiv翻頁] 記憶體快取命中: ${artworkId}`);
+                tlog.sys('Pixiv翻頁', `記憶體快取命中: ${artworkId}`);
             } else {
                 // 記憶體快取未命中，從磁碟讀取
                 fullCachedData = await cacheManager.loadArtworkCache(artworkId);
@@ -88,7 +89,7 @@ module.exports = {
                         data: fullCachedData,
                         timestamp: Date.now()
                     });
-                    console.log(`[Pixiv翻頁] 磁碟快取命中，已存入記憶體: ${artworkId}`);
+                    tlog.sys('Pixiv翻頁', `磁碟快取命中，已存入記憶體: ${artworkId}`);
                 }
             }
 
@@ -141,13 +142,13 @@ module.exports = {
                 components: components
             });
 
-            console.log(`[Pixiv翻頁] 成功切換到第 ${pageNumber + 1}/${totalPages} 張`);
+            tlog.sys('Pixiv翻頁', `成功切換到第 ${pageNumber + 1}/${totalPages} 張`);
 
             // 🚀 定期清理過期的記憶體快取（每次成功翻頁時檢查）
             cleanExpiredMemoryCache();
 
         } catch (error) {
-            console.error('[Pixiv翻頁] 處理翻頁互動失敗:', error);
+            tlog.sysError('Pixiv翻頁', `處理翻頁互動失敗: ${error}`);
 
             // 只有在特定錯誤時才嘗試回應
             if (error.code !== 10062) { // 10062 = Unknown interaction (已超時)
@@ -164,7 +165,7 @@ module.exports = {
                         });
                     }
                 } catch (replyError) {
-                    console.error('[Pixiv翻頁] 無法回應錯誤訊息:', replyError.message);
+                    tlog.sysError('Pixiv翻頁', `無法回應錯誤訊息: ${replyError.message}`);
                 }
             }
         }
@@ -187,7 +188,7 @@ function cleanExpiredMemoryCache() {
     }
 
     if (cleanedCount > 0) {
-        console.log(`[Pixiv翻頁] 已清理 ${cleanedCount} 個過期記憶體快取`);
+        tlog.sys('Pixiv翻頁', `已清理 ${cleanedCount} 個過期記憶體快取`);
     }
 }
 

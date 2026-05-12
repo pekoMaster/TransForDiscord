@@ -10,6 +10,7 @@ const { getTranslationState, setTranslationState } = require('./twitter-translat
 const { getCachedContent } = require('./content-translation-interactions.js');
 const { getInstance: getApiKeyService } = require('../utils/user-api-key-service.js');
 const { getInstance: getGeminiTranslator } = require('../utils/gemini-translator.js');
+const tlog = require('../utils/tfd-logger');
 
 /**
  * 處理 Twitter 引用/回覆推文切換按鈕互動
@@ -74,7 +75,7 @@ async function handleTwitterQuoteInteraction(interaction) {
                 tweet = fxapiResp.tweet;
             }
         } catch (fetchError) {
-            console.error(`[Twitter${typeLabel}切換] API 獲取失敗:`, fetchError.message);
+            tlog.sysError('Twitter${typeLabel}切換', `API 獲取失敗: ${fetchError.message}`);
         }
 
         // 獲取原始 embed 的 JSON
@@ -110,7 +111,7 @@ async function handleTwitterQuoteInteraction(interaction) {
                     // 如果處於翻譯狀態，需要翻譯引用推文
                     let displayContent = rawQuoteContent;
                     if (isTranslated) {
-                        console.log(`[Twitter引用切換] 當前為翻譯狀態，正在翻譯引用推文: ${quoteInfo.tweetId}`);
+                        tlog.sys('Twitter引用切換', `當前為翻譯狀態，正在翻譯引用推文: ${quoteInfo.tweetId}`);
                         
                         // 檢查是否已有引用推文的翻譯快取
                         let translatedQuoteText = translationState.translatedQuoteText;
@@ -183,7 +184,7 @@ async function handleTwitterQuoteInteraction(interaction) {
                     // 如果處於翻譯狀態，需要翻譯回覆推文
                     let displayContent = rawReplyContent;
                     if (isTranslated) {
-                        console.log(`[Twitter回覆切換] 當前為翻譯狀態，正在翻譯回覆推文: ${replyInfo.tweetId}`);
+                        tlog.sys('Twitter回覆切換', `當前為翻譯狀態，正在翻譯回覆推文: ${replyInfo.tweetId}`);
                         
                         // 檢查是否已有回覆推文的翻譯快取
                         let translatedReplyText = translationState.translatedReplyText;
@@ -345,7 +346,7 @@ async function handleTwitterQuoteInteraction(interaction) {
         return true;
 
     } catch (error) {
-        console.error('[Twitter引用/回覆切換] 處理失敗:', error);
+        tlog.sysError('Twitter引用/回覆切換', `處理失敗: ${error}`);
 
         try {
             if (interaction.deferred || interaction.replied) {
@@ -360,7 +361,7 @@ async function handleTwitterQuoteInteraction(interaction) {
                 });
             }
         } catch (replyError) {
-            console.error('[Twitter引用/回覆切換] 回應失敗:', replyError);
+            tlog.sysError('Twitter引用/回覆切換', `回應失敗: ${replyError}`);
         }
 
         return false;
@@ -382,7 +383,7 @@ async function translateQuoteTweet(quoteTweet, translationState, mainTweetId, us
         const userApiKey = await apiKeyService.getApiKey(userId, 'gemini');
 
         if (!userApiKey) {
-            console.log('[Twitter引用翻译] 用户没有 API Key，返回原文');
+            tlog.sys('Twitter引用翻译', '用户没有 API Key，返回原文');
             return null;
         }
 
@@ -401,7 +402,7 @@ async function translateQuoteTweet(quoteTweet, translationState, mainTweetId, us
         );
 
         if (!translateResult.success) {
-            console.error('[Twitter引用翻译] 翻译失败:', translateResult.errorType, translateResult.error);
+            tlog.sysError('Twitter引用翻译', `翻译失败: ${translateResult.errorType, translateResult.error}`);
             return null;
         }
 
@@ -411,11 +412,11 @@ async function translateQuoteTweet(quoteTweet, translationState, mainTweetId, us
         translationState.translatedQuoteText = translatedText;
         setTranslationState(mainTweetId, translationState);
 
-        console.log('[Twitter引用翻译] 翻译成功并已缓存');
+        tlog.sys('Twitter引用翻译', '翻译成功并已缓存');
         return translatedText;
 
     } catch (error) {
-        console.error('[Twitter引用翻译] 翻译异常:', error);
+        tlog.sysError('Twitter引用翻译', `翻译异常: ${error}`);
         return null;
     }
 }
@@ -435,7 +436,7 @@ async function translateReplyTweet(replyTweet, translationState, mainTweetId, us
         const userApiKey = await apiKeyService.getApiKey(userId, 'gemini');
 
         if (!userApiKey) {
-            console.log('[Twitter回覆翻译] 用户没有 API Key，返回原文');
+            tlog.sys('Twitter回覆翻译', '用户没有 API Key，返回原文');
             return null;
         }
 
@@ -454,7 +455,7 @@ async function translateReplyTweet(replyTweet, translationState, mainTweetId, us
         );
 
         if (!translateResult.success) {
-            console.error('[Twitter回覆翻译] 翻译失败:', translateResult.errorType, translateResult.error);
+            tlog.sysError('Twitter回覆翻译', `翻译失败: ${translateResult.errorType, translateResult.error}`);
             return null;
         }
 
@@ -464,11 +465,11 @@ async function translateReplyTweet(replyTweet, translationState, mainTweetId, us
         translationState.translatedReplyText = translatedText;
         setTranslationState(mainTweetId, translationState);
 
-        console.log('[Twitter回覆翻译] 翻译成功并已缓存');
+        tlog.sys('Twitter回覆翻译', '翻译成功并已缓存');
         return translatedText;
 
     } catch (error) {
-        console.error('[Twitter回覆翻译] 翻译异常:', error);
+        tlog.sysError('Twitter回覆翻译', `翻译异常: ${error}`);
         return null;
     }
 }

@@ -9,6 +9,7 @@ const { getInstance: getGeminiTranslator } = require('../utils/gemini-translator
 
 // 引入快取系統以取得完整文字
 const { getCachedContent } = require('./content-translation-interactions.js');
+const tlog = require('../utils/tfd-logger');
 
 // 翻譯快取 (避免重複翻譯相同內容)
 // 格式: Map<cacheKey, { text, fullText, timestamp }>
@@ -21,13 +22,6 @@ const translationStateCache = new Map();
 
 // 快取過期時間 (30 分鐘)
 const CACHE_TTL = 30 * 60 * 1000;
-
-function getTimePrefix() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    return `[${hours}:${minutes}]`;
-}
 
 /**
  * 處理翻譯按鈕互動
@@ -99,7 +93,7 @@ async function handleTranslateButton(interaction) {
 
         // 如果快取沒有，嘗試從 fxtwitter API 獲取
         if (!fullOriginalText) {
-            console.log(`${getTimePrefix()} [Twitter-Translate] 快取中無完整文字，從 API 獲取: ${tweetId}`);
+            tlog.log('Twitter-翻譯', interaction, `快取中無完整文字，從 API 獲取: ${tweetId}`);
             try {
                 const HTTPClient = require('../tfd-system/utils/http-client');
                 const httpClient = new HTTPClient();
@@ -112,7 +106,7 @@ async function handleTranslateButton(interaction) {
                     fullOriginalText = tweetData.text;
                 }
             } catch (fetchError) {
-                console.error(`${getTimePrefix()} [Twitter-Translate] 從 API 獲取失敗:`, fetchError.message);
+                tlog.sysError('Twitter-翻譯', `從 API 獲取失敗:`, fetchError.message);
             }
         } else {
             // 有快取文字但沒有 tweetData，嘗試獲取（為了引用推文上下文）
@@ -166,7 +160,7 @@ async function handleTranslateButton(interaction) {
                         quoteContext += `[被回覆的推文 by @${rt.author?.screen_name || ''}]: ${replyOriginalText}\n`;
                     }
                 } catch (replyFetchErr) {
-                    console.warn(`${getTimePrefix()} [Twitter-Translate] 獲取回覆推文失敗: ${replyFetchErr.message}`);
+                    tlog.warn('Twitter-翻譯', interaction, `獲取回覆推文失敗: ${replyFetchErr.message}`);
                 }
             }
         }
@@ -209,7 +203,7 @@ async function handleTranslateButton(interaction) {
         let translatedReplyText = ''; // 回覆推文的翻譯
 
         if (cachedTranslation && cachedTranslation.fullText) {
-            console.log(`${getTimePrefix()} [Twitter-Translate] 使用快取翻譯: ${tweetId}`);
+            tlog.log('Twitter-翻譯', interaction, `使用快取翻譯: ${tweetId}`);
             translatedFullText = cachedTranslation.fullText;
             translatedQuoteText = cachedTranslation.quoteText || '';
             translatedReplyText = cachedTranslation.replyText || ''; // 回覆推文的翻譯
@@ -233,11 +227,11 @@ async function handleTranslateButton(interaction) {
                     components: originalMessage.components
                 });
             } catch (loadingErr) {
-                console.warn(`${getTimePrefix()} [Twitter-Translate] 顯示翻譯中提示失敗:`, loadingErr.message);
+                tlog.warn('Twitter-翻譯', interaction, `顯示翻譯中提示失敗:`, loadingErr.message);
             }
 
             // 執行翻譯（主推文 + 引用推文 + 回覆推文一起翻，用上下文提高準確度）
-            console.log(`${getTimePrefix()} [Twitter-Translate] 開始翻譯推文: ${tweetId} (主文: ${fullOriginalText.length}字, 引用: ${quoteOriginalText.length}字, 回覆: ${replyOriginalText.length}字, 上下文: ${quoteContext.length}字)`);
+            tlog.log('Twitter-翻譯', interaction, `開始翻譯推文: ${tweetId} (主文: ${fullOriginalText.length}字, 引用: ${quoteOriginalText.length}字, 回覆: ${replyOriginalText.length}字, 上下文: ${quoteContext.length}字)`);
 
             const geminiTranslator = getGeminiTranslator();
 
@@ -325,7 +319,7 @@ async function handleTranslateButton(interaction) {
             const truncationResult = truncator.truncateText(translatedFullText);
             if (truncationResult.isTruncated) {
                 displayText = truncationResult.truncatedText;
-                console.log(`${getTimePrefix()} [Twitter-Translate] 翻譯文字已截斷: ${translatedFullText.length} -> ${displayText.length}`);
+                tlog.log('Twitter-翻譯', interaction, `翻譯文字已截斷: ${translatedFullText.length} -> ${displayText.length}`);
             }
         }
 
@@ -399,7 +393,7 @@ async function handleTranslateButton(interaction) {
         });
 
     } catch (error) {
-        console.error(`${getTimePrefix()} [Twitter-Translate] 翻譯錯誤:`, error);
+        tlog.sysError('Twitter-翻譯', `翻譯錯誤:`, error);
 
         try {
             if (interaction.deferred) {
@@ -414,7 +408,7 @@ async function handleTranslateButton(interaction) {
                 });
             }
         } catch (replyError) {
-            console.error(`${getTimePrefix()} [Twitter-Translate] 回應錯誤:`, replyError);
+            tlog.sysError('Twitter-翻譯', `回應錯誤:`, replyError);
         }
     }
 }
@@ -454,7 +448,7 @@ async function handleShowOriginalButton(interaction) {
 
         // 如果還是沒有，從 API 獲取
         if (!originalFullText) {
-            console.log(`${getTimePrefix()} [Twitter-Translate] 快取中無原文，從 API 獲取: ${tweetId}`);
+            tlog.log('Twitter-翻譯', interaction, `快取中無原文，從 API 獲取: ${tweetId}`);
             const HTTPClient = require('../tfd-system/utils/http-client');
             const httpClient = new HTTPClient();
 
@@ -467,7 +461,7 @@ async function handleShowOriginalButton(interaction) {
                     originalFullText = fxapiResp.tweet.text;
                 }
             } catch (fetchError) {
-                console.error(`${getTimePrefix()} [Twitter-Translate] 從 API 獲取失敗:`, fetchError.message);
+                tlog.sysError('Twitter-翻譯', `從 API 獲取失敗:`, fetchError.message);
             }
         }
 
@@ -495,7 +489,7 @@ async function handleShowOriginalButton(interaction) {
             const truncationResult = truncator.truncateText(originalFullText);
             if (truncationResult.isTruncated) {
                 displayText = truncationResult.truncatedText;
-                console.log(`${getTimePrefix()} [Twitter-Translate] 原文已截斷: ${originalFullText.length} -> ${displayText.length}`);
+                tlog.log('Twitter-翻譯', interaction, `原文已截斷: ${originalFullText.length} -> ${displayText.length}`);
             }
         }
 
@@ -560,10 +554,10 @@ async function handleShowOriginalButton(interaction) {
             components: updatedComponents
         });
 
-        console.log(`${getTimePrefix()} [Twitter-Translate] 已切換回原文: ${tweetId}`);
+        tlog.log('Twitter-翻譯', interaction, `已切換回原文: ${tweetId}`);
 
     } catch (error) {
-        console.error(`${getTimePrefix()} [Twitter-Translate] 切換原文錯誤:`, error);
+        tlog.sysError('Twitter-翻譯', `切換原文錯誤:`, error);
 
         try {
             if (interaction.deferred) {
@@ -573,7 +567,7 @@ async function handleShowOriginalButton(interaction) {
                 });
             }
         } catch (replyError) {
-            console.error(`${getTimePrefix()} [Twitter-Translate] 回應錯誤:`, replyError);
+            tlog.sysError('Twitter-翻譯', `回應錯誤:`, replyError);
         }
     }
 }

@@ -15,6 +15,7 @@
  */
 
 const db = require('../db');
+const tlog = require('./tfd-logger');
 
 const LIMITS = {
     user: parseInt(process.env.TFD_RATE_USER_PER_MIN, 10) || 10,
@@ -95,9 +96,9 @@ function startGC(intervalMs = 5 * 60 * 1000) {
     gcInterval = setInterval(() => {
         try {
             const removed = db.rateLimit.cleanupOlderThan(5);
-            if (removed > 0) console.log(`[rate-limiter] GC removed ${removed} old bucket rows`);
+            if (removed > 0) tlog.sys('rate-limiter', `GC removed ${removed} old bucket rows`);
         } catch (e) {
-            console.error('[rate-limiter] GC failed:', e.message);
+            tlog.sysError('rate-limiter', `GC failed: ${e.message}`);
         }
     }, intervalMs);
     gcInterval.unref?.();

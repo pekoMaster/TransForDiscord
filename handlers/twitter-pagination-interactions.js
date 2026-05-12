@@ -11,6 +11,7 @@ const TFDTwitterExtractor = require('../tfd-system/extractors/twitter-v2.js');
 const HTTPClient = require('../tfd-system/utils/http-client');
 const { appendSpoilerButton } = require('../utils/spoiler-button-helper.js');
 const { lookupUrl } = require('../tfd-system/utils/url-stats');
+const tlog = require('../utils/tfd-logger');
 
 /**
  * 處理翻頁按鈕（twitter_first_ / twitter_prev_ / twitter_next_ / twitter_last_ / twitter_page_）
@@ -72,7 +73,7 @@ async function handlePagination(interaction) {
         });
 
     } catch (error) {
-        console.error(`[Twitter分頁] 處理失敗:`, error);
+        tlog.sysError('Twitter分頁', `處理失敗: ${error}`);
 
         if (!interaction.replied && !interaction.deferred) {
             await interaction.reply({
@@ -97,7 +98,7 @@ function extractImagesFromTweet(tweet) {
             });
         }
     } catch (error) {
-        console.error('提取圖片失敗:', error);
+        tlog.sysError('TFD', `提取圖片失敗: ${error}`);
     }
     return images;
 }
@@ -120,7 +121,7 @@ function buildUpdatedEmbed(tweet, images, currentPage, urlStats = null) {
             embed.setThumbnail(tweet.author.avatar_url);
         }
     } catch (error) {
-        console.error('設定標題失敗:', error);
+        tlog.sysError('TFD', `設定標題失敗: ${error}`);
     }
 
     // 設定描述
@@ -129,7 +130,7 @@ function buildUpdatedEmbed(tweet, images, currentPage, urlStats = null) {
             embed.setDescription(tweet.text);
         }
     } catch (error) {
-        console.error('設定描述失敗:', error);
+        tlog.sysError('TFD', `設定描述失敗: ${error}`);
     }
 
     // 設定當前頁面的圖片
@@ -152,7 +153,7 @@ function buildUpdatedEmbed(tweet, images, currentPage, urlStats = null) {
             });
         }
     } catch (error) {
-        console.error('添加統計失敗:', error);
+        tlog.sysError('TFD', `添加統計失敗: ${error}`);
     }
 
     // 設定 footer - 保持與主提取器一致的格式
@@ -323,7 +324,7 @@ async function handleMergeImages(interaction, tweetId) {
         });
 
     } catch (error) {
-        console.error(`[Twitter] 合併圖片失敗:`, error);
+        tlog.sysError('Twitter', `合併圖片失敗: ${error}`);
         if (!interaction.replied && !interaction.deferred) {
             await interaction.reply({
                 content: '合併圖片時發生錯誤，請稍後再試。',
@@ -469,7 +470,7 @@ async function handleSplitImages(interaction, tweetId) {
         });
 
     } catch (error) {
-        console.error(`[Twitter] 拆開圖片失敗:`, error);
+        tlog.sysError('Twitter', `拆開圖片失敗: ${error}`);
         if (!interaction.replied && !interaction.deferred) {
             await interaction.reply({
                 content: '拆開圖片時發生錯誤，請稍後再試。',

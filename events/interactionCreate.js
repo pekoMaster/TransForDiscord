@@ -6,6 +6,7 @@
 const path = require('path');
 const fs = require('fs');
 const { MessageFlags } = require('discord.js');
+const tlog = require('../utils/tfd-logger');
 
 // 斜線指令快取
 const commands = new Map();
@@ -21,7 +22,7 @@ if (fs.existsSync(commandsPath)) {
                 commands.set(cmd.data.name, cmd);
             }
         } catch (e) {
-            console.error(`載入指令 ${file} 失敗:`, e.message);
+            tlog.sysError('InteractionCreate', `載入指令 ${file} 失敗: ${e.message}`);
         }
     }
 }
@@ -39,7 +40,7 @@ async function execute(interaction, client) {
 
     try {
         // ── 斜線指令 ──
-        if (interaction.isChatInputCommand()) {
+        if (interaction.isChatInputCommand() || interaction.isContextMenuCommand()) {
             const cmd = commands.get(interaction.commandName);
             if (!cmd) return;
             await cmd.execute(interaction, client);
@@ -54,6 +55,22 @@ async function execute(interaction, client) {
             if (modalId.startsWith('v2_spoiler_modal_')) {
                 const { handleV2SpoilerModalSubmit } = require('../handlers/twitter-v2-interactions.js');
                 return await handleV2SpoilerModalSubmit(interaction);
+            }
+
+
+            // Context menu modals
+            if (modalId.startsWith('ctx_delete_modal_') || modalId.startsWith('ctx_spoiler_modal_') || modalId.startsWith('ctx_report_modal_')) {
+                const ctxCmd = commands.get('PekoEmbed 操作');
+                if (ctxCmd && ctxCmd.handleContextModal) return await ctxCmd.handleContextModal(interaction);
+            }
+
+            // Report system modals
+            if (modalId.startsWith('report_spoiler_modal_') ||
+                modalId.startsWith('report_recall_modal_') ||
+                modalId.startsWith('report_blacklist_modal_') ||
+                modalId.startsWith('rbl_admin_modal_')) {
+                const { routeReportInteraction } = require('../handlers/report-button-interactions.js');
+                return await routeReportInteraction(interaction);
             }
 
             // 通用防爆雷 Modal
@@ -75,7 +92,20 @@ async function execute(interaction, client) {
             return await handleSpoilerButtonInteraction(interaction);
         }
 
-        // ── Twitter V2 互動（翻譯、引用、回覆、全文展開、防爆雷）──
+
+        // ── Context menu actions (PekoEmbed 操作)
+        if (customId.startsWith('ctx_')) {
+            const ctxCmd = commands.get('PekoEmbed 操作');
+            if (ctxCmd && ctxCmd.handleContextButton) return await ctxCmd.handleContextButton(interaction);
+        }
+
+        // ── Report system (回報 / 防爆雷 / 收回 / 黑名單回報 / 管理員審核) ──
+        if (customId.startsWith('report_') || customId.startsWith('rbl_')) {
+            const { routeReportInteraction } = require('../handlers/report-button-interactions.js');
+            return await routeReportInteraction(interaction);
+        }
+
+        // ── Twitter V2 互動
         if (customId.startsWith('v2_')) {
             const handler = require('../handlers/twitter-v2-interactions.js');
             return await handler.handleV2Interaction(interaction);
@@ -119,7 +149,7 @@ async function execute(interaction, client) {
         }
 
     } catch (err) {
-        console.error(`[InteractionCreate] 處理錯誤 (${interaction.customId || interaction.commandName}):`, err.message);
+        tlog.error('InteractionCreate', interaction, `處理錯誤 (${interaction.customId || interaction.commandName}): ${err.message}`);
         try {
             const msg = { content: '❌ 處理請求時發生錯誤，請稍後再試。', flags: MessageFlags.Ephemeral };
             if (!interaction.replied && !interaction.deferred) {

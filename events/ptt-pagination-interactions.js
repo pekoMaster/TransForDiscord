@@ -7,6 +7,7 @@
 const { Events, MessageFlags } = require('discord.js');
 const PTTExtractor = require('../tfd-system/extractors/ptt.js');
 const PTTCacheManager = require('../utils/ptt-cache-manager.js');
+const tlog = require('../utils/tfd-logger');
 
 // 記憶體快取（避免每次翻頁都讀取磁碟）
 const memoryCache = new Map();
@@ -40,7 +41,7 @@ module.exports = {
             if (clickCooldown.has(cooldownKey)) {
                 const lastClick = clickCooldown.get(cooldownKey);
                 if (now - lastClick < cooldownTime) {
-                    console.log(`[PTT翻頁] 用戶 ${interaction.user.tag} 點擊過於頻繁，跳過處理`);
+                    tlog.sys('PTT翻頁', `用戶 ${interaction.user.tag} 點擊過於頻繁，跳過處理`);
                     return;
                 }
             }
@@ -53,7 +54,7 @@ module.exports = {
                 await interaction.deferUpdate();
             }
 
-            console.log(`[PTT翻頁] 用戶 ${interaction.user.tag} 點擊: ${action} → 第 ${pageNumber + 1} 頁`);
+            tlog.sys('PTT翻頁', `用戶 ${interaction.user.tag} 點擊: ${action} → 第 ${pageNumber + 1} 頁`);
 
             // 優先從記憶體快取獲取
             let cachedData = null;
@@ -101,12 +102,12 @@ module.exports = {
                 });
             }
 
-            console.log(`[PTT翻頁] 成功切換到第 ${pageNumber + 1} 頁`);
+            tlog.sys('PTT翻頁', `成功切換到第 ${pageNumber + 1} 頁`);
 
             cleanExpiredMemoryCache();
 
         } catch (error) {
-            console.error('[PTT翻頁] 處理翻頁互動失敗:', error);
+            tlog.sysError('PTT翻頁', `處理翻頁互動失敗: ${error}`);
 
             // 只有在特定錯誤時才嘗試回應
             if (error.code !== 10062) { // 10062 = Unknown interaction (已超時)
@@ -122,10 +123,10 @@ module.exports = {
                         });
                     }
                 } catch (replyError) {
-                    console.error('[PTT翻頁] 無法回應錯誤訊息:', replyError.message);
+                    tlog.sysError('PTT翻頁', `無法回應錯誤訊息: ${replyError.message}`);
                 }
             } else {
-                console.log('[PTT翻頁] 互動已超時，跳過錯誤回應');
+                tlog.sys('PTT翻頁', '互動已超時，跳過錯誤回應');
             }
         }
     }

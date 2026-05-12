@@ -6,6 +6,7 @@
 const { EmbedBuilder, MessageFlags } = require('discord.js');
 const translator = require('../utils/translator.js');
 const deeplTranslator = require('../utils/deepl-translator.js').getInstance();
+const tlog = require('../utils/tfd-logger');
 
 // 暫存原始文字的 Map（用於翻譯）
 // 格式：Map<sourceId, { text, timestamp }>
@@ -70,7 +71,7 @@ async function handleContentTranslationInteraction(interaction) {
             return false; // 不是翻譯按鈕，返回 false
         }
 
-        console.log(`[內容翻譯] 用戶 ${interaction.user.username} 點擊了 ${customId}`);
+        tlog.sys('內容翻譯', `用戶 ${interaction.user.username} 點擊了 ${customId}`);
 
         // 延遲回應避免超時
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -101,7 +102,7 @@ async function handleContentTranslationInteraction(interaction) {
             return true;
         }
 
-        console.log(`[內容翻譯] 開始翻譯（長度: ${originalText.length}，引擎: ${isDeepL ? 'DeepL' : 'Google'}）`);
+        tlog.sys('內容翻譯', `開始翻譯（長度: ${originalText.length}，引擎: ${isDeepL ? 'DeepL' : 'Google'}）`);
 
         let translationResult;
         let engineName;
@@ -119,7 +120,7 @@ async function handleContentTranslationInteraction(interaction) {
             const deeplResult = await deeplTranslator.toTraditionalChinese(originalText);
 
             if (!deeplResult.success) {
-                console.error(`[內容翻譯] DeepL 翻譯失敗:`, deeplResult.error);
+                tlog.sysError('內容翻譯', `DeepL 翻譯失敗: ${deeplResult.error}`);
                 await interaction.followUp({
                     content: `❌ DeepL 翻譯失敗：${deeplResult.error}`,
                     flags: MessageFlags.Ephemeral
@@ -139,7 +140,7 @@ async function handleContentTranslationInteraction(interaction) {
                 translationResult = googleResult;
                 engineName = 'Google Translate';
             } catch (error) {
-                console.error(`[內容翻譯] Google 翻譯失敗:`, error.message);
+                tlog.sysError('內容翻譯', `Google 翻譯失敗: ${error.message}`);
                 await interaction.followUp({
                     content: `❌ 翻譯失敗：${error.message}`,
                     flags: MessageFlags.Ephemeral
@@ -148,7 +149,7 @@ async function handleContentTranslationInteraction(interaction) {
             }
         }
 
-        console.log(`[內容翻譯] 翻譯成功 (來源語言: ${translationResult.from})`);
+        tlog.sys('內容翻譯', `翻譯成功 (來源語言: ${translationResult.from})`);
 
         // 建立翻譯結果 Embed
         const translationEmbed = new EmbedBuilder()
@@ -169,11 +170,11 @@ async function handleContentTranslationInteraction(interaction) {
             flags: MessageFlags.Ephemeral
         });
 
-        console.log(`[內容翻譯] 翻譯結果已發送給 ${interaction.user.username}`);
+        tlog.sys('內容翻譯', `翻譯結果已發送給 ${interaction.user.username}`);
         return true;
 
     } catch (error) {
-        console.error(`[內容翻譯] 處理失敗:`, error);
+        tlog.sysError('內容翻譯', `處理失敗: ${error}`);
 
         try {
             if (interaction.deferred || interaction.replied) {
@@ -188,7 +189,7 @@ async function handleContentTranslationInteraction(interaction) {
                 });
             }
         } catch (replyError) {
-            console.error(`[內容翻譯] 無法回應錯誤訊息:`, replyError.message);
+            tlog.sysError('內容翻譯', `無法回應錯誤訊息: ${replyError.message}`);
         }
 
         return true;

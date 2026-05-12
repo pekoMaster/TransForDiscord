@@ -8,6 +8,7 @@
  */
 
 const { WebhookClient } = require('discord.js');
+const tlog = require('./tfd-logger');
 
 // Webhook 名稱（用於識別 Bot 建立的 Webhook）
 const WEBHOOK_NAME = 'MB_MessageBubble';
@@ -44,7 +45,7 @@ async function getOrCreateWebhook(channel) {
                 throw new Error('無法取得討論串的父頻道');
             }
 
-            console.log(`[Webhook] 討論串模式: ${channel.name} → 父頻道 ${targetChannel.name}`);
+            tlog.sys('Webhook', `討論串模式: ${channel.name} → 父頻道 ${targetChannel.name}`);
         }
 
         // 使用父頻道 ID 作為快取 key（討論串共用父頻道的 Webhook）
@@ -69,7 +70,7 @@ async function getOrCreateWebhook(channel) {
                 name: WEBHOOK_NAME,
                 reason: 'Ermiana URL 預覽系統使用'
             });
-            console.log(`[Webhook] 已在頻道 ${targetChannel.name} 建立新的 Webhook`);
+            tlog.sys('Webhook', `已在頻道 ${targetChannel.name} 建立新的 Webhook`);
         }
 
         // 存入快取
@@ -77,7 +78,7 @@ async function getOrCreateWebhook(channel) {
 
         return { webhook, threadId };
     } catch (error) {
-        console.error('[Webhook] 取得或建立 Webhook 失敗:', error);
+        tlog.sysError('Webhook', `取得或建立 Webhook 失敗: ${error}`);
         throw new Error(`無法建立 Webhook：${error.message}`);
     }
 }
@@ -100,10 +101,10 @@ function resetIdleTimer(channel) {
             const webhook = webhookCache.get(channelId);
             if (webhook && webhook.name !== IDLE_WEBHOOK_NAME) {
                 await webhook.edit({ name: IDLE_WEBHOOK_NAME });
-                console.log(`[Webhook] 頻道 ${channel.name} 閒置 30 分鐘，已將 Webhook 重命名為「${IDLE_WEBHOOK_NAME}」`);
+                tlog.sys('Webhook', `頻道 ${channel.name} 閒置 30 分鐘，已將 Webhook 重命名為「${IDLE_WEBHOOK_NAME}」`);
             }
         } catch (error) {
-            console.warn('[Webhook] 閒置重命名失敗:', error.message);
+            tlog.sys('Webhook', `⚠️ 閒置重命名失敗: ${error.message}`);
         }
         channelIdleTimers.delete(channelId);
     }, IDLE_TIMEOUT);
@@ -154,7 +155,7 @@ async function sendWithWebhook(channel, options) {
         if (error.code === 10015) {
             const cacheKey = ([10, 11, 12].includes(channel.type) ? channel.parent : channel).id;
             webhookCache.delete(cacheKey);
-            console.warn(`[Webhook] Webhook 已失效（10015），清除快取重試...`);
+            tlog.sys('Webhook', `⚠️ Webhook 已失效（10015），清除快取重試...`);
             try {
                 const { webhook: newWh, threadId: newThreadId } = await getOrCreateWebhook(channel);
                 const message = await newWh.send(buildSendOptions(newThreadId));
@@ -162,11 +163,11 @@ async function sendWithWebhook(channel, options) {
                 resetIdleTimer(targetChannel);
                 return message;
             } catch (retryErr) {
-                console.error('[Webhook] 重試後仍失敗:', retryErr);
+                tlog.sysError('Webhook', `重試後仍失敗: ${retryErr}`);
                 throw new Error(`Webhook 發送失敗：${retryErr.message}`);
             }
         }
-        console.error('[Webhook] 發送訊息失敗:', error);
+        tlog.sysError('Webhook', `發送訊息失敗: ${error}`);
         throw new Error(`Webhook 發送失敗：${error.message}`);
     }
 }
@@ -242,9 +243,9 @@ async function editWebhookMessage(channel, messageId, options) {
         if (error.code === 10015) {
             const cacheKey = ([10, 11, 12].includes(channel.type) ? channel.parent : channel).id;
             webhookCache.delete(cacheKey);
-            console.warn(`[Webhook] 編輯時 Webhook 失效（10015），已清除快取`);
+            tlog.sys('Webhook', `⚠️ 編輯時 Webhook 失效（10015），已清除快取`);
         }
-        console.error('[Webhook] 編輯訊息失敗:', error);
+        tlog.sysError('Webhook', `編輯訊息失敗: ${error}`);
         throw new Error(`Webhook 編輯失敗：${error.message}`);
     }
 }
@@ -258,7 +259,7 @@ function clearAllIdleTimers() {
     }
     channelIdleTimers.clear();
     webhookCache.clear();
-    console.log('[Webhook] 已清除所有閒置計時器');
+    tlog.sys('Webhook', '已清除所有閒置計時器');
 }
 
 module.exports = {

@@ -7,11 +7,7 @@ const { MessageFlags, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInpu
 const { buildV2Container, getCachedTweetData, cacheTweetData, deriveStateFromComponents } = require('./twitter-v2-container-builder');
 const { lookupUrl } = require('../tfd-system/utils/url-stats');
 const db = require('../db');
-
-function getTimePrefix() {
-    const now = new Date();
-    return `[${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}]`;
-}
+const tlog = require('../utils/tfd-logger');
 
 /**
  * 主路由
@@ -31,7 +27,7 @@ async function handleV2Interaction(interaction) {
             await handleV2Spoiler(interaction);
         }
     } catch (error) {
-        console.error(`${getTimePrefix()} [V2-Interactions] 錯誤:`, error);
+        tlog.sysError('V2-Interactions', `錯誤: ${error.message}`);
         try {
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({ content: '❌ 處理時發生錯誤', flags: MessageFlags.Ephemeral });
@@ -145,7 +141,7 @@ async function handleV2Translate(interaction) {
     if (!isTranslateAction) {
         // 切回原文
         await rebuildAndUpdate(interaction, tweetId, { isTranslated: false });
-        console.log(`${getTimePrefix()} [V2-Interactions] 切回原文: ${tweetId}`);
+        tlog.log('V2-翻譯', interaction, `切回原文: ${tweetId}`);
         return;
     }
 
@@ -172,7 +168,7 @@ async function handleV2Translate(interaction) {
             isTranslated: true,
             ...cached,
         });
-        console.log(`${getTimePrefix()} [V2-Interactions] 使用快取翻譯: ${tweetId}`);
+        tlog.log('V2-翻譯', interaction, `快取翻譯: ${tweetId}`);
         return;
     }
 
@@ -202,7 +198,7 @@ async function handleV2Translate(interaction) {
     const translateOptions = { targetLanguage: '繁體中文' };
     if (tweet.author?.name) translateOptions.authorName = tweet.author.name;
 
-    console.log(`${getTimePrefix()} [V2-Interactions] 開始翻譯: ${tweetId} (${textToTranslate.length} 字)`);
+    tlog.log('V2-翻譯', interaction, `開始翻譯: ${tweetId} (${textToTranslate.length} 字)`);
 
     const result = await geminiTranslator.translateWithUserKey(textToTranslate, userApiKey, translateOptions);
 
@@ -250,7 +246,7 @@ async function handleV2Translate(interaction) {
         ...translationData,
     });
 
-    console.log(`${getTimePrefix()} [V2-Interactions] 翻譯完成: ${tweetId}`);
+    tlog.log('V2-翻譯', interaction, `翻譯完成: ${tweetId}`);
 }
 
 /**
@@ -281,7 +277,7 @@ async function handleV2Toggle(interaction, type) {
     }
 
     await rebuildAndUpdate(interaction, tweetId, overrides);
-    console.log(`${getTimePrefix()} [V2-Interactions] ${type} 切換: ${tweetId}`);
+    tlog.log('V2-切換', interaction, `${type} 切換: ${tweetId}`);
 }
 
 module.exports = { handleV2Interaction, handleV2SpoilerModalSubmit };
@@ -305,12 +301,12 @@ async function handleV2Reload(interaction) {
                 replyData: existingCached?.replyData || null,
             });
             await rebuildAndUpdate(interaction, tweetId, {});
-            console.log(`${getTimePrefix()} [V2-Interactions] 重整成功: ${tweetId}`);
+            tlog.log('V2-重整', interaction, `重整成功: ${tweetId}`);
         } else {
             await interaction.followUp({ content: '❌ 無法重新載入推文資料', flags: MessageFlags.Ephemeral });
         }
     } catch (error) {
-        console.error(`${getTimePrefix()} [V2-Interactions] 重整失敗:`, error);
+        tlog.sysError('V2-Interactions', `重整失敗: ${error.message}`);
         await interaction.followUp({ content: '❌ 重整失敗，請稍後再試', flags: MessageFlags.Ephemeral });
     }
 }
@@ -385,7 +381,7 @@ async function handleV2SpoilerModalSubmit(interaction) {
             }
         }
     } catch (e) {
-        console.error('[V2-Spoiler] 送 log 失敗:', e.message);
+        tlog.sysError('V2-Spoiler', `送 log 失敗: ${e.message}`);
     }
 
     // 取得快取推文資料
@@ -466,12 +462,12 @@ async function handleV2SpoilerModalSubmit(interaction) {
         }
         sent = true;
     } catch (e) {
-        console.error('[V2-Spoiler] 發送失敗:', e.message);
+        tlog.sysError('V2-Spoiler', `發送失敗: ${e.message}`);
     }
 
     if (sent) {
         try { await message.delete(); } catch (e) {
-            console.error('[V2-Spoiler] 刪除原訊息失敗:', e.message);
+            tlog.sysError('V2-Spoiler', `刪除原訊息失敗: ${e.message}`);
         }
     }
 

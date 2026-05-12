@@ -11,6 +11,7 @@
 const { EmbedBuilder, MessageFlags } = require('discord.js');
 const TFDTwitterExtractor = require('../tfd-system/extractors/twitter-v2.js');
 const { appendSpoilerButton } = require('../utils/spoiler-button-helper.js');
+const tlog = require('../utils/tfd-logger');
 
 module.exports = {
   async handleTwitterReloadInteraction(interaction) {
@@ -78,7 +79,7 @@ module.exports = {
       return interaction.followUp({ content: '無法重建推文格式。', flags: MessageFlags.Ephemeral });
 
     } catch (error) {
-      console.error('[twitter-reload] 處理互動時發生錯誤:', error);
+      tlog.sysError('twitter-reload', `處理互動時發生錯誤: ${error}`);
       try {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({ content: '處理推文重新載入時發生錯誤，請稍後再試。', flags: MessageFlags.Ephemeral });
