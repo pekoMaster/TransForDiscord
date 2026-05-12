@@ -26,7 +26,8 @@ const db = require('../db');
 const { buildSpoilerComponents, sendSpoilerAndCleanup } = require('./spoiler-button-interactions');
 const { getInstance: getGBM } = require('../utils/guild-blacklist-manager');
 
-const BTN_EXPIRE_MS = 60_000;
+const BTN_EXPIRE_MS = 86_400_000;
+const SUBMENU_EXPIRE_MS = 60_000;
 const COOLDOWN_MS = 5_000;
 const cooldowns = new Map(); // userId → timestamp
 const RECALL_LIMIT_MS = 600_000;
@@ -119,7 +120,7 @@ async function routeButton(interaction) {
 async function handleMainButton(interaction) {
     const ts = parseInt(parseId(interaction.customId, 'report_btn_'), 10);
     if (isExpired(ts)) {
-        return interaction.update({ content: '⏰ 此按鈕已失效（訊息超過 60 秒）', components: [], flags: MessageFlags.Ephemeral });
+        return interaction.reply({ content: '⏰ 此按鈕已失效（訊息超過 60 秒）', flags: MessageFlags.Ephemeral });
     }
     if (checkCooldown(interaction.user.id)) {
         return interaction.reply({ content: '⏳ 操作冷卻中，請稍候', flags: MessageFlags.Ephemeral });
@@ -146,7 +147,7 @@ async function handleMainButton(interaction) {
 
 async function handleSpoilerSubmenu(interaction) {
     const { channelId, messageId, subTs } = parseChMsg(interaction.customId);
-    if (isExpired(subTs)) {
+    if (Date.now() - subTs > SUBMENU_EXPIRE_MS) {
         return interaction.update({ content: '⏰ 操作已逾時', components: [], flags: MessageFlags.Ephemeral });
     }
 
