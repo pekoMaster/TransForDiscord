@@ -27,7 +27,7 @@ module.exports = {
         if (!targetMsg) return interaction.reply({ content: '無法取得目標訊息', flags: MessageFlags.Ephemeral });
         if (!targetMsg.webhookId && !targetMsg.author.bot) return interaction.reply({ content: '此訊息非 PekoEmbed 轉發訊息', flags: MessageFlags.Ephemeral });
         const chId = interaction.channelId, msgId = targetMsg.id;
-        const originalAuthorId = extractAuthorFromMsg(targetMsg.content);
+        const originalAuthorId = resolveAuthorId(targetMsg);
         const isAuthor = !originalAuthorId || originalAuthorId === userId;
         const btnRow = [
             ...(isAuthor ? [new ButtonBuilder().setCustomId('ctx_delete_' + chId + '_' + msgId).setLabel('移除訊息').setStyle(ButtonStyle.Danger)] : []),
@@ -55,7 +55,15 @@ module.exports = {
 };
 
 function parseCtxId(customId) { const p = customId.split('_'); return { channelId: p[p.length - 2], messageId: p[p.length - 1] }; }
-function extractAuthorFromMsg(c) { if (!c) return null; const ls = c.split('\n'); for (let i = ls.length - 1; i >= 0; i--) { const m = ls[i].match(/# <@!?(\d+)>/); if (m) return m[1]; } return null; }
+function resolveAuthorId(msg) {
+    if (!msg) return null;
+    if (msg.content) {
+        const ls = msg.content.split('\n');
+        for (let i = ls.length - 1; i >= 0; i--) { const m = ls[i].match(/# <@!?(\d+)>/); if (m) return m[1]; }
+    }
+    try { const first = msg.components?.[0]?.components?.[0]; if (first) { const c = first.content || first.data?.content || ''; const m = c.match(/# <@!?(\d+)>/); if (m) return m[1]; } } catch (_) {}
+    return null;
+}
 
 async function handleContextDelete(interaction) {
     const { channelId, messageId } = parseCtxId(interaction.customId);
@@ -74,12 +82,17 @@ async function handleContextDelete(interaction) {
     recallCounts.set(userId, arr);
 
     // Check if user is original author
-    const originalAuthorId = extractAuthorFromMsg(t.content);
+    const originalAuthorId = resolveAuthorId(t);
     if (originalAuthorId && originalAuthorId !== interaction.user.id) {
         return interaction.reply({ content: '只有原作者可以收回訊息', flags: MessageFlags.Ephemeral });
     }
     if (originalAuthorId && originalAuthorId === interaction.user.id) {
         await t.delete().catch(() => {});
+        const gs = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
+        if (gs?.log_channel_id) {
+            const lc = await interaction.client.channels.fetch(gs.log_channel_id).catch(() => null);
+            if (lc) await lc.send({ embeds: [{ color: 0xED4245, description: '🗑️ <@' + interaction.user.id + '> 收回了自己的轉發訊息', fields: [{ name: '頻道', value: '<#' + interaction.channelId + '>', inline: true }], timestamp: new Date().toISOString() }], allowedMentions: { parse: [] } }).catch(() => {});
+        }
         return interaction.reply({ content: '已收回訊息', flags: MessageFlags.Ephemeral });
     }
 
@@ -96,7 +109,7 @@ async function handleDeleteModalSubmit(interaction) {
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
     if (!t) return interaction.editReply({ content: '目標訊息已不存在' });
     if (!t.webhookId) return interaction.editReply({ content: '僅限 Webhook 轉發訊息才能使用收回功能' });
-    const authorId = extractAuthorFromMsg(t.content);
+    const authorId = resolveAuthorId(t);
     if (authorId && authorId !== interaction.user.id) return interaction.editReply({ content: '只有原作者可以收回訊息' });
     await t.delete().catch(() => {});
     const gs = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
@@ -171,7 +184,7 @@ async function handleReportModalSubmit(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
     let ta = null, plat = 'unknown', ou = '';
-    if (t) { ta = extractAuthorFromMsg(t.content); const um = (t.content||'').match(/https?:\/\/[^\s<>"]+/i); if (um) { ou=um[0]; if (ou.includes('twitter.com')) plat='twitter'; else if (ou.includes('pixiv.net')) plat='pixiv'; else if (ou.includes('youtube.com')) plat='youtube'; else if (ou.includes('instagram.com')) plat='instagram'; else if (ou.includes('threads.com')) plat='threads'; } }
+    if (t) { ta = resolveAuthorId(t); const um = (t.content||'').match(/https?:\/\/[^\s<>"]+/i); if (um) { ou=um[0]; if (ou.includes('twitter.com')) plat='twitter'; else if (ou.includes('pixiv.net')) plat='pixiv'; else if (ou.includes('youtube.com')) plat='youtube'; else if (ou.includes('instagram.com')) plat='instagram'; else if (ou.includes('threads.com')) plat='threads'; } }
     const gbm = getGBM();
     const rid = gbm.createReport({ guildId: interaction.guildId, channelId, messageId, originalUrl: ou, targetAuthor: ta, platform: plat, reporterId: interaction.user.id, suggestedLevel: lv, reason });
     const gs = db.guilds.get(interaction.guildId);
