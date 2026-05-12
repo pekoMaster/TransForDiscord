@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TFD 資料層 — SQLite 統一介面
  *
  * 設計原則：
@@ -153,6 +153,30 @@ function _prepareStatements() {
         WHERE user_id = ? AND created_at >= ?
     `);
     stmts.abuseCleanup = db.prepare('DELETE FROM abuse_records WHERE created_at < ?');
+    // guild_blacklist
+    stmts.blacklistAdd = db.prepare(`
+        INSERT INTO guild_blacklist (guild_id, platform, author, uid, level, label, added_by, reason, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(guild_id, platform, author) DO UPDATE SET
+            uid = excluded.uid, level = excluded.level, label = excluded.label,
+            added_by = excluded.added_by, reason = excluded.reason, updated_at = excluded.updated_at
+    `);
+    stmts.blacklistRemove = db.prepare('DELETE FROM guild_blacklist WHERE guild_id = ? AND platform = ? AND author = ?');
+    stmts.blacklistListByGuild = db.prepare('SELECT * FROM guild_blacklist WHERE guild_id = ? ORDER BY platform, author');
+    stmts.blacklistListByGuildPlatform = db.prepare('SELECT * FROM guild_blacklist WHERE guild_id = ? AND platform = ? ORDER BY author');
+    stmts.blacklistCheck = db.prepare('SELECT * FROM guild_blacklist WHERE guild_id = ? AND platform = ? AND author = ?');
+    stmts.blacklistCheckWithUid = db.prepare('SELECT * FROM guild_blacklist WHERE guild_id = ? AND platform = ? AND (author = ? OR uid = ?) LIMIT 1');
+
+    // blacklist_reports
+    stmts.reportInsert = db.prepare(`
+        INSERT INTO blacklist_reports (guild_id, channel_id, message_id, original_url, target_author, platform, reporter_id, suggested_level, reason, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmts.reportGet = db.prepare('SELECT * FROM blacklist_reports WHERE id = ?');
+    stmts.reportSetLevel = db.prepare('UPDATE blacklist_reports SET final_level = ?, updated_at = ? WHERE id = ?');
+    stmts.reportApprove = db.prepare('UPDATE blacklist_reports SET status = \x27approved\x27, admin_id = ?, final_level = ?, admin_reason = ?, updated_at = ? WHERE id = ?');
+    stmts.reportReject = db.prepare('UPDATE blacklist_reports SET status = \x27rejected\x27, admin_id = ?, updated_at = ? WHERE id = ?');
+
 }
 
 // ────────────────────────────────────────────────────────────
@@ -353,6 +377,74 @@ const abuse = {
     }
 };
 
+
+// ============================================================
+// guild_blacklist API
+// ============================================================
+
+const blacklist = {
+    add(guildId, platform, author, { uid = null, level, label = null, addedBy, reason = null } = {}) {
+        const ts = now();
+        const normalizedAuthor = author.trim();
+        return _stmt('blacklistAdd').run(guildId, platform, normalizedAuthor, uid, level, label, addedBy, reason, ts, ts);
+    },
+
+    remove(guildId, platform, author) {
+        const normalizedAuthor = author.trim();
+        const result = _stmt('blacklistRemove').run(guildId, platform, normalizedAuthor);
+        return result.changes;
+    },
+
+    list(guildId, platform = null) {
+        if (platform) {
+            return _stmt('blacklistListByGuildPlatform').all(guildId, platform);
+        }
+        return _stmt('blacklistListByGuild').all(guildId);
+    },
+
+    check(guildId, platform, author, uid = null) {
+        const normalizedAuthor = author ? author.trim() : author;
+        if (!normalizedAuthor && !uid) return null;
+        if (uid) {
+            return _stmt('blacklistCheckWithUid').get(guildId, platform, normalizedAuthor, uid) || null;
+        }
+        return _stmt('blacklistCheck').get(guildId, platform, normalizedAuthor) || null;
+    }
+};
+
+// ============================================================
+// blacklist_reports API
+// ============================================================
+
+const blacklistReports = {
+    create({ guildId, channelId, messageId = null, originalUrl = null, targetAuthor = null, platform = 'unknown', reporterId, suggestedLevel, reason = null } = {}) {
+        const ts = now();
+        const info = _stmt('reportInsert').run(guildId, channelId, messageId, originalUrl, targetAuthor, platform, reporterId, suggestedLevel, reason, ts, ts);
+        return info.lastInsertRowid;
+    },
+
+    get(reportId) {
+        return _stmt('reportGet').get(reportId) || null;
+    },
+
+    setLevel(reportId, level) {
+        return _stmt('reportSetLevel').run(level, now(), reportId);
+    },
+
+    approve(reportId, adminId, finalLevel, adminReason = null) {
+        return _stmt('reportApprove').run(adminId, finalLevel, adminReason, now(), reportId);
+    },
+
+    reject(reportId, adminId) {
+        return _stmt('reportReject').run(adminId, now(), reportId);
+    },
+
+    isPending(reportId) {
+        const r = _stmt('reportGet').get(reportId);
+        return r ? r.status === 'pending' : false;
+    }
+};
+
 module.exports = {
     init,
     close,
@@ -363,5 +455,7 @@ module.exports = {
     apiKeys,
     urlStats,
     rateLimit,
+    blacklist,
+    blacklistReports,
     abuse
 };

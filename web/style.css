@@ -268,6 +268,35 @@ section .subtitle {
     border-radius: 4px; color: var(--accent-light); font-size: .85em;
 }
 
+
+/* ── Admin Tools ── */
+#admin-tools { border-top: 1px solid var(--border); background: var(--bg-secondary); }
+#admin-tools h2 { text-align: center; }
+.admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+.admin-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    transition: border-color .2s;
+}
+.admin-card:hover { border-color: var(--accent-dark); }
+.admin-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 12px; color: var(--accent); }
+.admin-card p { color: var(--text-secondary); font-size: .88rem; margin-bottom: 10px; }
+.admin-card ul, .admin-card ol { padding-left: 20px; margin-bottom: 10px; }
+.admin-card ul li, .admin-card ol li {
+    color: var(--text-secondary); font-size: .86rem; padding: 3px 0; line-height: 1.5;
+}
+.admin-card ul li strong, .admin-card ol li strong { color: var(--text-primary); }
+.admin-card code {
+    background: var(--bg-secondary); padding: 2px 6px;
+    border-radius: 4px; color: var(--accent-light); font-size: .85em;
+}
+
 /* ── Footer ── */
 footer {
     padding: 40px 0;

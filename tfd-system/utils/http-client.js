@@ -121,8 +121,6 @@ class HTTPClient {
         if (result.success) {
             return result.data;
         } else {
-            const level = EXPECTED_BOT_BLOCK_STATUSES.has(result.status) ? 'warn' : 'error';
-            this.log(`無法取得 HTML: ${url} - ${result.error}`, level);
             // 🔧 返回錯誤資訊物件（包含 HTTP 狀態碼）
             return { error: true, status: result.status, message: result.error };
         }
@@ -148,8 +146,6 @@ class HTTPClient {
                 return null;
             }
         } else {
-            const level = EXPECTED_BOT_BLOCK_STATUSES.has(result.status) ? 'warn' : 'error';
-            this.log(`無法取得 JSON: ${url} - ${result.error}`, level);
             return null;
         }
     }

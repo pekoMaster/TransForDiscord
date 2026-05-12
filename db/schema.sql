@@ -1,4 +1,4 @@
--- TFD SQLite Schema v1
+﻿-- TFD SQLite Schema v1
 -- 設計原則：欄位細分、per-guild 隔離、加密欄位獨立、索引齊全
 
 PRAGMA foreign_keys = ON;
@@ -117,6 +117,53 @@ CREATE INDEX IF NOT EXISTS idx_abuse_type ON abuse_records(abuse_type, created_a
 -- ────────────────────────────────────────────────────────────
 -- 8. Schema 版本紀錄（用於將來資料庫遷移）
 -- ────────────────────────────────────────────────────────────
+
+-- ============================================================
+-- 9. Per-server author blacklist
+-- ============================================================
+CREATE TABLE IF NOT EXISTS guild_blacklist (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id    TEXT NOT NULL,
+  platform    TEXT NOT NULL,
+  author      TEXT NOT NULL COLLATE NOCASE,
+  uid         TEXT,
+  level       INTEGER NOT NULL CHECK(level IN (1, 2, 3)),
+  label       TEXT,
+  added_by    TEXT NOT NULL,
+  reason      TEXT,
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  UNIQUE(guild_id, platform, author)
+);
+
+CREATE INDEX IF NOT EXISTS idx_guild_blacklist_lookup ON guild_blacklist(guild_id, platform, author);
+
+-- ============================================================
+-- 10. Blacklist reports (pending/admin review)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS blacklist_reports (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id        TEXT NOT NULL,
+  channel_id      TEXT NOT NULL,
+  message_id      TEXT,
+  original_url    TEXT,
+  target_author   TEXT,
+  platform        TEXT,
+  reporter_id     TEXT NOT NULL,
+  suggested_level INTEGER NOT NULL CHECK(suggested_level IN (1, 2, 3)),
+  reason          TEXT,
+  status          TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
+  admin_id        TEXT,
+  final_level     INTEGER CHECK(final_level IN (1, 2, 3)),
+  admin_reason    TEXT,
+  log_message_id  TEXT,
+  created_at      INTEGER NOT NULL,
+  updated_at      INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_blacklist_reports_pending ON blacklist_reports(guild_id, status);
+
+-- 11. Schema version tracking
 CREATE TABLE IF NOT EXISTS schema_version (
   version    INTEGER PRIMARY KEY,
   applied_at INTEGER NOT NULL,

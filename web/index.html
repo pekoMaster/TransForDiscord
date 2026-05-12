@@ -33,6 +33,7 @@
             <li><a href="#translate">翻譯</a></li>
             <li><a href="#sites">支援站台</a></li>
             <li><a href="#commands">指令</a></li>
+            <li><a href="#admin-tools">管理工具</a></li>
             <li><a href="#donate">支持我們</a></li>
             <li><a href="privacy.html">隱私政策</a></li>
             <li><a href="terms.html">服務條款</a></li>
@@ -90,6 +91,22 @@
                 <div class="icon">🛡️</div>
                 <h3>防爆雷系統</h3>
                 <p>一鍵將預覽內容隱藏為防爆雷模式，保護還沒看到最新回的同好。適合追番、追劇、追 Vtuber 企劃的伺服器。</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="icon">🚫</div>
+                <h3>Per-Server 黑名單</h3>
+                <p>各伺服器獨立設定平台作者黑名單。Level 1 提示、Level 2 自動防爆雷、Level 3 完全封鎖。管理員可透過指令或回報審核來管理。</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">🗑️</div>
+                <h3>收回訊息</h3>
+                <p>任何人皆可收回 Peko Embed 轉發的訊息。原作者可直接刪除，非原作者需填寫理由並記錄於日誌。每 10 分鐘上限 3 次防止濫用。</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">📋</div>
+                <h3>回報系統</h3>
+                <p>每則轉發訊息下方都有回報按鈕。可對內容上防爆雷、收回訊息、或回報作者至管理員審核黑名單。右鍵選單也支援同樣操作。</p>
             </div>
             <div class="feature-card">
                 <div class="icon">⚡</div>
@@ -269,6 +286,22 @@
                     <div class="cmd-params">channel: <em>#頻道</em> &nbsp; action: <em>新增排除 | 移除排除 | 列表</em></div>
                     <div class="cmd-desc">排除特定頻道觸發預覽。適合不希望出現預覽的頻道（如公告區）。</div>
                 </div>
+                
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe blacklist add</div>
+                    <div class="cmd-params">platform: <em>Twitter|PTT|Pixiv|YouTube|Instagram|Threads|其他</em> &nbsp; author: <em>作者名</em> &nbsp; level: <em>1|2|3</em> &nbsp; label: <em>標記</em>（選填）</div>
+                    <div class="cmd-desc">將平台作者加入本伺服器黑名單。Level 1=僅提示、2=自動防爆雷、3=完全封鎖不轉發。作者名支援 Twitter UID 防止改名規避。</div>
+                </div>
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe blacklist remove</div>
+                    <div class="cmd-params">platform: <em>Twitter|PTT|...</em> &nbsp; author: <em>作者名</em></div>
+                    <div class="cmd-desc">從本伺服器黑名單中移除指定作者。</div>
+                </div>
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe blacklist list</div>
+                    <div class="cmd-params">platform: <em>平台</em>（選填）</div>
+                    <div class="cmd-desc">列出本伺服器黑名單。可選平台過濾。每頁最多顯示 10 條記錄。</div>
+                </div>
                 <div class="cmd-card">
                     <div class="cmd-name">/pe owner</div>
                     <div class="cmd-params">user: <em>@使用者</em>（選填）</div>
@@ -279,6 +312,63 @@
 
         <div class="cmd-tip">
             <strong>💡 小提示：</strong>不想讓某條連結被預覽？用 <code>&lt;https://...&gt;</code> 角括號包住 URL 即可跳過處理。
+        </div>
+    </div>
+</section>
+
+
+<!-- ── Admin Tools ── -->
+<section id="admin-tools">
+    <div class="container">
+        <h2>🛠️ <span>管理工具</span>與操作說明</h2>
+        <p class="subtitle">除了指令，Peko Embed 還提供按鈕互動與右鍵選單進行內容管理。</p>
+
+        <div class="admin-grid">
+            <div class="admin-card">
+                <h3>📋 回報按鈕</h3>
+                <p>每則轉發訊息右下角都有 <strong>📋 回報</strong> 按鈕（60 秒內有效）。按下後出現三個選項：</p>
+                <ul>
+                    <li><strong>上防爆雷</strong> — 套用防爆雷遮罩，隱藏預覽內容（可填理由）</li>
+                    <li><strong>收回訊息</strong> — 刪除轉發訊息。原作者可直接刪除；非原作者需填理由並記錄日誌</li>
+                    <li><strong>黑名單回報</strong> — 回報作者至管理員審核。選擇等級（1/2/3）並附理由</li>
+                </ul>
+            </div>
+
+            <div class="admin-card">
+                <h3>🖱️ 右鍵選單</h3>
+                <p>對任何 Peko Embed 轉發的訊息 <strong>右鍵 → 應用程式 → PekoEmbed 操作</strong>，可直接執行：</p>
+                <ul>
+                    <li><strong>移除訊息</strong> — 刪除轉發訊息（含日誌記錄）</li>
+                    <li><strong>上防爆雷</strong> — 對該訊息套用防爆雷</li>
+                    <li><strong>黑名單回報</strong> — 快速回報作者（需伺服器已設定日誌頻道）</li>
+                </ul>
+            </div>
+
+            <div class="admin-card">
+                <h3>🛡️ 黑名單執法機制</h3>
+                <p>當使用者貼出連結時，Peko Embed 自動檢查作者是否在本伺服器黑名單中：</p>
+                <ul>
+                    <li><strong>Level 1（提示）</strong> — 正常轉發，附加橘色警告標記</li>
+                    <li><strong>Level 2（防爆雷）</strong> — 自動套用防爆雷遮罩</li>
+                    <li><strong>Level 3（封鎖）</strong> — 不轉發內容，顯示提醒訊息</li>
+                </ul>
+                <p>黑名單可透過 <code>/pe blacklist add</code> 手動加入，或經由使用者回報 → 管理員審核核准後自動加入。</p>
+            </div>
+
+            <div class="admin-card">
+                <h3>👑 管理員審核流程</h3>
+                <p>當使用者提交黑名單回報後，管理員會在日誌頻道收到審核訊息：</p>
+                <ol>
+                    <li>從下拉選單選擇最終等級（提示 / 防爆雷 / 封鎖）</li>
+                    <li>點擊 <strong>✅ 確認核准</strong> 並填寫審核理由</li>
+                    <li>系統自動將作者加入黑名單（同作者重複加入會更新等級）</li>
+                </ol>
+                <p>也可點擊 <strong>❌ 拒絕</strong> 直接駁回回報。審核按鈕僅限擁有「管理伺服器」或「管理員」權限的成員使用。</p>
+            </div>
+        </div>
+
+        <div class="cmd-tip">
+            <strong>💡 提示：</strong>管理員審核功能需要先設定日誌頻道（<code>/pe log add</code>）。未設定日誌頻道的伺服器，回報內容會顯示在當前頻道並附帶警告。
         </div>
     </div>
 </section>

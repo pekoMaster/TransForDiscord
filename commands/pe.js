@@ -69,6 +69,58 @@ module.exports = {
             .addSubcommand(s => s.setName('show').setDescription('查看目前日誌頻道設定'))
         )
 
+
+        // ── /pe blacklist（管理員，per-guild）──
+        .addSubcommandGroup(g => g
+            .setName('blacklist')
+            .setDescription('管理本伺服器黑名單（管理員）')
+            .addSubcommand(s => s.setName('add').setDescription('加入黑名單')
+                .addStringOption(o => o.setName('platform').setDescription('平台').setRequired(true)
+                    .addChoices(
+                        { name: 'Twitter', value: 'twitter' },
+                        { name: 'PTT', value: 'ptt' },
+                        { name: 'Pixiv', value: 'pixiv' },
+                        { name: 'YouTube', value: 'youtube' },
+                        { name: 'Instagram', value: 'instagram' },
+                        { name: 'Threads', value: 'threads' },
+                        { name: '其他', value: 'other' }
+                    ))
+                .addStringOption(o => o.setName('author').setDescription('作者名稱').setRequired(true))
+                .addIntegerOption(o => o.setName('level').setDescription('等級').setRequired(true)
+                    .addChoices(
+                        { name: '1 - 僅提示', value: 1 },
+                        { name: '2 - 防爆雷', value: 2 },
+                        { name: '3 - 封鎖', value: 3 }
+                    ))
+                .addStringOption(o => o.setName('label').setDescription('警告標記（等級 1 建議填寫）').setRequired(false))
+            )
+            .addSubcommand(s => s.setName('remove').setDescription('移除黑名單')
+                .addStringOption(o => o.setName('platform').setDescription('平台').setRequired(true)
+                    .addChoices(
+                        { name: 'Twitter', value: 'twitter' },
+                        { name: 'PTT', value: 'ptt' },
+                        { name: 'Pixiv', value: 'pixiv' },
+                        { name: 'YouTube', value: 'youtube' },
+                        { name: 'Instagram', value: 'instagram' },
+                        { name: 'Threads', value: 'threads' },
+                        { name: '其他', value: 'other' }
+                    ))
+                .addStringOption(o => o.setName('author').setDescription('作者名稱').setRequired(true))
+            )
+            .addSubcommand(s => s.setName('list').setDescription('列出本伺服器黑名單')
+                .addStringOption(o => o.setName('platform').setDescription('過濾平台（可選）').setRequired(false)
+                    .addChoices(
+                        { name: 'Twitter', value: 'twitter' },
+                        { name: 'PTT', value: 'ptt' },
+                        { name: 'Pixiv', value: 'pixiv' },
+                        { name: 'YouTube', value: 'youtube' },
+                        { name: 'Instagram', value: 'instagram' },
+                        { name: 'Threads', value: 'threads' },
+                        { name: '其他', value: 'other' }
+                    ))
+            )
+        )
+
         // ── /pe nouser（管理員，per-guild）──
         .addSubcommand(s => s.setName('nouser').setDescription('排除/恢復某使用者在本伺服器觸發預覽（管理員）')
             .addUserOption(o => o.setName('user').setDescription('要排除/恢復的使用者').setRequired(true))
@@ -123,6 +175,8 @@ module.exports = {
             });
 
             if (group === 'log') return await handleLog(interaction, sub, guildId);
+            if (group === 'blacklist') return await handleBlacklist(interaction, sub, guildId, userId);
+
 
             switch (sub) {
                 case 'nouser': return await handleNoUser(interaction, guildId, userId);
@@ -323,4 +377,75 @@ async function handleStatus(interaction, guildId) {
         '• 設定：`/pe api add provider:Gemini apikey:你的金鑰`'
     ];
     return interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });
+}
+
+
+// ────────────────────────────────────────────────────────────
+// /pe blacklist（per-guild）
+// ────────────────────────────────────────────────────────────
+async function handleBlacklist(interaction, sub, guildId, userId) {
+    const { getInstance: getGBM } = require('../utils/guild-blacklist-manager.js');
+    const gbm = getGBM();
+
+    if (sub === 'add') {
+        const platform = interaction.options.getString('platform');
+        const author = interaction.options.getString('author').trim();
+        const level = interaction.options.getInteger('level');
+        const label = interaction.options.getString('label');
+
+        if (!author) {
+            return interaction.reply({ content: '❌ 作者名稱不可為空', flags: MessageFlags.Ephemeral });
+        }
+
+        gbm.add(guildId, platform, author, {
+            level,
+            label,
+            addedBy: userId
+        });
+
+        const levelNames = { 1: '僅提示', 2: '防爆雷', 3: '封鎖' };
+        return interaction.reply({
+            content: `✅ 已將 ${platform} 作者 ${author} 加入黑名單（等級 ${level}: ${levelNames[level] || level}）`,
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    if (sub === 'remove') {
+        const platform = interaction.options.getString('platform');
+        const author = interaction.options.getString('author').trim();
+        const removed = gbm.remove(guildId, platform, author);
+
+        return interaction.reply({
+            content: removed > 0
+                ? `✅ 已從黑名單移除 ${platform} 作者 ${author}`
+                : `❌ 找不到 ${platform} 作者 ${author} 的黑名單記錄`,
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    if (sub === 'list') {
+        const platform = interaction.options.getString('platform');
+        const list = gbm.list(guildId, platform || null);
+
+        if (list.length === 0) {
+            return interaction.reply({
+                content: '📋 本伺服器目前沒有黑名單記錄',
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+        const levelNames = { 1: '僅提示', 2: '防爆雷', 3: '封鎖' };
+        const lines = list.slice(0, 10).map((r, i) => {
+            const authorDisplay = r.platform === 'twitter' ? `@${r.author}` : r.author;
+            return `${i + 1}. [${r.platform}] ${authorDisplay} — 等級 ${r.level} (${levelNames[r.level] || r.level})${r.label ? ` 【${r.label}】` : ''}`;
+        });
+
+        let content = `📋 本伺服器黑名單（共 ${list.length} 條）:\n${lines.join('\n')}`;
+
+        if (list.length > 10) {
+            content += `\n...另有 ${list.length - 10} 條（每頁最多顯示 10 條）`;
+        }
+
+        return interaction.reply({ content, flags: MessageFlags.Ephemeral });
+    }
 }

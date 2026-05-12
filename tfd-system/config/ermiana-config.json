@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "enabled": true,
+  "settings": {
+    "timeout": 10000,
+    "maxRetries": 3,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "maxContentLength": 10485760,
+    "allowedChannels": [],
+    "blockedChannels": [
+      "774188479928074261",
+      "1048543593398272070"
+    ],
+    "excludedUsers": [],
+    "logLevel": "info"
+  },
+  "features": {
+    "embedGeneration": true,
+    "imagePreview": true,
+    "videoPreview": true,
+    "contextMenu": false,
+    "twitterEmbedProxy": {
+      "enabled": true,
+      "useLocalProxy": true,
+      "fallbackToFxTwitter": true,
+      "vercelEmbedBaseUrl": "https://pekolfd.vercel.app"
+    }
+  },
+  "rateLimit": {
+    "requestsPerMinute": 30,
+    "requestsPerUser": 5
+  },
+  "facebookPreview": {
+    "enabled": true,
+    "preferFullText": true,
+    "allowBrowserFallback": true,
+    "enableLegacyFallbacks": true,
+    "enableGoogleScriptFallback": true,
+    "requestTimeoutMs": 8000,
+    "maxContentLength": 280,
+    "debugLog": false
+  }
+}

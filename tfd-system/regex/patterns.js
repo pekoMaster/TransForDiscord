@@ -11,7 +11,8 @@ const patterns = {
         // 2. 新版格式: twitter.com/i/status/123 或 twitter.com/i/web/status/123
         // 3. 第三方轉換服務: vxtwitter.com, fxtwitter.com, fixupx.com 等
         tweet: /https?:\/\/(?:twitter\.com|x\.com|mobile\.twitter\.com|vxtwitter\.com|fxtwitter\.com|fixupx\.com|twittpr\.com|c\.vxtwitter\.com|d\.vxtwitter\.com)\/(?:([A-Za-z0-9_.-]+)\/)?(?:status|i\/(?:web\/)?status)\/(\d+)/i,
-        profile: /https?:\/\/(?:twitter\.com|x\.com|mobile\.twitter\.com|vxtwitter\.com|fxtwitter\.com|fixupx\.com)\/([A-Za-z0-9_.-]+)$/i
+        // 排除 Twitter/X 系統保留路徑（search、explore、i、notifications 等）
+        profile: /https?:\/\/(?:twitter\.com|x\.com|mobile\.twitter\.com|vxtwitter\.com|fxtwitter\.com|fixupx\.com)\/(?!(?:search|explore|i|notifications|messages|home|settings|compose|intent|hashtag|login|signup|logout|account|help|about|privacy|tos|download|who_to_follow)(?:[/?#]|$))([A-Za-z0-9_.-]+)$/i
     },
 
     instagram: {
