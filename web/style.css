@@ -214,6 +214,60 @@ section .subtitle {
 }
 .donate-card p { color: var(--text-secondary); margin-bottom: 20px; font-size: .95rem; }
 
+/* ── Commands ── */
+#commands { border-top: 1px solid var(--border); }
+.cmd-section { margin-bottom: 36px; }
+.cmd-section h3 {
+    font-size: 1rem; font-weight: 600; color: var(--text-secondary);
+    margin-bottom: 16px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+.cmd-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 14px;
+}
+.cmd-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 18px 22px;
+    transition: border-color .2s;
+}
+.cmd-card:hover { border-color: var(--accent-dark); }
+.cmd-name {
+    font-family: 'Courier New', monospace;
+    font-size: .95rem; font-weight: 700;
+    color: var(--accent-light);
+    margin-bottom: 4px;
+}
+.cmd-params {
+    font-size: .8rem; color: var(--text-dim);
+    margin-bottom: 8px;
+}
+.cmd-params em {
+    font-style: normal; color: var(--text-secondary);
+    background: var(--bg-secondary); padding: 1px 5px;
+    border-radius: 3px; font-size: .78rem;
+}
+.cmd-desc {
+    font-size: .88rem; color: var(--text-secondary); line-height: 1.5;
+}
+.cmd-tip {
+    margin-top: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+    font-size: .9rem;
+    color: var(--text-secondary);
+}
+.cmd-tip code {
+    background: var(--bg-secondary); padding: 2px 6px;
+    border-radius: 4px; color: var(--accent-light); font-size: .85em;
+}
+
 /* ── Footer ── */
 footer {
     padding: 40px 0;

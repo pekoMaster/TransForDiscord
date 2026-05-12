@@ -32,6 +32,7 @@
             <li><a href="#features">功能</a></li>
             <li><a href="#translate">翻譯</a></li>
             <li><a href="#sites">支援站台</a></li>
+            <li><a href="#commands">指令</a></li>
             <li><a href="#donate">支持我們</a></li>
             <li><a href="privacy.html">隱私政策</a></li>
             <li><a href="terms.html">服務條款</a></li>
@@ -205,13 +206,80 @@
 </section>
 
 <!-- ── CTA ── -->
-<section style="text-align:center; padding: 60px 0 80px;">
+<section style="text-align:center; padding: 60px 0 40px;">
     <div class="container">
         <h2>準備好了嗎？</h2>
         <p class="subtitle">只需要一個按鈕，就能讓你的伺服器擁有完美的網址預覽。</p>
         <a href="https://discord.com/oauth2/authorize?client_id=1483257652812320998&permissions=536955904&scope=bot" class="btn btn-discord" target="_blank" rel="noopener">
             ＋ 將 Peko Embed 加入伺服器
         </a>
+    </div>
+</section>
+
+<!-- ── Commands ── -->
+<section id="commands">
+    <div class="container">
+        <h2>📖 <span>指令</span>說明</h2>
+        <p class="subtitle">所有設定都透過 <code style="background:var(--bg-card);padding:2px 8px;border-radius:4px;color:var(--accent-light)">/pe</code> 斜線指令完成。加入伺服器後即自動運作，不需要任何設定。</p>
+
+        <div class="cmd-section">
+            <h3>所有人可用</h3>
+            <div class="cmd-grid">
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe api add</div>
+                    <div class="cmd-params">provider: <em>OpenAI | Claude | Gemini</em> &nbsp; apikey: <em>你的 Key</em></div>
+                    <div class="cmd-desc">綁定你的 AI API Key，啟用推文翻譯功能。Key 以 AES-256-GCM 加密儲存，設定一次即跨伺服器可用。</div>
+                </div>
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe api edit</div>
+                    <div class="cmd-params">provider: <em>OpenAI | Claude | Gemini</em> &nbsp; apikey: <em>新的 Key</em></div>
+                    <div class="cmd-desc">修改已綁定的 API Key。</div>
+                </div>
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe api del</div>
+                    <div class="cmd-params">provider: <em>OpenAI | Claude | Gemini</em></div>
+                    <div class="cmd-desc">刪除已綁定的 API Key。刪除後該引擎的翻譯功能將停用。</div>
+                </div>
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe api status</div>
+                    <div class="cmd-desc">查看你目前綁定了哪些 AI 服務商（不會顯示 Key 內容）。</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cmd-section">
+            <h3>管理員專用</h3>
+            <div class="cmd-grid">
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe status</div>
+                    <div class="cmd-desc">查看本伺服器的 Peko Embed 設定狀態，包含日誌頻道、排除清單、owner 等。</div>
+                </div>
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe log add / edit / del / show</div>
+                    <div class="cmd-params">channel: <em>#頻道</em></div>
+                    <div class="cmd-desc">設定、更換、移除或查看日誌頻道。開啟後，每次預覽轉換都會記錄到指定頻道。</div>
+                </div>
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe nouser</div>
+                    <div class="cmd-params">user: <em>@使用者</em> &nbsp; action: <em>新增排除 | 移除排除 | 列表</em></div>
+                    <div class="cmd-desc">排除特定使用者觸發預覽。被排除的使用者貼的連結不會被處理。</div>
+                </div>
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe noch</div>
+                    <div class="cmd-params">channel: <em>#頻道</em> &nbsp; action: <em>新增排除 | 移除排除 | 列表</em></div>
+                    <div class="cmd-desc">排除特定頻道觸發預覽。適合不希望出現預覽的頻道（如公告區）。</div>
+                </div>
+                <div class="cmd-card">
+                    <div class="cmd-name">/pe owner</div>
+                    <div class="cmd-params">user: <em>@使用者</em>（選填）</div>
+                    <div class="cmd-desc">設定本伺服器的 Peko Embed 活動 owner。不填則清除。</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cmd-tip">
+            <strong>💡 小提示：</strong>不想讓某條連結被預覽？用 <code>&lt;https://...&gt;</code> 角括號包住 URL 即可跳過處理。
+        </div>
     </div>
 </section>
 
