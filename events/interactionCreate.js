@@ -83,15 +83,15 @@ async function execute(interaction, client) {
 
         // ── Twitter 展開/收起 ──
         if (customId.startsWith('twitter_expand_') || customId.startsWith('twitter_collapse_')) {
-            const handler = require('../handlers/twitter-expand-interactions.js');
-            return await handler.execute(interaction);
+            const { handleTwitterExpandInteraction } = require('../handlers/twitter-expand-interactions.js');
+            return await handleTwitterExpandInteraction(interaction);
         }
 
         // ── Twitter 翻譯 ──
         if (customId.startsWith('twitter_translate_') ||
             customId.startsWith('twitter_original_')) {
-            const handler = require('../handlers/twitter-translate-interactions.js');
-            return await handler.execute(interaction);
+            const { handleTranslateInteraction } = require('../handlers/twitter-translate-interactions.js');
+            return await handleTranslateInteraction(interaction);
         }
 
         // ── Twitter 重新整理 ──
@@ -102,8 +102,8 @@ async function execute(interaction, client) {
 
         // ── Twitter 分頁 ──
         if (customId.startsWith('twitter_page_')) {
-            const handler = require('../handlers/twitter-pagination-interactions.js');
-            return await handler.execute(interaction);
+            const { handlePagination } = require('../handlers/twitter-pagination-interactions.js');
+            return await handlePagination(interaction);
         }
 
         // ── Pixiv 分頁 ──
