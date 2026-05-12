@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { getInstance: getGeminiTranslator } = require('../utils/gemini-translator.js');
 const db = require('../db');
+const tlog = require('../utils/tfd-logger');
 
 /**
  * 檢查互動使用者是否為本伺服器的 TFD owner
@@ -34,7 +35,7 @@ class TwitterInteractionHandler {
             } = process.env;
 
             if (!X_CONSUMER_API_KEY || !X_CONSUMER_API_KEY_SECRET || !X_ACCESS_TOKEN || !X_ACCESS_TOKEN_SECRET) {
-                console.error('[Twitter] 缺少必要的環境變數');
+                tlog.sysError('Twitter-發推', '缺少必要的環境變數');
                 return;
             }
 
@@ -45,9 +46,9 @@ class TwitterInteractionHandler {
                 accessSecret: X_ACCESS_TOKEN_SECRET,
             });
 
-            console.log('[Twitter] API 客戶端初始化成功');
+            tlog.sys('Twitter-發推', 'API 客戶端初始化成功');
         } catch (error) {
-            console.error('[Twitter] 初始化失敗:', error);
+            tlog.sysError('Twitter-發推', `初始化失敗: ${error}`);
         }
     }
 
@@ -123,10 +124,10 @@ class TwitterInteractionHandler {
             });
 
             await interaction.showModal(modal);
-            console.log(`[Twitter] 顯示編輯模態視窗: ${messageId}`);
+            tlog.sys('Twitter-發推', `顯示編輯模態視窗: ${messageId}`);
 
         } catch (error) {
-            console.error('[Twitter] 處理準備按鈕錯誤:', error);
+            tlog.sysError('Twitter-發推', `處理準備按鈕錯誤: ${error}`);
             // 嘗試回應，但用 try-catch 避免重複回應錯誤
             try {
                 if (!interaction.replied && !interaction.deferred) {
@@ -159,7 +160,7 @@ class TwitterInteractionHandler {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
             // 🔥 自動翻譯成 5CH 風格日文
-            console.log('[Twitter] 🌐 開始翻譯推文內容成 5CH 風格日文...');
+            tlog.sys('Twitter-發推', '🌐 開始翻譯推文內容成 5CH 風格日文...');
 
             try {
                 // 🔥 支援多行內容的翻譯
@@ -168,7 +169,7 @@ class TwitterInteractionHandler {
                 const matches = [...tweetContent.matchAll(regex)];
 
                 if (matches && matches.length > 0) {
-                    console.log(`[Twitter] 找到 ${matches.length} 段需要翻譯的內容`);
+                    tlog.sys('Twitter-發推', `找到 ${matches.length} 段需要翻譯的內容`);
 
                     for (const match of matches) {
                         const fullMatch = match[0];
@@ -177,7 +178,7 @@ class TwitterInteractionHandler {
                         const prefix = `とある野うさぎ${suffix}：`;
 
                         if (originalText && originalText !== '(無內容)' && originalText !== '(圖片或貼圖內容)') {
-                            console.log('[Twitter] 原文:', originalText.substring(0, 80) + (originalText.length > 80 ? '...' : ''));
+                            tlog.sys('Twitter-發推', `原文: ${originalText.substring(0, 80)}${originalText.length > 80 ? '...' : ''}`);
 
                             // 翻譯（保留換行符，將多行合併後翻譯）
                             const textToTranslate = originalText.replace(/\n/g, ' ').trim();
@@ -191,16 +192,16 @@ class TwitterInteractionHandler {
 
                             // 替換原文（保持原本的換行結構）
                             tweetContent = tweetContent.replace(fullMatch, prefix + finalText);
-                            console.log('[Twitter] 譯文:', finalText.substring(0, 80) + (finalText.length > 80 ? '...' : ''));
+                            tlog.sys('Twitter-發推', `譯文: ${finalText.substring(0, 80)}${finalText.length > 80 ? '...' : ''}`);
                         }
                     }
 
-                    console.log('[Twitter] ✅ 翻譯完成');
+                    tlog.sys('Twitter-發推', '✅ 翻譯完成');
                 } else {
-                    console.log('[Twitter] ⚠️ 未找到「とある野うさぎ：」格式的內容，跳過翻譯');
+                    tlog.sys('Twitter-發推', '⚠️ 未找到「とある野うさぎ：」格式的內容，跳過翻譯');
                 }
             } catch (error) {
-                console.error('[Twitter] ❌ 翻譯失敗，使用原文:', error.message);
+                tlog.sysError('Twitter-發推', `❌ 翻譯失敗，使用原文: ${error.message}`);
                 // 翻譯失敗時保持原文不變
             }
 
@@ -258,12 +259,12 @@ class TwitterInteractionHandler {
                     });
                 }
 
-                console.log(`[Twitter] 📸 偵測到 ${imageUrls.length} 張圖片`);
+                tlog.sys('Twitter-發推', `📸 偵測到 ${imageUrls.length} 張圖片`);
 
                 // 清理記憶體
                 this.preparedMessages.delete(messageId);
             } else {
-                console.warn(`[Twitter] ⚠️  找不到訊息資料: ${messageId}`);
+                tlog.sys('Twitter-發推', `⚠️ ⚠️  找不到訊息資料: ${messageId}`);
             }
 
             // 儲存推文內容和圖片 URLs 供確認時使用
@@ -275,10 +276,10 @@ class TwitterInteractionHandler {
                 timestamp: Date.now()
             });
 
-            console.log(`[Twitter] 模態提交處理完成: ${messageId}`);
+            tlog.sys('Twitter-發推', `模態提交處理完成: ${messageId}`);
 
         } catch (error) {
-            console.error('[Twitter] 處理模態提交錯誤:', error);
+            tlog.sysError('Twitter-發推', `處理模態提交錯誤: ${error}`);
             // 嘗試回應，但用 try-catch 避免重複回應錯誤
             try {
                 if (interaction.deferred && !interaction.replied) {
@@ -325,7 +326,7 @@ class TwitterInteractionHandler {
                     components: []
                 });
 
-                console.log(`[Twitter] 發推已取消: ${messageId}`);
+                tlog.sys('Twitter-發推', `發推已取消: ${messageId}`);
                 return;
             }
 
@@ -382,11 +383,11 @@ class TwitterInteractionHandler {
 
                 // 清理暫存資料
                 this.pendingTweets.delete(messageId);
-                console.log(`[Twitter] 推文處理完成: ${messageId}, 成功: ${result.success}`);
+                tlog.sys('Twitter-發推', `推文處理完成: ${messageId}, 成功: ${result.success}`);
             }
 
         } catch (error) {
-            console.error('[Twitter] 處理確認按鈕錯誤:', error);
+            tlog.sysError('Twitter-發推', `處理確認按鈕錯誤: ${error}`);
             
             const embed = new EmbedBuilder()
                 .setTitle('❌ 處理錯誤')
@@ -415,7 +416,7 @@ class TwitterInteractionHandler {
      */
     async downloadImage(url) {
         try {
-            console.log(`[Twitter] 📥 下載圖片: ${url.substring(0, 80)}...`);
+            tlog.sys('Twitter-發推', `📥 下載圖片: ${url.substring(0, 80)}...`);
 
             const response = await axios.get(url, {
                 responseType: 'arraybuffer',
@@ -436,10 +437,10 @@ class TwitterInteractionHandler {
             // 寫入檔案
             fs.writeFileSync(filepath, response.data);
 
-            console.log(`[Twitter] ✅ 圖片下載完成: ${filename}`);
+            tlog.sys('Twitter-發推', `✅ 圖片下載完成: ${filename}`);
             return filepath;
         } catch (error) {
-            console.error(`[Twitter] ❌ 圖片下載失敗:`, error.message);
+            tlog.sysError('Twitter-發推', `圖片下載失敗: ${error.message}`);
             throw error;
         }
     }
@@ -451,24 +452,24 @@ class TwitterInteractionHandler {
      */
     async uploadImageToTwitter(filepath) {
         try {
-            console.log(`[Twitter] 📤 上傳圖片到 Twitter: ${path.basename(filepath)}`);
+            tlog.sys('Twitter-發推', `📤 上傳圖片到 Twitter: ${path.basename(filepath)}`);
 
             const mediaId = await this.twitterClient.v1.uploadMedia(filepath);
 
-            console.log(`[Twitter] ✅ 圖片上傳成功，media_id: ${mediaId}`);
+            tlog.sys('Twitter-發推', `✅ 圖片上傳成功，media_id: ${mediaId}`);
             return mediaId;
         } catch (error) {
-            console.error(`[Twitter] ❌ 圖片上傳失敗:`, error.message);
+            tlog.sysError('Twitter-發推', `圖片上傳失敗: ${error.message}`);
             throw error;
         } finally {
             // 刪除暫存檔案
             try {
                 if (fs.existsSync(filepath)) {
                     fs.unlinkSync(filepath);
-                    console.log(`[Twitter] 🗑️  已刪除暫存檔案: ${path.basename(filepath)}`);
+                    tlog.sys('Twitter-發推', `🗑️  已刪除暫存檔案: ${path.basename(filepath)}`);
                 }
             } catch (cleanupError) {
-                console.warn(`[Twitter] ⚠️  清理暫存檔案失敗:`, cleanupError.message);
+                tlog.sys('Twitter-發推', `⚠️ 清理暫存檔案失敗: ${cleanupError.message}`);
             }
         }
     }
@@ -485,7 +486,7 @@ class TwitterInteractionHandler {
             // 🖼️ 處理圖片上傳（如果有圖片）
             let mediaIds = [];
             if (imageUrls && imageUrls.length > 0) {
-                console.log(`[Twitter] 🖼️  準備上傳 ${imageUrls.length} 張圖片`);
+                tlog.sys('Twitter-發推', `🖼️  準備上傳 ${imageUrls.length} 張圖片`);
 
                 for (const imageUrl of imageUrls) {
                     try {
@@ -496,12 +497,12 @@ class TwitterInteractionHandler {
                         const mediaId = await this.uploadImageToTwitter(filepath);
                         mediaIds.push(mediaId);
                     } catch (error) {
-                        console.error(`[Twitter] ⚠️  圖片處理失敗，跳過: ${imageUrl}`, error.message);
+                        tlog.sysError('Twitter-發推', `圖片處理失敗，跳過: ${imageUrl} ${error.message}`);
                         // 繼續處理其他圖片，不中斷流程
                     }
                 }
 
-                console.log(`[Twitter] ✅ 成功上傳 ${mediaIds.length} 張圖片`);
+                tlog.sys('Twitter-發推', `✅ 成功上傳 ${mediaIds.length} 張圖片`);
             }
 
             // 發推（附加圖片 media_ids）
@@ -524,19 +525,19 @@ class TwitterInteractionHandler {
             };
 
         } catch (error) {
-            console.error('[Twitter] 發推錯誤:', error);
+            tlog.sysError('Twitter-發推', `發推錯誤: ${error}`);
             
             let errorMessage = '未知錯誤';
             let diagnosticInfo = '';
             
             // 詳細錯誤分析
             if (error.code === 403 || (error.data && error.data.status === 403)) {
-                console.error('[Twitter] 403 認證錯誤 - 詳細資訊:', {
+                tlog.sysError('Twitter-發推', `403 認證錯誤 - 詳細資訊: ${{
                     code: error.code,
                     message: error.message,
                     data: error.data,
                     errors: error.errors
-                });
+                }}`);
                 
                 errorMessage = '403 認證錯誤';
                 diagnosticInfo = '\n可能原因:\n• Twitter應用程式權限不足(需要Read and Write)\n• Access Token過期或無效\n• 帳戶被限制\n• API金鑰配置錯誤';
@@ -553,7 +554,7 @@ class TwitterInteractionHandler {
                 errorMessage = error.message;
             }
             
-            console.error(`[Twitter] 錯誤診斷: ${errorMessage}${diagnosticInfo}`);
+            tlog.sysError('Twitter-發推', `錯誤診斷: ${errorMessage}${diagnosticInfo}`);
 
             return {
                 success: false,

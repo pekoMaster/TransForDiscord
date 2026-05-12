@@ -11,6 +11,7 @@
 const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
+const tlog = require('../utils/tfd-logger');
 
 const DB_PATH = path.join(__dirname, '..', 'data', 'tfd.db');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
@@ -38,7 +39,7 @@ function init() {
     db.exec(schema);
 
     _prepareStatements();
-    console.log(`[DB] SQLite 初始化完成: ${DB_PATH}`);
+    tlog.sys('DB', `SQLite 初始化完成: ${DB_PATH}`);
     return db;
 }
 

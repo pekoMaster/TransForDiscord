@@ -24,6 +24,7 @@ const {
 
 const db = require('../db');
 const { PROVIDERS, saveKey, removeKey, getKeyStatus, hasAnyKey } = require('../utils/user-api-key-storage.js');
+const tlog = require('../utils/tfd-logger');
 
 const PROVIDER_CHOICES = [
     { name: 'OpenAI', value: 'openai' },
@@ -186,7 +187,7 @@ module.exports = {
             }
 
         } catch (error) {
-            console.error('[/pe] 指令執行失敗:', error);
+            tlog.error('/pe', interaction, `指令執行失敗: ${error.message}`);
             const reply = { content: '❌ 執行指令時發生錯誤，請稍後再試。', flags: MessageFlags.Ephemeral };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(reply).catch(() => {});
