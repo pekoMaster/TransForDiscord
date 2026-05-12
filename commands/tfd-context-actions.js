@@ -27,11 +27,15 @@ module.exports = {
         if (!targetMsg) return interaction.reply({ content: '無法取得目標訊息', flags: MessageFlags.Ephemeral });
         if (!targetMsg.webhookId && !targetMsg.author.bot) return interaction.reply({ content: '此訊息非 PekoEmbed 轉發訊息', flags: MessageFlags.Ephemeral });
         const chId = interaction.channelId, msgId = targetMsg.id;
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('ctx_delete_' + chId + '_' + msgId).setLabel('移除訊息').setStyle(ButtonStyle.Danger),
+        const originalAuthorId = extractAuthorFromMsg(targetMsg.content);
+        const isAuthor = !originalAuthorId || originalAuthorId === userId;
+        const btnRow = [
+            ...(isAuthor ? [new ButtonBuilder().setCustomId('ctx_delete_' + chId + '_' + msgId).setLabel('移除訊息').setStyle(ButtonStyle.Danger)] : []),
             new ButtonBuilder().setCustomId('ctx_spoiler_' + chId + '_' + msgId).setLabel('上防爆雷').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('ctx_report_' + chId + '_' + msgId).setLabel('黑名單回報').setStyle(ButtonStyle.Secondary));
-        await interaction.reply({ content: '**PekoEmbed 操作選單**', components: [row], flags: MessageFlags.Ephemeral });
+            new ButtonBuilder().setCustomId('ctx_report_' + chId + '_' + msgId).setLabel('黑名單回報').setStyle(ButtonStyle.Secondary)
+        ];
+        const note = isAuthor ? '' : '\n⚠️ 只有原作者可以收回此訊息';
+        await interaction.reply({ content: '**PekoEmbed 操作選單**' + note, components: [new ActionRowBuilder().addComponents(...btnRow)], flags: MessageFlags.Ephemeral });
     },
 
     async handleContextButton(interaction) {
@@ -71,12 +75,15 @@ async function handleContextDelete(interaction) {
 
     // Check if user is original author
     const originalAuthorId = extractAuthorFromMsg(t.content);
+    if (originalAuthorId && originalAuthorId !== interaction.user.id) {
+        return interaction.reply({ content: '只有原作者可以收回訊息', flags: MessageFlags.Ephemeral });
+    }
     if (originalAuthorId && originalAuthorId === interaction.user.id) {
         await t.delete().catch(() => {});
         return interaction.reply({ content: '已收回訊息', flags: MessageFlags.Ephemeral });
     }
 
-    // Not original author: show reason modal
+    // No author info: show modal
     const modal = new ModalBuilder().setCustomId('ctx_delete_modal_' + channelId + '_' + messageId).setTitle('收回訊息理由')
         .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('請輸入收回理由（可空白）').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(200)));
     return interaction.showModal(modal);
@@ -90,6 +97,7 @@ async function handleDeleteModalSubmit(interaction) {
     if (!t) return interaction.editReply({ content: '目標訊息已不存在' });
     if (!t.webhookId) return interaction.editReply({ content: '僅限 Webhook 轉發訊息才能使用收回功能' });
     const authorId = extractAuthorFromMsg(t.content);
+    if (authorId && authorId !== interaction.user.id) return interaction.editReply({ content: '只有原作者可以收回訊息' });
     await t.delete().catch(() => {});
     const gs = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
     if (gs && gs.log_channel_id) {
