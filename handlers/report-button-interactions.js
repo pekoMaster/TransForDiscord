@@ -126,10 +126,6 @@ async function handleMainButton(interaction) {
         return interaction.reply({ content: '⏳ 操作冷卻中，請稍候', flags: MessageFlags.Ephemeral });
     }
 
-    if (!db.guilds.isBlacklistEnabled(interaction.guildId)) {
-        return interaction.reply({ content: '⚠️ 本功能尚未啟用（管理員請使用 /pe blacklist switch on 開啟）', flags: MessageFlags.Ephemeral });
-    }
-
     const channelId = interaction.channelId;
     const messageId = interaction.message.id;
     const subTs = Date.now();
@@ -234,6 +230,10 @@ async function handleBlacklistSubmenu(interaction) {
     const { channelId, messageId, subTs } = parseChMsg(interaction.customId);
     if (isExpired(subTs)) {
         return interaction.update({ content: '⏰ 操作已逾時', components: [], flags: MessageFlags.Ephemeral });
+    }
+
+    if (!db.guilds.isBlacklistEnabled(interaction.guildId)) {
+        return interaction.reply({ content: '⚠️ 本功能尚未啟用（管理員請使用 /pe blacklist switch on 開啟）', flags: MessageFlags.Ephemeral });
     }
 
     const guildSettings = db.guilds.get(interaction.guildId);

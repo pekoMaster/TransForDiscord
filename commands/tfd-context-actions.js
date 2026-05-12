@@ -26,17 +26,15 @@ module.exports = {
         const targetMsg = await interaction.channel.messages.fetch(interaction.targetId).catch(() => null);
         if (!targetMsg) return interaction.reply({ content: '無法取得目標訊息', flags: MessageFlags.Ephemeral });
         if (!targetMsg.webhookId && !targetMsg.author.bot) return interaction.reply({ content: '此訊息非 PekoEmbed 轉發訊息', flags: MessageFlags.Ephemeral });
-        if (!db.guilds.isBlacklistEnabled(interaction.guildId)) {
-            return interaction.reply({ content: '⚠️ 本功能尚未啟用（管理員請使用 /pe blacklist switch on 開啟）', flags: MessageFlags.Ephemeral });
-        }
 
         const chId = interaction.channelId, msgId = targetMsg.id;
         const originalAuthorId = resolveAuthorId(targetMsg);
         const isAuthor = !originalAuthorId || originalAuthorId === userId;
+        const blacklistEnabled = db.guilds.isBlacklistEnabled(interaction.guildId);
         const btnRow = [
             ...(isAuthor ? [new ButtonBuilder().setCustomId('ctx_delete_' + chId + '_' + msgId).setLabel('移除訊息').setStyle(ButtonStyle.Danger)] : []),
             new ButtonBuilder().setCustomId('ctx_spoiler_' + chId + '_' + msgId).setLabel('上防爆雷').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('ctx_report_' + chId + '_' + msgId).setLabel('黑名單回報').setStyle(ButtonStyle.Secondary)
+            ...(blacklistEnabled ? [new ButtonBuilder().setCustomId('ctx_report_' + chId + '_' + msgId).setLabel('黑名單回報').setStyle(ButtonStyle.Secondary)] : [])
         ];
         const note = isAuthor ? '' : '\n⚠️ 只有原作者可以收回此訊息';
         await interaction.reply({ content: '**PekoEmbed 操作選單**' + note, components: [new ActionRowBuilder().addComponents(...btnRow)], flags: MessageFlags.Ephemeral });
@@ -154,6 +152,9 @@ async function handleSpoilerModalSubmit(interaction) {
 
 async function handleContextReport(interaction) {
     const { channelId, messageId } = parseCtxId(interaction.customId);
+    if (!db.guilds.isBlacklistEnabled(interaction.guildId)) {
+        return interaction.reply({ content: '⚠️ 本功能尚未啟用（管理員請使用 /pe blacklist switch on 開啟）', flags: MessageFlags.Ephemeral });
+    }
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
     if (!t) return interaction.reply({ content: '目標訊息已不存在', flags: MessageFlags.Ephemeral });
     const gs = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
