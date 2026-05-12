@@ -10,7 +10,8 @@ PRAGMA journal_mode = WAL;
 CREATE TABLE IF NOT EXISTS guild_settings (
   guild_id          TEXT PRIMARY KEY,
   guild_name        TEXT,                      -- 快照（用於管理面板顯示）
-  enabled           INTEGER NOT NULL DEFAULT 1, -- TFD 是否在此伺服器啟用（0/1）
+  enabled           INTEGER NOT NULL DEFAULT 1,
+  blacklist_enabled INTEGER NOT NULL DEFAULT 0, -- TFD 是否在此伺服器啟用（0/1）
   log_channel_id    TEXT,                      -- 日誌頻道；NULL = 不發 log
   owner_user_id     TEXT,                      -- 活動用「自定 owner」（管理員按鈕用）
   language          TEXT DEFAULT 'zh-TW',      -- 介面語言

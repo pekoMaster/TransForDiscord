@@ -552,7 +552,16 @@ async function handleAdminModal(interaction) {
 
     gbm.approveReport(reportId, interaction.user.id, report.final_level, adminReason);
     await updateAdminMessage(interaction, report, 'approved', interaction.user.id, report.final_level, adminReason);
-    return interaction.editReply({ content: `✅ 已核准回報（等級 ${report.final_level}）` });
+    
+    // Log admin action
+    {
+        const gls = db.guilds.get(report.guild_id);
+        if (gls && gls.log_channel_id) {
+            const lc = await interaction.client.channels.fetch(gls.log_channel_id).catch(() => null);
+            if (lc) await lc.send({ content: '✅ <@' + interaction.user.id + '> 核准了黑名單回報 #' + reportId + '（等級 ' + report.final_level + '，備註：' + (adminReason || '無') + '）', allowedMentions: { parse: [] } });
+        }
+    }
+return interaction.editReply({ content: `✅ 已核准回報（等級 ${report.final_level}）` });
 }
 
 async function updateAdminMessage(interaction, report, status, adminId, finalLevel = null, adminReason = null) {

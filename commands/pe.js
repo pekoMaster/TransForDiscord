@@ -108,6 +108,10 @@ module.exports = {
                     ))
                 .addStringOption(o => o.setName('author').setDescription('作者名稱').setRequired(true))
             )
+            .addSubcommand(s => s.setName('switch').setDescription('啟用/停用黑名單系統')
+                .addStringOption(o => o.setName('action').setDescription('on=啟用, off=停用').setRequired(true)
+                    .addChoices({ name: 'ON - 啟用', value: 'on' }, { name: 'OFF - 停用', value: 'off' }))
+            )
             .addSubcommand(s => s.setName('list').setDescription('列出本伺服器黑名單')
                 .addStringOption(o => o.setName('platform').setDescription('過濾平台（可選）').setRequired(false)
                     .addChoices(
@@ -388,6 +392,7 @@ async function handleBlacklist(interaction, sub, guildId, userId) {
     const { getInstance: getGBM } = require('../utils/guild-blacklist-manager.js');
     const gbm = getGBM();
 
+    if (sub === 'switch') return handleBlacklistSwitch(interaction, guildId);
     if (sub === 'add') {
         const platform = interaction.options.getString('platform');
         const author = interaction.options.getString('author').trim();

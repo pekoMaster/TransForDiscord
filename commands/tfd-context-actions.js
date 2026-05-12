@@ -26,6 +26,10 @@ module.exports = {
         const targetMsg = await interaction.channel.messages.fetch(interaction.targetId).catch(() => null);
         if (!targetMsg) return interaction.reply({ content: '無法取得目標訊息', flags: MessageFlags.Ephemeral });
         if (!targetMsg.webhookId && !targetMsg.author.bot) return interaction.reply({ content: '此訊息非 PekoEmbed 轉發訊息', flags: MessageFlags.Ephemeral });
+        if (!db.guilds.isBlacklistEnabled(interaction.guildId)) {
+            return interaction.reply({ content: '⚠️ 本功能尚未啟用（管理員請使用 /pe blacklist switch on 開啟）', flags: MessageFlags.Ephemeral });
+        }
+
         const chId = interaction.channelId, msgId = targetMsg.id;
         const originalAuthorId = resolveAuthorId(targetMsg);
         const isAuthor = !originalAuthorId || originalAuthorId === userId;

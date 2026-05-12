@@ -1380,7 +1380,7 @@ class TFDMessageHandler {
                 message._currentOriginalUrl = currentUrl;
 
                 // 🔒 Per-server blacklist enforcement (level 1/2/3)
-                if (message.guild) {
+                if (message.guild && db.guilds.isBlacklistEnabled(message.guild.id)) {
                     const gbm = getGBM();
                     const { author, uid, platform } = normalizeAuthorForBlacklist(result, message);
                     const entry = author || uid ? gbm.check(message.guild.id, platform, author, uid) : null;

@@ -223,6 +223,17 @@ const guilds = {
             .run(enabled ? 1 : 0, now(), guildId);
     },
 
+    isBlacklistEnabled(guildId) {
+        const g = _stmt('guildGet').get(guildId);
+        return g ? !!g.blacklist_enabled : false;
+    },
+
+    setBlacklistEnabled(guildId, enabled) {
+        guilds._ensure(guildId);
+        return getDB().prepare('UPDATE guild_settings SET blacklist_enabled = ?, updated_at = ? WHERE guild_id = ?')
+            .run(enabled ? 1 : 0, now(), guildId);
+    },
+
     all() {
         return _stmt('guildAll').all();
     },
@@ -237,10 +248,6 @@ const guilds = {
         }
     }
 };
-
-// ────────────────────────────────────────────────────────────
-// blocked channels API
-// ────────────────────────────────────────────────────────────
 
 const blockedChannels = {
     add(guildId, channelId, addedBy = null, reason = null) {
