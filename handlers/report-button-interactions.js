@@ -72,13 +72,22 @@ function checkCooldown(userId) {
     return false;
 }
 
-function extractAuthorFromMsg(content) {
-    if (!content) return null;
-    const lines = content.split('\n');
-    // Walk backwards to find the LAST -# line with a mention
-    for (let i = lines.length - 1; i >= 0; i--) {
-        const m = lines[i].match(/# <@!?(\d+)>/);
-        if (m) return m[1];
+function extractAuthorFromMsg(msgOrContent) {
+    const content = (typeof msgOrContent === 'string' || !msgOrContent) ? msgOrContent : msgOrContent.content;
+    if (content) {
+        const lines = content.split('\n');
+        // Walk backwards to find the LAST -# line with a mention
+        for (let i = lines.length - 1; i >= 0; i--) {
+            const m = lines[i].match(/# <@!?(\d+)>/);
+            if (m) return m[1];
+        }
+    }
+    // V2 Container fallback
+    if (msgOrContent && typeof msgOrContent !== 'string') {
+        try {
+            const first = msgOrContent.components?.[0]?.components?.[0];
+            if (first) { const c = first.content || first.data?.content || ''; const m = c.match(/# <@!?(\d+)>/); if (m) return m[1]; }
+        } catch (_) {}
     }
     return null;
 }
@@ -114,6 +123,10 @@ async function handleMainButton(interaction) {
     }
     if (checkCooldown(interaction.user.id)) {
         return interaction.reply({ content: '⏳ 操作冷卻中，請稍候', flags: MessageFlags.Ephemeral });
+    }
+
+    if (!db.guilds.isBlacklistEnabled(interaction.guildId)) {
+        return interaction.reply({ content: '⚠️ 本功能尚未啟用（管理員請使用 /pe blacklist switch on 開啟）', flags: MessageFlags.Ephemeral });
     }
 
     const channelId = interaction.channelId;
@@ -182,7 +195,12 @@ async function handleRecallSubmenu(interaction) {
         return interaction.reply({ content: '❌ 原始訊息已不存在或無法存取', flags: MessageFlags.Ephemeral });
     }
 
-    const originalAuthorId = extractAuthorFromMsg(targetMsg.content);
+    const originalAuthorId = extractAuthorFromMsg(targetMsg);
+
+    // Non-author: block
+    if (originalAuthorId && originalAuthorId !== interaction.user.id) {
+        return interaction.reply({ content: '只有原作者可以收回訊息', flags: MessageFlags.Ephemeral });
+    }
 
     // If caller is the original author: delete directly
     if (originalAuthorId && originalAuthorId === interaction.user.id) {
@@ -391,7 +409,8 @@ async function handleRecallModal(interaction) {
         return interaction.editReply({ content: '❌ 原始訊息已不存在' });
     }
 
-    const originalAuthorId = extractAuthorFromMsg(targetMsg.content);
+    const originalAuthorId = extractAuthorFromMsg(targetMsg);
+    if (originalAuthorId && originalAuthorId !== interaction.user.id) return interaction.editReply({ content: '只有原作者可以收回訊息' });
     await targetMsg.delete().catch(() => {});
     await logRecall(interaction, targetMsg, originalAuthorId, reason);
     return interaction.editReply({ content: '✅ 已收回訊息' });
@@ -446,7 +465,7 @@ async function handleBlacklistModal(interaction) {
     try {
         const channel = await interaction.client.channels.fetch(channelId);
         targetMsg = await channel.messages.fetch(messageId);
-        targetAuthor = extractAuthorFromMsg(targetMsg.content);
+        targetAuthor = extractAuthorFromMsg(targetMsg);
         if (targetMsg.content) {
             const urlMatch = targetMsg.content.match(/https?:\/\/[^\s<>"{}|\\^`[\]]+/i);
             if (urlMatch) originalUrl = urlMatch[0];
