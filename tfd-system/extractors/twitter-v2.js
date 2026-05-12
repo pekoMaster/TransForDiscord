@@ -7,7 +7,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const TwitterVideoAttachmentOptimizer = require('./twitter-video-attachment-optimizer');
-const TwitterImageAttachmentOptimizer = require('./twitter-image-attachment-optimizer');
 const MixedMediaHTMLBuilder = require('../render/mixed-media-html-builder');
 const TextTruncator = require('../utils/text-truncator');
 const URLConverterLogger = require('../utils/url-converter-logger');
@@ -32,7 +31,6 @@ class TFDTwitterExtractor {
         this.name = 'Twitter/X';
         this.iconURL = 'https://ermiana.canaria.cc/pic/twitter.png';
         this.videoOptimizer = new TwitterVideoAttachmentOptimizer();
-        this.imageOptimizer = new TwitterImageAttachmentOptimizer();
         this.htmlBuilder = new MixedMediaHTMLBuilder();
         this.textTruncator = new TextTruncator();
 

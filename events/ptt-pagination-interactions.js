@@ -8,6 +8,10 @@ const { Events, MessageFlags } = require('discord.js');
 const PTTExtractor = require('../tfd-system/extractors/ptt.js');
 const PTTCacheManager = require('../utils/ptt-cache-manager.js');
 
+// 記憶體快取（避免每次翻頁都讀取磁碟）
+const memoryCache = new Map();
+const MEMORY_CACHE_TTL = 5 * 60 * 1000; // 5 分鐘
+
 // 防止快速點擊的冷卻機制
 const clickCooldown = new Map();
 
@@ -51,11 +55,20 @@ module.exports = {
 
             console.log(`[PTT翻頁] 用戶 ${interaction.user.tag} 點擊: ${action} → 第 ${pageNumber + 1} 頁`);
 
-            // 🚀 從快取獲取資料
-            const cacheManager = new PTTCacheManager();
+            // 優先從記憶體快取獲取
+            let cachedData = null;
+            const memoryCacheEntry = memoryCache.get(articleHash);
 
-            // 從快取中尋找對應的文章（需要從快取目錄中查找）
-            const cachedData = await cacheManager.loadArticleCache(articleHash);
+            if (memoryCacheEntry && (Date.now() - memoryCacheEntry.timestamp < MEMORY_CACHE_TTL)) {
+                cachedData = memoryCacheEntry.data;
+            } else {
+                const cacheManager = new PTTCacheManager();
+                cachedData = await cacheManager.loadArticleCache(articleHash);
+
+                if (cachedData) {
+                    memoryCache.set(articleHash, { data: cachedData, timestamp: Date.now() });
+                }
+            }
 
             if (!cachedData) {
                 // 快取已過期，要求用戶重新張貼網址
@@ -90,6 +103,8 @@ module.exports = {
 
             console.log(`[PTT翻頁] 成功切換到第 ${pageNumber + 1} 頁`);
 
+            cleanExpiredMemoryCache();
+
         } catch (error) {
             console.error('[PTT翻頁] 處理翻頁互動失敗:', error);
 
@@ -115,3 +130,14 @@ module.exports = {
         }
     }
 };
+
+function cleanExpiredMemoryCache() {
+    const now = Date.now();
+    for (const [hash, entry] of memoryCache.entries()) {
+        if (now - entry.timestamp > MEMORY_CACHE_TTL) {
+            memoryCache.delete(hash);
+        }
+    }
+}
+
+setInterval(cleanExpiredMemoryCache, 10 * 60 * 1000);

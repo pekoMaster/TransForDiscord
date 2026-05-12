@@ -86,7 +86,7 @@ async function translateWithOpenAI(text, apiKey, systemPrompt) {
     const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
-            model: 'gpt-4o-mini',
+            model: 'gpt-4.1-mini',
             messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: text }
@@ -115,7 +115,7 @@ async function translateWithClaude(text, apiKey, systemPrompt) {
     const response = await axios.post(
         'https://api.anthropic.com/v1/messages',
         {
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-6-20250227',
             max_tokens: 2048,
             system: systemPrompt,
             messages: [
@@ -148,7 +148,7 @@ async function translateWithGemini(text, apiKey, systemPrompt) {
     const prompt = `${systemPrompt}\n\n原文：\n${text}\n\n譯文：`;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite-preview',
+        model: 'gemini-2.5-flash-lite',
         contents: prompt
     });
 
