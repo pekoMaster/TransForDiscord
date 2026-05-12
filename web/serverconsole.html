@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Console — Peko Embed</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0e14;
+            --bg-card: #141922;
+            --bg-card-hover: #1a2030;
+            --bg-input: #0f1319;
+            --border: #1e2636;
+            --text: #e2e8f0;
+            --text-dim: #8492a6;
+            --accent: #f59e42;
+            --accent-light: #fbbf6a;
+            --green: #22c55e;
+            --green-dim: rgba(34,197,94,.15);
+            --blue: #3b82f6;
+            --blue-dim: rgba(59,130,246,.15);
+            --red: #ef4444;
+            --purple: #a78bfa;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── Auth Screen ── */
+        .auth-screen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .auth-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 48px 40px;
+            text-align: center;
+            max-width: 420px;
+            width: 100%;
+        }
+        .auth-box h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+        .auth-box .subtitle {
+            color: var(--text-dim);
+            margin-bottom: 32px;
+            font-size: .95rem;
+        }
+        .auth-box .logo { font-size: 3rem; margin-bottom: 16px; }
+        #g-signin-btn {
+            display: flex;
+            justify-content: center;
+            margin: 24px 0;
+            min-height: 44px;
+        }
+        .auth-error {
+            color: var(--red);
+            margin-top: 16px;
+            font-size: .9rem;
+            display: none;
+        }
+        .auth-loading {
+            color: var(--text-dim);
+            margin-top: 12px;
+            font-size: .85rem;
+        }
+
+        /* ── Dashboard ── */
+        .dashboard { display: none; }
+
+        /* Top bar */
+        .topbar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .bot-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+        }
+        .bot-name {
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+        .bot-tag {
+            color: var(--text-dim);
+            font-size: .8rem;
+            margin-left: 4px;
+        }
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .topbar-right .last-update {
+            color: var(--text-dim);
+            font-size: .8rem;
+        }
+        .btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            cursor: pointer;
+            font-size: .85rem;
+            font-family: inherit;
+            transition: background .15s;
+        }
+        .btn:hover { background: var(--bg-card-hover); }
+        .btn-accent {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+            font-weight: 600;
+        }
+        .btn-accent:hover { background: var(--accent-light); }
+
+        /* Content */
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Stats row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .stat-label {
+            color: var(--text-dim);
+            font-size: .85rem;
+            margin-top: 4px;
+        }
+        .stat-sub {
+            font-size: .75rem;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+        .stat-green { color: var(--green); }
+        .stat-blue { color: var(--blue); }
+        .stat-accent { color: var(--accent); }
+        .stat-purple { color: var(--purple); }
+
+        /* Table section */
+        .table-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .table-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .search-input {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 14px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: .9rem;
+            width: 260px;
+            outline: none;
+            transition: border-color .15s;
+        }
+        .search-input:focus { border-color: var(--accent); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead th {
+            text-align: left;
+            padding: 10px 16px;
+            font-weight: 600;
+            font-size: .8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        thead th:hover { color: var(--accent); }
+        thead th.no-sort { cursor: default; }
+        thead th.no-sort:hover { color: var(--text-dim); }
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background .1s;
+        }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: var(--bg-card-hover); }
+        tbody td {
+            padding: 10px 16px;
+            font-size: .9rem;
+            vertical-align: middle;
+        }
+        .guild-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            vertical-align: middle;
+        }
+        .guild-icon-placeholder {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--border);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .75rem;
+            color: var(--text-dim);
+        }
+        .guild-name-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .guild-name-text {
+            font-weight: 500;
+            line-height: 1.3;
+        }
+        .guild-desc {
+            font-size: .75rem;
+            color: var(--text-dim);
+            max-width: 280px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: .7rem;
+            font-weight: 600;
+        }
+        .badge-green { background: var(--green-dim); color: var(--green); }
+        .badge-blue { background: var(--blue-dim); color: var(--blue); }
+        .badge-boost {
+            background: rgba(167,139,250,.15);
+            color: var(--purple);
+        }
+        .guild-id {
+            font-family: 'Courier New', monospace;
+            font-size: .8rem;
+            color: var(--text-dim);
+            cursor: pointer;
+        }
+        .guild-id:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+        .perm-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+        }
+        .perm-badge {
+            display: inline-block;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: .65rem;
+            background: var(--bg);
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+        .perm-admin {
+            background: rgba(239,68,68,.12);
+            color: var(--red);
+            border-color: rgba(239,68,68,.3);
+        }
+        .online-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            margin-right: 4px;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(11,14,20,.85);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading-overlay.active { display: flex; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text {
+            color: var(--text-dim);
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: .9rem;
+            z-index: 300;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all .3s;
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .table-header { flex-direction: column; gap: 12px; }
+            .search-input { width: 100%; }
+        }
+        @media (max-width: 600px) {
+            .stats-row { grid-template-columns: 1fr; }
+            .topbar { flex-direction: column; gap: 8px; padding: 12px 16px; }
+            .content { padding: 16px; }
+            table { font-size: .8rem; }
+            tbody td, thead th { padding: 8px 10px; }
+            .guild-desc { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Auth Screen ── -->
+<div class="auth-screen" id="auth-screen">
+    <div class="auth-box">
+        <div class="logo">🥕</div>
+        <h1>Server Console</h1>
+        <p class="subtitle">Peko Embed 管理員控制台<br>僅限授權帳號登入</p>
+        <div id="g-signin-btn"></div>
+        <p class="auth-loading" id="auth-loading">正在載入 Google 登入…</p>
+        <p class="auth-error" id="auth-error"></p>
+    </div>
+</div>
+
+<!-- ── Loading Overlay ── -->
+<div class="loading-overlay" id="loading-overlay">
+    <div>
+        <div class="spinner"></div>
+        <div class="loading-text">正在載入伺服器資料…</div>
+    </div>
+</div>
+
+<!-- ── Dashboard ── -->
+<div class="dashboard" id="dashboard">
+    <div class="topbar">
+        <div class="topbar-left">
+            <img class="bot-avatar" id="bot-avatar" src="" alt="">
+            <div>
+                <span class="bot-name" id="bot-name">Peko Embed</span>
+                <span class="bot-tag" id="bot-tag"></span>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <span class="last-update" id="last-update"></span>
+            <button class="btn" onclick="refreshData()">重新整理</button>
+            <button class="btn" onclick="logout()">登出</button>
+        </div>
+    </div>
+
+    <div class="content">
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value stat-accent" id="s-guilds">—</div>
+                <div class="stat-label">伺服器數量</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-blue" id="s-members">—</div>
+                <div class="stat-label">總成員數（約）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-green" id="s-online">—</div>
+                <div class="stat-label">在線人數（約）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-purple" id="s-largest">—</div>
+                <div class="stat-label">最大伺服器</div>
+                <div class="stat-sub" id="s-largest-name"></div>
+            </div>
+        </div>
+
+        <!-- Guild Table -->
+        <div class="table-section">
+            <div class="table-header">
+                <h2>伺服器列表</h2>
+                <input class="search-input" type="text" placeholder="搜尋伺服器名稱或 ID…" oninput="filterTable(this.value)">
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="no-sort" style="width:48px"></th>
+                            <th onclick="sortBy('name')">名稱</th>
+                            <th onclick="sortBy('members')" style="width:100px">成員</th>
+                            <th onclick="sortBy('online')" style="width:90px">在線</th>
+                            <th class="no-sort">權限</th>
+                            <th onclick="sortBy('boost')" style="width:70px">Boost</th>
+                            <th class="no-sort">ID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="guild-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer onload="onGsiLoaded()" onerror="onGsiError()"></script>
+
+<script>
+/* ── State ── */
+let idToken = null;
+let guildData = [];
+let sortField = 'members';
+let sortAsc = false;
+let searchQuery = '';
+
+/* ── Google Sign-In ── */
+let gsiReady = false;
+
+function onGsiLoaded() { gsiReady = true; initSignIn(); }
+function onGsiError() {
+    document.getElementById('auth-loading').textContent = '';
+    showAuthError('無法載入 Google 登入服務，請檢查網路連線或廣告攔截器');
+}
+
+async function initSignIn() {
+    try {
+        const res = await fetch('/api/bot-stats');
+        if (!res.ok) throw new Error('無法取得設定');
+        const cfg = await res.json();
+
+        if (!gsiReady) {
+            document.getElementById('auth-loading').textContent = '等待 Google 服務…';
+            await new Promise(r => { const iv = setInterval(() => { if (gsiReady) { clearInterval(iv); r(); } }, 200); });
+        }
+
+        document.getElementById('auth-loading').textContent = '';
+
+        google.accounts.id.initialize({
+            client_id: cfg.googleClientId,
+            callback: handleCredential,
+            auto_select: true
+        });
+        google.accounts.id.renderButton(
+            document.getElementById('g-signin-btn'),
+            { theme: 'filled_blue', size: 'large', text: 'signin_with', locale: 'zh-TW', width: 280 }
+        );
+    } catch (e) {
+        document.getElementById('auth-loading').textContent = '';
+        showAuthError(e.message);
+    }
+}
+
+async function handleCredential(response) {
+    idToken = response.credential;
+
+    const payload = parseJwt(idToken);
+    if (payload.email !== 'lmmlmm16861@gmail.com') {
+        showAuthError('此 Google 帳號未授權。僅限管理員登入。');
+        idToken = null;
+        return;
+    }
+
+    sessionStorage.setItem('pe_token', idToken);
+    showDashboard();
+    await fetchStats();
+}
+
+function parseJwt(token) {
+    const b = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(decodeURIComponent(atob(b).split('').map(c =>
+        '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join('')));
+}
+
+function showAuthError(msg) {
+    const el = document.getElementById('auth-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+/* ── Session restore ── */
+window.addEventListener('DOMContentLoaded', () => {
+    const saved = sessionStorage.getItem('pe_token');
+    if (saved) {
+        try {
+            const p = parseJwt(saved);
+            if (p.exp * 1000 > Date.now() && p.email === 'lmmlmm16861@gmail.com') {
+                idToken = saved;
+                showDashboard();
+                fetchStats();
+                return;
+            }
+        } catch {}
+        sessionStorage.removeItem('pe_token');
+    }
+    initSignIn();
+});
+
+/* ── Dashboard ── */
+function showDashboard() {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+}
+
+async function fetchStats() {
+    document.getElementById('loading-overlay').classList.add('active');
+    try {
+        const res = await fetch('/api/bot-stats', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+            sessionStorage.removeItem('pe_token');
+            location.reload();
+            return;
+        }
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        guildData = data.guilds;
+        renderBotInfo(data);
+        renderStats(data);
+        renderTable();
+
+        document.getElementById('last-update').textContent =
+            '更新：' + new Date(data.fetchedAt).toLocaleString('zh-TW');
+    } catch (e) {
+        toast('載入失敗：' + e.message);
+    } finally {
+        document.getElementById('loading-overlay').classList.remove('active');
+    }
+}
+
+function refreshData() { fetchStats(); }
+
+function logout() {
+    sessionStorage.removeItem('pe_token');
+    idToken = null;
+    google.accounts.id.disableAutoSelect();
+    location.reload();
+}
+
+/* ── Render ── */
+const fmt = n => n.toLocaleString('zh-TW');
+
+function renderBotInfo(data) {
+    const bot = data.bot;
+    if (bot.avatar) {
+        document.getElementById('bot-avatar').src =
+            `https://cdn.discordapp.com/avatars/${bot.id}/${bot.avatar}.png?size=72`;
+    }
+    document.getElementById('bot-name').textContent = bot.username;
+    document.getElementById('bot-tag').textContent = `#${bot.discriminator || '0'}`;
+}
+
+function renderStats(data) {
+    document.getElementById('s-guilds').textContent = fmt(data.totalGuilds);
+    document.getElementById('s-members').textContent = fmt(data.totalMembers);
+    document.getElementById('s-online').textContent = fmt(data.totalOnline);
+
+    if (data.guilds.length > 0) {
+        const top = data.guilds[0];
+        document.getElementById('s-largest').textContent = fmt(top.approximate_member_count);
+        document.getElementById('s-largest-name').textContent = top.name;
+    }
+}
+
+/* ── Permission helpers ── */
+const PERMS = {
+    ADMINISTRATOR:     [0x8n,     '管理員',     true],
+    MANAGE_GUILD:      [0x20n,    '管理伺服器', false],
+    MANAGE_MESSAGES:   [0x2000n,  '管理訊息',   false],
+    SEND_MESSAGES:     [0x800n,   '發送訊息',   false],
+    EMBED_LINKS:       [0x4000n,  'Embed',      false],
+    ATTACH_FILES:      [0x8000n,  '附件',       false],
+};
+
+function getPermBadges(permStr) {
+    if (!permStr) return '';
+    const p = BigInt(permStr);
+    const isAdmin = (p & 0x8n) === 0x8n;
+    if (isAdmin) return '<span class="perm-badge perm-admin">管理員</span>';
+
+    let html = '';
+    for (const [, [bit, label]] of Object.entries(PERMS)) {
+        if (bit === 0x8n) continue;
+        if ((p & bit) === bit) {
+            html += `<span class="perm-badge">${label}</span>`;
+        }
+    }
+    return html || '<span class="perm-badge">基本</span>';
+}
+
+const BOOST_TIER = ['—', 'Lv.1', 'Lv.2', 'Lv.3'];
+
+function guildIconUrl(g) {
+    if (!g.icon) return null;
+    const ext = g.icon.startsWith('a_') ? 'gif' : 'png';
+    return `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.${ext}?size=64`;
+}
+
+function guildInitial(name) {
+    return name.split(/\s+/).map(w => w[0]).join('').substring(0, 2).toUpperCase();
+}
+
+/* ── Table ── */
+function getFiltered() {
+    let list = guildData;
+    if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        list = list.filter(g =>
+            g.name.toLowerCase().includes(q) || g.id.includes(q)
+        );
+    }
+    list = [...list].sort((a, b) => {
+        let va, vb;
+        switch (sortField) {
+            case 'name':    va = a.name.toLowerCase(); vb = b.name.toLowerCase();
+                            return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+            case 'members': va = a.approximate_member_count; vb = b.approximate_member_count; break;
+            case 'online':  va = a.approximate_presence_count; vb = b.approximate_presence_count; break;
+            case 'boost':   va = a.premium_tier; vb = b.premium_tier; break;
+            default:        va = a.approximate_member_count; vb = b.approximate_member_count;
+        }
+        return sortAsc ? va - vb : vb - va;
+    });
+    return list;
+}
+
+function renderTable() {
+    const tbody = document.getElementById('guild-tbody');
+    const list = getFiltered();
+
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-dim)">
+            ${searchQuery ? '找不到符合的伺服器' : '尚無資料'}</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = list.map(g => {
+        const icon = guildIconUrl(g);
+        const iconHtml = icon
+            ? `<img class="guild-icon" src="${icon}" alt="" loading="lazy">`
+            : `<span class="guild-icon-placeholder">${guildInitial(g.name)}</span>`;
+        const desc = g.description
+            ? `<div class="guild-desc" title="${g.description.replace(/"/g, '&quot;')}">${g.description}</div>`
+            : '';
+        const boostTier = BOOST_TIER[g.premium_tier] || '—';
+        const boostClass = g.premium_tier > 0 ? ' badge-boost' : '';
+
+        return `<tr>
+            <td>${iconHtml}</td>
+            <td><div class="guild-name-cell"><div>
+                <div class="guild-name-text">${esc(g.name)}</div>${desc}
+            </div></div></td>
+            <td>${fmt(g.approximate_member_count)}</td>
+            <td>${g.approximate_presence_count > 0
+                ? `<span class="online-dot"></span>${fmt(g.approximate_presence_count)}`
+                : '<span style="color:var(--text-dim)">—</span>'}</td>
+            <td><div class="perm-badges">${getPermBadges(g.permissions)}</div></td>
+            <td><span class="badge${boostClass}">${boostTier}</span></td>
+            <td><span class="guild-id" onclick="copyId('${g.id}')" title="點擊複製">${g.id}</span></td>
+        </tr>`;
+    }).join('');
+}
+
+function sortBy(field) {
+    if (sortField === field) sortAsc = !sortAsc;
+    else { sortField = field; sortAsc = false; }
+    renderTable();
+}
+
+function filterTable(val) {
+    searchQuery = val.trim();
+    renderTable();
+}
+
+function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+/* ── Utilities ── */
+function copyId(id) {
+    navigator.clipboard.writeText(id).then(() => toast('已複製 ID: ' + id));
+}
+
+function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>

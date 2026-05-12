@@ -16,7 +16,14 @@ class GeminiTranslator {
         ].filter(key => key && key.trim() !== '');
 
         this.currentKeyIndex = 0;
-        this.model = 'gemini-2.5-flash'; // 使用最新的 Gemini 2.5 Flash 模型
+        this.model = 'gemini-3.1-flash-lite-preview';
+        this.translationModelFallbacks = [
+            'gemini-3.1-flash-lite-preview',
+            'gemini-3-flash-preview',
+            'gemini-2.5-flash-lite',
+            'gemini-2.5-flash',
+            'gemini-3.1-pro-preview'
+        ];
         this.GoogleGenAI = null; // 延遲載入 ES Module
 
         if (this.apiKeys.length === 0) {
@@ -471,22 +478,65 @@ ${text}`;
 
             prompt += `\n\n**原文**：\n${text}\n\n**譯文**：`;
 
-            console.log(`${this.getTimeStamp()} [Gemini用戶翻譯] 開始翻譯 (${text.length} 字元)`);
+            let lastError = null;
+            const failedModels = [];
 
-            const response = await ai.models.generateContent({
-                model: this.model,
-                contents: prompt
-            });
+            for (let i = 0; i < this.translationModelFallbacks.length; i++) {
+                const modelName = this.translationModelFallbacks[i];
 
-            const translatedText = response.text.trim();
+                try {
+                    console.log(
+                        `${this.getTimeStamp()} [Gemini用戶翻譯] 開始翻譯 (${text.length} 字元)` +
+                        `${i === 0 ? '' : ` [模型切換: ${modelName}]`}`
+                    );
 
-            console.log(`${this.getTimeStamp()} [Gemini用戶翻譯] ✅ 翻譯成功`);
+                    const response = await ai.models.generateContent({
+                        model: modelName,
+                        contents: prompt
+                    });
 
-            return {
-                success: true,
-                text: translatedText,
-                error: null
-            };
+                    const translatedText = response.text.trim();
+
+                    console.log(`${this.getTimeStamp()} [Gemini用戶翻譯] ✅ 翻譯成功 (${modelName})`);
+
+                    return {
+                        success: true,
+                        text: translatedText,
+                        error: null
+                    };
+                } catch (modelError) {
+                    lastError = modelError;
+                    failedModels.push({
+                        model: modelName,
+                        message: modelError.message || ''
+                    });
+
+                    const errorText = modelError.message || '';
+                    const isRetryableModelError =
+                        errorText.includes('503') ||
+                        errorText.includes('UNAVAILABLE') ||
+                        errorText.includes('429') ||
+                        errorText.includes('404') ||
+                        errorText.includes('quota') ||
+                        errorText.includes('RESOURCE_EXHAUSTED') ||
+                        errorText.includes('rate limit') ||
+                        errorText.includes('not found') ||
+                        errorText.includes('not supported') ||
+                        errorText.includes('INVALID_ARGUMENT') ||
+                        errorText.includes('timeout') ||
+                        errorText.includes('ETIMEDOUT');
+
+                    if (!isRetryableModelError || i === this.translationModelFallbacks.length - 1) {
+                        break;
+                    }
+                }
+            }
+
+            if (lastError && failedModels.length > 0) {
+                lastError.message = `${lastError.message}\n[GeminiFallbacks] ${failedModels.map(item => `${item.model}: ${item.message}`).join(' | ')}`;
+            }
+
+            throw lastError || new Error('所有翻譯模型都無法使用');
 
         } catch (error) {
             console.error(`${this.getTimeStamp()} [Gemini用戶翻譯] ❌ 錯誤: ${error.message}`);

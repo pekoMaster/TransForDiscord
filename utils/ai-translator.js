@@ -137,24 +137,48 @@ async function translateWithClaude(text, apiKey, systemPrompt) {
     return content.trim();
 }
 
+const GEMINI_MODEL_FALLBACKS = [
+    'gemini-3.1-flash-lite-preview',
+    'gemini-3-flash-preview',
+    'gemini-2.5-flash-lite',
+    'gemini-2.5-flash',
+    'gemini-3.1-pro-preview'
+];
+
 /**
- * 使用 Gemini API 翻譯
+ * 使用 Gemini API 翻譯（多模型 fallback）
  */
 async function translateWithGemini(text, apiKey, systemPrompt) {
-    // 動態載入 ES Module
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `${systemPrompt}\n\n原文：\n${text}\n\n譯文：`;
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
-        contents: prompt
-    });
+    let lastError = null;
+    for (let i = 0; i < GEMINI_MODEL_FALLBACKS.length; i++) {
+        const modelName = GEMINI_MODEL_FALLBACKS[i];
+        try {
+            const response = await ai.models.generateContent({
+                model: modelName,
+                contents: prompt
+            });
 
-    const content = response.text;
-    if (!content) throw new Error('Gemini 回傳空內容');
-    return content.trim();
+            const content = response.text;
+            if (!content) throw new Error('Gemini 回傳空內容');
+            console.log(`[AI-Translate] Gemini 翻譯成功 (${modelName})`);
+            return content.trim();
+        } catch (err) {
+            lastError = err;
+            const msg = err.message || '';
+            const retryable = ['503', 'UNAVAILABLE', '429', '404', 'quota', 'RESOURCE_EXHAUSTED',
+                'rate limit', 'not found', 'not supported', 'INVALID_ARGUMENT', 'timeout', 'ETIMEDOUT']
+                .some(k => msg.includes(k));
+
+            if (!retryable || i === GEMINI_MODEL_FALLBACKS.length - 1) break;
+            console.warn(`[AI-Translate] Gemini ${modelName} 失敗 (${msg})，切換下一個模型`);
+        }
+    }
+    throw lastError || new Error('所有 Gemini 模型都無法使用');
 }
 
 // 廠商對應翻譯函數
