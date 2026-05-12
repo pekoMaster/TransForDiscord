@@ -117,9 +117,11 @@ function extractAuthorFromV2Content(message) {
  * @returns {Object} { container, originalAuthorId }
  */
 function buildSpoilerComponents(targetMessage, { operatorId, reason = '', originalAuthorId = null } = {}) {
-        // V2 Container message: reconstruct with spoiler tags
+    // V2 Container message: reconstruct with spoiler tags
     if (isV2ContainerMessage(targetMessage)) {
-        return buildV2SpoilerContainer(targetMessage, { operatorId, reason });
+        const result = buildV2SpoilerContainer(targetMessage, { operatorId, reason });
+        if (result.container) return result;
+        // fallthrough if container is null (unexpected V2 structure)
     }
 
     // Traditional embed message
@@ -221,80 +223,67 @@ function buildSpoilerComponents(targetMessage, { operatorId, reason = '', origin
 
 /**
  * 為 V2 Container 訊息構建防爆雷容器
+ *
+ * Discord V2 component type 對照：
+ *   1=ActionRow, 9=Section, 10=TextDisplay,
+ *   12=MediaGallery, 13=MediaGalleryItem, 14=Separator
  */
 function buildV2SpoilerContainer(targetMessage, { operatorId, reason = '' } = {}) {
     const originalAuthorId = extractAuthorFromV2Content(targetMessage) || null;
 
-    // Parse existing container components
     const origComps = targetMessage.components;
     if (!origComps?.[0]?.components) {
-        // Fallback to regular build
         return { container: null, originalAuthorId };
     }
 
-    const items = origComps[0].components;
-    let markerText = null;
-
-    // Extract marker text from first TextDisplay
-    if (items[0]) {
-        const first = items[0];
-        const content = first.content || first.data?.content || '';
-        if (content && content.startsWith('-#')) {
-            markerText = content;
-        }
-    }
-
-    // Build spoiler container
     const container = new ContainerBuilder().setAccentColor(0xED4245);
 
-    // Header: marker + spoiler notice
-    const spoilerNotice = `-# 🕶️ <@${operatorId}> 將此訊息上了防爆雷${reason ? `（${reason}）` : ''}`;
-    const headerParts = [];
-    if (markerText) headerParts.push(markerText);
-    headerParts.push(spoilerNotice);
-    container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(headerParts.join('\n'))
-    );
+    // 防爆雷通知 header
+    const spoilerNotice = (originalAuthorId && originalAuthorId !== operatorId)
+        ? `-# 🕶️ <@${operatorId}> 將 <@${originalAuthorId}> 的訊息上了防爆雷${reason ? `（${reason}）` : ''}`
+        : `-# 🕶️ <@${operatorId}> 將此訊息上了防爆雷${reason ? `（${reason}）` : ''}`;
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(spoilerNotice));
     container.addSeparatorComponents(new SeparatorBuilder());
 
-    // Walk remaining items and spoiler text content
-    for (const item of items.slice(1)) {
-        const rawContent = item.content || item.data?.content;
-        const itemType = item.type || item.data?.type;
+    for (const item of origComps[0].components) {
+        const itemType = item.type ?? item.data?.type;
+        const rawContent = item.content ?? item.data?.content;
 
-        // TextDisplay (type 1): wrap content in spoiler
-        if ((itemType === 1 || itemType === 'text_display') && rawContent) {
-            container.addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(`||${rawContent}||`)
-            );
-        }
-        // MediaGallery: set spoiler on items
-        else if (item.components) {
+        if (itemType === 10) {
+            // TextDisplay：footer 行（-# 開頭）保留可見，其他全部 spoiler
+            if (rawContent) {
+                const isMeta = rawContent.startsWith('-#');
+                container.addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(isMeta ? rawContent : `||${rawContent}||`)
+                );
+            }
+        } else if (itemType === 12) {
+            // MediaGallery：Discord API 格式 { items: [{ media: { url } }] }
+            const rawItems = item.items ?? item.components ?? [];
             const galleryItems = [];
-            for (const media of item.components) {
-                const url = media.url || media.data?.url;
-                if (url) {
-                    galleryItems.push(
-                        new MediaGalleryItemBuilder().setURL(url).setSpoiler(true)
+            for (const mi of rawItems) {
+                const url = mi.media?.url ?? mi.url ?? mi.data?.media?.url ?? mi.data?.url;
+                if (url) galleryItems.push(new MediaGalleryItemBuilder().setURL(url).setSpoiler(true));
+            }
+            if (galleryItems.length > 0) {
+                container.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(...galleryItems));
+            }
+        } else if (itemType === 9) {
+            // Section（引用/回覆）：spoiler 其中的 TextDisplay
+            const sectionComps = item.components ?? item.data?.components ?? [];
+            for (const sc of sectionComps) {
+                const scType = sc.type ?? sc.data?.type;
+                const scContent = sc.content ?? sc.data?.content;
+                if (scType === 10 && scContent) {
+                    container.addTextDisplayComponents(
+                        new TextDisplayBuilder().setContent(`||${scContent}||`)
                     );
                 }
             }
-            if (galleryItems.length > 0) {
-                container.addMediaGalleryComponents(
-                    new MediaGalleryBuilder().addItems(...galleryItems)
-                );
-            }
-        }
-        // Separator: preserve
-        else if (itemType === 2 || itemType === 'separator') {
+        } else if (itemType === 14) {
             container.addSeparatorComponents(new SeparatorBuilder());
         }
-        // Other (footer text, stats): preserve unspoilered
-        else if (rawContent) {
-            container.addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(rawContent)
-            );
-        }
+        // itemType === 1 (ActionRow/按鈕)：略過，不加入防爆雷版本
     }
 
     return { container, originalAuthorId };
