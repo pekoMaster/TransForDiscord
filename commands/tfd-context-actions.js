@@ -56,6 +56,10 @@ function extractAuthorFromMsg(c) { if (!c) return null; const ls = c.split('\n')
 async function handleContextDelete(interaction) {
     const { channelId, messageId } = parseCtxId(interaction.customId);
 
+    const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
+    if (!t) return interaction.reply({ content: '目標訊息已不存在', flags: MessageFlags.Ephemeral });
+    if (!t.webhookId) return interaction.reply({ content: '僅限 Webhook 轉發訊息才能使用收回功能', flags: MessageFlags.Ephemeral });
+
     // Recall rate limit
     const userId = interaction.user.id;
     let arr = recallCounts.get(userId) || [];
@@ -64,9 +68,6 @@ async function handleContextDelete(interaction) {
     if (arr.length >= RECALL_LIMIT_COUNT) return interaction.reply({ content: '你已達收回次數上限（每 10 分鐘 3 次）', flags: MessageFlags.Ephemeral });
     arr.push({ ts: now });
     recallCounts.set(userId, arr);
-
-    const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
-    if (!t) return interaction.reply({ content: '目標訊息已不存在', flags: MessageFlags.Ephemeral });
 
     // Check if user is original author
     const originalAuthorId = extractAuthorFromMsg(t.content);
@@ -87,6 +88,7 @@ async function handleDeleteModalSubmit(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
     if (!t) return interaction.editReply({ content: '目標訊息已不存在' });
+    if (!t.webhookId) return interaction.editReply({ content: '僅限 Webhook 轉發訊息才能使用收回功能' });
     const authorId = extractAuthorFromMsg(t.content);
     await t.delete().catch(() => {});
     const gs = interaction.guildId ? db.guilds.get(interaction.guildId) : null;

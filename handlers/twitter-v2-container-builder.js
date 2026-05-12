@@ -14,7 +14,7 @@ const {
 } = require('discord.js');
 
 const TextTruncator = require('../tfd-system/utils/text-truncator');
-const { SPOILER_BTN_ID } = require('../utils/spoiler-button-helper');
+const { SPOILER_BTN_ID, REPORT_BTN_PREFIX } = require('../utils/spoiler-button-helper');
 
 // V2 推文資料快取（供按鈕互動時重建 Container 使用）
 // 格式: Map<tweetId, { tweet, originalURL, quoteData, replyData, timestamp }>
@@ -218,6 +218,10 @@ function buildV2Container(tweet, originalURL, options = {}) {
         new ButtonBuilder()
             .setCustomId(`v2_spoiler_${tweet.id}`)
             .setLabel('防爆雷')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId(REPORT_BTN_PREFIX + Date.now())
+            .setLabel('回報')
             .setStyle(ButtonStyle.Secondary)
     ];
 
