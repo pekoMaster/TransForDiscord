@@ -239,7 +239,13 @@ async function translate(text, userId, options = {}) {
         return { success: true, text: '', model: 'none' };
     }
 
-    const availableProviders = getAvailableProviders(userId);
+    const allAvailable = getAvailableProviders(userId);
+
+    // 若指定了 provider，只使用該廠商
+    const availableProviders = options.provider
+        ? (allAvailable.includes(options.provider) ? [options.provider] : [])
+        : allAvailable;
+
     if (availableProviders.length === 0) {
         return { success: false, error: '未設定任何 AI API Key', errorType: 'NO_API_KEY' };
     }

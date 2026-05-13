@@ -73,14 +73,15 @@ function getAllKeys(userId) {
 
 /**
  * 取得使用者的 Key 設定狀態（不回傳值）
- * @returns {Object} { openai: boolean, claude: boolean, gemini: boolean }
+ * @returns {Object} { openai: boolean, claude: boolean, gemini: boolean, openrouter: boolean }
  */
 function getKeyStatus(userId) {
     const providers = new Set(db.apiKeys.listProviders(userId));
     return {
-        openai: providers.has('openai'),
-        claude: providers.has('claude'),
-        gemini: providers.has('gemini')
+        openai:     providers.has('openai'),
+        claude:     providers.has('claude'),
+        gemini:     providers.has('gemini'),
+        openrouter: providers.has('openrouter')
     };
 }
 
@@ -111,6 +112,22 @@ function hasKey(userId, provider) {
     return hasAnyKey(userId);
 }
 
+/**
+ * 取得使用者偏好的翻譯廠商
+ * @returns {string|null} provider key，未設定時回傳 null
+ */
+function getPreferredProvider(userId) {
+    return db.userPrefs.getProvider(userId);
+}
+
+/**
+ * 設定使用者偏好的翻譯廠商
+ */
+function setPreferredProvider(userId, provider) {
+    _ensureProvider(provider);
+    return db.userPrefs.setProvider(userId, provider);
+}
+
 module.exports = {
     PROVIDERS,
     saveKey,
@@ -119,5 +136,7 @@ module.exports = {
     getAllKeys,
     removeKey,
     hasAnyKey,
-    hasKey
+    hasKey,
+    getPreferredProvider,
+    setPreferredProvider
 };

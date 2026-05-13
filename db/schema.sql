@@ -173,3 +173,13 @@ CREATE TABLE IF NOT EXISTS schema_version (
 
 INSERT OR IGNORE INTO schema_version (version, applied_at, note)
 VALUES (1, strftime('%s', 'now'), 'initial schema');
+
+-- ============================================================
+-- 12. Per-user translation preferences
+-- ============================================================
+CREATE TABLE IF NOT EXISTS user_preferences (
+  user_id            TEXT PRIMARY KEY,
+  preferred_provider TEXT,                        -- openai / claude / gemini / openrouter
+  created_at         INTEGER NOT NULL,
+  updated_at         INTEGER NOT NULL
+);

@@ -154,6 +154,17 @@ function _prepareStatements() {
         WHERE user_id = ? AND created_at >= ?
     `);
     stmts.abuseCleanup = db.prepare('DELETE FROM abuse_records WHERE created_at < ?');
+
+    // user_preferences
+    stmts.userPrefGet = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?');
+    stmts.userPrefUpsert = db.prepare(`
+        INSERT INTO user_preferences (user_id, preferred_provider, created_at, updated_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            preferred_provider = excluded.preferred_provider,
+            updated_at = excluded.updated_at
+    `);
+    stmts.userPrefDelete = db.prepare('DELETE FROM user_preferences WHERE user_id = ?');
     // guild_blacklist
     stmts.blacklistAdd = db.prepare(`
         INSERT INTO guild_blacklist (guild_id, platform, author, uid, level, label, added_by, reason, created_at, updated_at)
@@ -385,6 +396,27 @@ const abuse = {
     }
 };
 
+// ────────────────────────────────────────────────────────────
+// user_preferences API
+// ────────────────────────────────────────────────────────────
+
+const userPrefs = {
+    getProvider(userId) {
+        const row = _stmt('userPrefGet').get(userId);
+        return row?.preferred_provider || null;
+    },
+
+    setProvider(userId, provider) {
+        const ts = now();
+        const existing = _stmt('userPrefGet').get(userId);
+        return _stmt('userPrefUpsert').run(userId, provider, existing ? existing.created_at : ts, ts);
+    },
+
+    clear(userId) {
+        return _stmt('userPrefDelete').run(userId);
+    }
+};
+
 
 // ============================================================
 // guild_blacklist API
@@ -469,5 +501,6 @@ module.exports = {
     rateLimit,
     blacklist,
     blacklistReports,
-    abuse
+    abuse,
+    userPrefs
 };

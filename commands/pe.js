@@ -23,7 +23,7 @@ const {
 } = require('discord.js');
 
 const db = require('../db');
-const { PROVIDERS, saveKey, removeKey, getKeyStatus, hasAnyKey } = require('../utils/user-api-key-storage.js');
+const { PROVIDERS, saveKey, removeKey, getKeyStatus, hasAnyKey, getPreferredProvider, setPreferredProvider } = require('../utils/user-api-key-storage.js');
 const tlog = require('../utils/tfd-logger');
 const { getInstance: getGBM } = require('../utils/guild-blacklist-manager.js');
 
@@ -54,6 +54,9 @@ module.exports = {
             )
             .addSubcommand(s => s.setName('del').setDescription('刪除已設定的 API Key')
                 .addStringOption(o => o.setName('provider').setDescription('AI 服務商').setRequired(true).addChoices(...PROVIDER_CHOICES))
+            )
+            .addSubcommand(s => s.setName('model').setDescription('選擇預設翻譯引擎（點翻譯時使用）')
+                .addStringOption(o => o.setName('provider').setDescription('要使用的 AI 服務商').setRequired(true).addChoices(...PROVIDER_CHOICES))
             )
             .addSubcommand(s => s.setName('status').setDescription('查看你的 API Key 設定狀態'))
         )
@@ -239,18 +242,32 @@ async function handleApi(interaction, sub, userId) {
         });
     }
 
+    if (sub === 'model') {
+        const provider = interaction.options.getString('provider');
+        const providerName = PROVIDERS[provider]?.name || provider;
+        setPreferredProvider(userId, provider);
+        return interaction.reply({
+            content: `✅ 已將預設翻譯引擎設為 **${providerName}**。\n點擊「翻譯」按鈕時將優先使用此引擎。\n\n（尚未設定對應 API Key 的話，請使用 \`/pe api add provider:${providerName}\` 設定）`,
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
     if (sub === 'status') {
         const status = getKeyStatus(userId);
+        const preferred = getPreferredProvider(userId);
+        const preferredName = preferred ? (PROVIDERS[preferred]?.name || preferred) : null;
         const lines = [
-            '**🔑 你的 AI API Key 設定狀態**\n',
-            `• OpenAI: ${status.openai ? '✅ 已設定（加密儲存）' : '❌ 未設定'}`,
-            `• Claude: ${status.claude ? '✅ 已設定（加密儲存）' : '❌ 未設定'}`,
-            `• Gemini: ${status.gemini ? '✅ 已設定（加密儲存）' : '❌ 未設定'}`,
-            `• OpenRouter: ${status.openrouter ? '✅ 已設定（加密儲存）' : '❌ 未設定'}`,
+            '**🔑 你的 AI 翻譯設定狀態**\n',
+            `• OpenAI: ${status.openai ? '✅ 已設定' : '❌ 未設定'}`,
+            `• Claude: ${status.claude ? '✅ 已設定' : '❌ 未設定'}`,
+            `• Gemini: ${status.gemini ? '✅ 已設定' : '❌ 未設定'}`,
+            `• OpenRouter: ${status.openrouter ? '✅ 已設定' : '❌ 未設定'}`,
+            '',
+            `**預設翻譯引擎：** ${preferredName ? `✅ ${preferredName}` : '❌ 未選擇（請使用 `/pe api model` 選擇）'}`,
             '',
             hasAnyKey(userId)
-                ? '翻譯時可點擊「改使用 AI 翻譯」按鈕使用你的 Key。'
-                : '使用 `/pe api add` 設定至少一組 Key 後，即可使用 AI 翻譯功能。'
+                ? '設定好 Key 後，使用 `/pe api model` 選擇要用哪個引擎，再點擊「翻譯」即可使用。'
+                : '請先使用 `/pe api add` 設定至少一組 Key，再用 `/pe api model` 選擇引擎。'
         ];
         return interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });
     }

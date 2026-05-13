@@ -5,6 +5,7 @@
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { translate: aiTranslate, buildApiKeyTutorialEmbed, getAvailableProviders } = require('../utils/ai-translator.js');
+const { getPreferredProvider, PROVIDERS } = require('../utils/user-api-key-storage.js');
 
 // 引入快取系統以取得完整文字
 const { getCachedContent } = require('./content-translation-interactions.js');
@@ -49,10 +50,31 @@ async function handleTranslateButton(interaction) {
         // 必須在任何耗時操作（如資料庫查詢）之前執行
         await interaction.deferUpdate();
 
-        // 檢查用戶是否有任何 AI API Key（openai / claude / gemini 任一）
-        if (getAvailableProviders(userId).length === 0) {
+        // 檢查用戶是否有任何 AI API Key
+        const availProviders = getAvailableProviders(userId);
+        if (availProviders.length === 0) {
             await interaction.followUp({
                 embeds: [buildApiKeyTutorialEmbed()],
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+
+        // 檢查是否已選擇預設翻譯引擎
+        const preferredProvider = getPreferredProvider(userId);
+        if (!preferredProvider) {
+            await interaction.followUp({
+                content: '❌ 請先使用 `/pe api model` 選擇翻譯引擎，再使用翻譯功能。',
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+
+        // 檢查所選引擎是否有設定 API Key
+        if (!availProviders.includes(preferredProvider)) {
+            const pName = PROVIDERS[preferredProvider]?.name || preferredProvider;
+            await interaction.followUp({
+                content: `❌ 你選擇的翻譯引擎「${pName}」尚未設定 API Key。\n請使用 \`/pe api add\` 設定 Key，或使用 \`/pe api model\` 更換引擎。`,
                 flags: MessageFlags.Ephemeral
             });
             return;
@@ -228,6 +250,7 @@ async function handleTranslateButton(interaction) {
             if (quoteContext && !quoteOriginalText) {
                 translateOptions.context = quoteContext;
             }
+            translateOptions.provider = preferredProvider;
 
             const translateResult = await aiTranslate(textToTranslate, userId, translateOptions);
 
