@@ -177,7 +177,7 @@ function _prepareStatements() {
     stmts.reportSetLevel = db.prepare('UPDATE blacklist_reports SET final_level = ?, updated_at = ? WHERE id = ?');
     stmts.reportApprove = db.prepare('UPDATE blacklist_reports SET status = \x27approved\x27, admin_id = ?, final_level = ?, admin_reason = ?, updated_at = ? WHERE id = ?');
     stmts.reportReject = db.prepare('UPDATE blacklist_reports SET status = \x27rejected\x27, admin_id = ?, updated_at = ? WHERE id = ?');
-
+    stmts.reportSetLogMsgId = db.prepare('UPDATE blacklist_reports SET log_message_id = ? WHERE id = ?');
 }
 
 // ────────────────────────────────────────────────────────────
@@ -450,6 +450,10 @@ const blacklistReports = {
     isPending(reportId) {
         const r = _stmt('reportGet').get(reportId);
         return r ? r.status === 'pending' : false;
+    },
+
+    setLogMessageId(reportId, messageId) {
+        return _stmt('reportSetLogMsgId').run(messageId, reportId);
     }
 };
 

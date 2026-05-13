@@ -1,14 +1,18 @@
-const { ApplicationCommandType, ContextMenuCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, MessageFlags } = require('discord.js');
+const {
+    ApplicationCommandType, ContextMenuCommandBuilder,
+    ActionRowBuilder, ButtonBuilder, ButtonStyle,
+    ModalBuilder, TextInputBuilder, TextInputStyle,
+    StringSelectMenuBuilder, MessageFlags
+} = require('discord.js');
 const db = require('../db');
+const tlog = require('../utils/tfd-logger');
 const { buildSpoilerComponents, sendSpoilerAndCleanup } = require('../handlers/spoiler-button-interactions');
 const { getInstance: getGBM } = require('../utils/guild-blacklist-manager');
+const { resolveAuthorId, detectPlatformFromUrl, extractUrlFromMessage } = require('../utils/embed-helpers');
+const { recallCounts, RECALL_LIMIT_MS, RECALL_LIMIT_COUNT, checkRecallLimit } = require('../utils/recall-limiter');
 
 const cooldowns = new Map();
 const COOLDOWN_MS = 60_000;
-const recallCounts = new Map();
-const RECALL_LIMIT_MS = 600_000;
-const RECALL_LIMIT_COUNT = 3;
-setInterval(() => { const now = Date.now(); for (const [k, arr] of recallCounts) { const f = arr.filter(e => now - e.ts < RECALL_LIMIT_MS); if (f.length === 0) recallCounts.delete(k); else recallCounts.set(k, f); } }, 60_000).unref();
 
 module.exports = {
     data: new ContextMenuCommandBuilder()
@@ -19,25 +23,37 @@ module.exports = {
     async execute(interaction) {
         if (!interaction.isContextMenuCommand()) return;
         if (interaction.commandName !== 'PekoEmbed 操作') return;
+
         const userId = interaction.user.id;
         const last = cooldowns.get(userId);
-        if (last && Date.now() - last < COOLDOWN_MS) return interaction.reply({ content: '操作冷卻中，請稍候再試', flags: MessageFlags.Ephemeral });
+        if (last && Date.now() - last < COOLDOWN_MS) {
+            return interaction.reply({ content: '操作冷卻中，請稍候再試', flags: MessageFlags.Ephemeral });
+        }
         cooldowns.set(userId, Date.now());
+
         const targetMsg = await interaction.channel.messages.fetch(interaction.targetId).catch(() => null);
         if (!targetMsg) return interaction.reply({ content: '無法取得目標訊息', flags: MessageFlags.Ephemeral });
-        if (!targetMsg.webhookId && !targetMsg.author.bot) return interaction.reply({ content: '此訊息非 PekoEmbed 轉發訊息', flags: MessageFlags.Ephemeral });
+        if (!targetMsg.webhookId && !targetMsg.author.bot) {
+            return interaction.reply({ content: '此訊息非 PekoEmbed 轉發訊息', flags: MessageFlags.Ephemeral });
+        }
 
-        const chId = interaction.channelId, msgId = targetMsg.id;
+        const chId = interaction.channelId;
+        const msgId = targetMsg.id;
         const originalAuthorId = resolveAuthorId(targetMsg);
         const isAuthor = !originalAuthorId || originalAuthorId === userId;
         const blacklistEnabled = db.guilds.isBlacklistEnabled(interaction.guildId);
+
         const btnRow = [
-            ...(isAuthor ? [new ButtonBuilder().setCustomId('ctx_delete_' + chId + '_' + msgId).setLabel('移除訊息').setStyle(ButtonStyle.Danger)] : []),
-            new ButtonBuilder().setCustomId('ctx_spoiler_' + chId + '_' + msgId).setLabel('上防爆雷').setStyle(ButtonStyle.Secondary),
-            ...(blacklistEnabled ? [new ButtonBuilder().setCustomId('ctx_report_' + chId + '_' + msgId).setLabel('黑名單回報').setStyle(ButtonStyle.Secondary)] : [])
+            ...(isAuthor ? [new ButtonBuilder().setCustomId(`ctx_delete_${chId}_${msgId}`).setLabel('移除訊息').setStyle(ButtonStyle.Danger)] : []),
+            new ButtonBuilder().setCustomId(`ctx_spoiler_${chId}_${msgId}`).setLabel('上防爆雷').setStyle(ButtonStyle.Secondary),
+            ...(blacklistEnabled ? [new ButtonBuilder().setCustomId(`ctx_report_${chId}_${msgId}`).setLabel('黑名單回報').setStyle(ButtonStyle.Secondary)] : [])
         ];
         const note = isAuthor ? '' : '\n⚠️ 只有原作者可以收回此訊息';
-        await interaction.reply({ content: '**PekoEmbed 操作選單**' + note, components: [new ActionRowBuilder().addComponents(...btnRow)], flags: MessageFlags.Ephemeral });
+        await interaction.reply({
+            content: '**PekoEmbed 操作選單**' + note,
+            components: [new ActionRowBuilder().addComponents(...btnRow)],
+            flags: MessageFlags.Ephemeral
+        });
     },
 
     async handleContextButton(interaction) {
@@ -56,51 +72,56 @@ module.exports = {
     }
 };
 
-function parseCtxId(customId) { const p = customId.split('_'); return { channelId: p[p.length - 2], messageId: p[p.length - 1] }; }
-function resolveAuthorId(msg) {
-    if (!msg) return null;
-    if (msg.content) {
-        const ls = msg.content.split('\n');
-        for (let i = ls.length - 1; i >= 0; i--) { const m = ls[i].match(/# <@!?(\d+)>/); if (m) return m[1]; }
-    }
-    try { const first = msg.components?.[0]?.components?.[0]; if (first) { const c = first.content || first.data?.content || ''; const m = c.match(/# <@!?(\d+)>/); if (m) return m[1]; } } catch (_) {}
-    return null;
+function parseCtxId(customId) {
+    const p = customId.split('_');
+    return { channelId: p[p.length - 2], messageId: p[p.length - 1] };
 }
+
+async function sendLogEmbed(interaction, embed) {
+    const gs = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
+    if (!gs?.log_channel_id) return;
+    const lc = await interaction.client.channels.fetch(gs.log_channel_id).catch(() => null);
+    if (!lc) return;
+    await lc.send({ embeds: [embed], allowedMentions: { parse: [] } }).catch(() => {});
+}
+
+// ── 收回訊息 ──
 
 async function handleContextDelete(interaction) {
     const { channelId, messageId } = parseCtxId(interaction.customId);
-
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
     if (!t) return interaction.reply({ content: '目標訊息已不存在', flags: MessageFlags.Ephemeral });
     if (!t.webhookId) return interaction.reply({ content: '僅限 Webhook 轉發訊息才能使用收回功能', flags: MessageFlags.Ephemeral });
 
-    // Recall rate limit
     const userId = interaction.user.id;
-    let arr = recallCounts.get(userId) || [];
-    const now = Date.now();
-    arr = arr.filter(e => now - e.ts < RECALL_LIMIT_MS);
-    if (arr.length >= RECALL_LIMIT_COUNT) return interaction.reply({ content: '你已達收回次數上限（每 10 分鐘 3 次）', flags: MessageFlags.Ephemeral });
-    arr.push({ ts: now });
-    recallCounts.set(userId, arr);
+    if (!checkRecallLimit(userId)) {
+        return interaction.reply({ content: '你已達收回次數上限（每 10 分鐘 3 次）', flags: MessageFlags.Ephemeral });
+    }
 
-    // Check if user is original author
     const originalAuthorId = resolveAuthorId(t);
-    if (originalAuthorId && originalAuthorId !== interaction.user.id) {
+    if (originalAuthorId && originalAuthorId !== userId) {
         return interaction.reply({ content: '只有原作者可以收回訊息', flags: MessageFlags.Ephemeral });
     }
-    if (originalAuthorId && originalAuthorId === interaction.user.id) {
+
+    if (originalAuthorId && originalAuthorId === userId) {
         await t.delete().catch(() => {});
-        const gs = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
-        if (gs?.log_channel_id) {
-            const lc = await interaction.client.channels.fetch(gs.log_channel_id).catch(() => null);
-            if (lc) await lc.send({ embeds: [{ color: 0xED4245, description: '🗑️ <@' + interaction.user.id + '> 收回了自己的轉發訊息', fields: [{ name: '頻道', value: '<#' + interaction.channelId + '>', inline: true }], timestamp: new Date().toISOString() }], allowedMentions: { parse: [] } }).catch(() => {});
-        }
+        tlog.log('CtxMenu-收回', interaction, '收回了自己的轉發訊息');
+        await sendLogEmbed(interaction, {
+            color: 0xED4245,
+            description: `🗑️ <@${userId}> 收回了自己的轉發訊息`,
+            fields: [{ name: '頻道', value: `<#${interaction.channelId}>`, inline: true }],
+            timestamp: new Date().toISOString()
+        });
         return interaction.reply({ content: '已收回訊息', flags: MessageFlags.Ephemeral });
     }
 
-    // No author info: show modal
-    const modal = new ModalBuilder().setCustomId('ctx_delete_modal_' + channelId + '_' + messageId).setTitle('收回訊息理由')
-        .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('請輸入收回理由（可空白）').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(200)));
+    const modal = new ModalBuilder()
+        .setCustomId(`ctx_delete_modal_${channelId}_${messageId}`)
+        .setTitle('收回訊息理由')
+        .addComponents(new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('reason').setLabel('請輸入收回理由（可空白）')
+                .setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(200)
+        ));
     return interaction.showModal(modal);
 }
 
@@ -108,29 +129,46 @@ async function handleDeleteModalSubmit(interaction) {
     const { channelId, messageId } = parseCtxId(interaction.customId);
     const reason = interaction.fields.getTextInputValue('reason') || '';
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
     if (!t) return interaction.editReply({ content: '目標訊息已不存在' });
     if (!t.webhookId) return interaction.editReply({ content: '僅限 Webhook 轉發訊息才能使用收回功能' });
+
     const authorId = resolveAuthorId(t);
-    if (authorId && authorId !== interaction.user.id) return interaction.editReply({ content: '只有原作者可以收回訊息' });
-    await t.delete().catch(() => {});
-    const gs = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
-    if (gs && gs.log_channel_id) {
-        const lc = await interaction.client.channels.fetch(gs.log_channel_id).catch(() => null);
-        if (lc) {
-            const ad = authorId ? '<@' + authorId + '>' : '未知用戶';
-            await lc.send({ embeds: [{ color: 0xED4245, description: '🗑️ <@' + interaction.user.id + '> 移除了 ' + ad + ' 的轉發訊息', fields: [{ name: '頻道', value: '<#' + interaction.channelId + '>', inline: true }, { name: '理由', value: reason || '（無）', inline: true }], timestamp: new Date().toISOString() }], allowedMentions: { parse: [] } });
-        }
+    if (authorId && authorId !== interaction.user.id) {
+        return interaction.editReply({ content: '只有原作者可以收回訊息' });
     }
+
+    await t.delete().catch(() => {});
+    tlog.log('CtxMenu-收回', interaction, `移除訊息 (理由: ${reason || '無'})`);
+
+    const ad = authorId ? `<@${authorId}>` : '未知用戶';
+    await sendLogEmbed(interaction, {
+        color: 0xED4245,
+        description: `🗑️ <@${interaction.user.id}> 移除了 ${ad} 的轉發訊息`,
+        fields: [
+            { name: '頻道', value: `<#${interaction.channelId}>`, inline: true },
+            { name: '理由', value: reason || '（無）', inline: true }
+        ],
+        timestamp: new Date().toISOString()
+    });
     return interaction.editReply({ content: '✅ 已移除訊息' });
 }
+
+// ── 防爆雷 ──
 
 async function handleContextSpoiler(interaction) {
     const { channelId, messageId } = parseCtxId(interaction.customId);
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
     if (!t) return interaction.reply({ content: '目標訊息已不存在', flags: MessageFlags.Ephemeral });
-    const modal = new ModalBuilder().setCustomId('ctx_spoiler_modal_' + channelId + '_' + messageId).setTitle('上防爆雷')
-        .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('請輸入理由（可空白）').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(100)));
+
+    const modal = new ModalBuilder()
+        .setCustomId(`ctx_spoiler_modal_${channelId}_${messageId}`)
+        .setTitle('上防爆雷')
+        .addComponents(new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('reason').setLabel('請輸入理由（可空白）')
+                .setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(100)
+        ));
     return interaction.showModal(modal);
 }
 
@@ -138,45 +176,70 @@ async function handleSpoilerModalSubmit(interaction) {
     const { channelId, messageId } = parseCtxId(interaction.customId);
     const reason = interaction.fields.getTextInputValue('reason') || '';
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
     if (!t) return interaction.editReply({ content: '目標訊息已不存在' });
+
     const { container, originalAuthorId } = buildSpoilerComponents(t, { operatorId: interaction.user.id, reason });
-    const gs = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
-    if (gs && gs.log_channel_id) {
-        const lc = await interaction.client.channels.fetch(gs.log_channel_id).catch(() => null);
-        if (lc) { const td = originalAuthorId ? '<@' + originalAuthorId + '>' : '未知用戶'; await lc.send({ embeds: [{ color: 0x5865F2, description: '🕶️ <@' + interaction.user.id + '> 對 ' + td + ' 的訊息使用了防爆雷', fields: [{ name: '頻道', value: '<#' + interaction.channelId + '>', inline: true }, { name: '理由', value: reason || '（無）', inline: false }], timestamp: new Date().toISOString() }], allowedMentions: { parse: [] } }); }
-    }
+    tlog.log('CtxMenu-防爆雷', interaction, `對 ${originalAuthorId || '未知'} 的訊息套用防爆雷`);
+
+    const td = originalAuthorId ? `<@${originalAuthorId}>` : '未知用戶';
+    await sendLogEmbed(interaction, {
+        color: 0x5865F2,
+        description: `🕶️ <@${interaction.user.id}> 對 ${td} 的訊息使用了防爆雷`,
+        fields: [
+            { name: '頻道', value: `<#${interaction.channelId}>`, inline: true },
+            { name: '理由', value: reason || '（無）', inline: false }
+        ],
+        timestamp: new Date().toISOString()
+    });
     await sendSpoilerAndCleanup(t, container);
     return interaction.editReply({ content: '🕶️ 已套用防爆雷' });
 }
+
+// ── 黑名單回報 ──
 
 async function handleContextReport(interaction) {
     const { channelId, messageId } = parseCtxId(interaction.customId);
     if (!db.guilds.isBlacklistEnabled(interaction.guildId)) {
         return interaction.reply({ content: '⚠️ 本功能尚未啟用（管理員請使用 /pe blacklist switch on 開啟）', flags: MessageFlags.Ephemeral });
     }
+
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
     if (!t) return interaction.reply({ content: '目標訊息已不存在', flags: MessageFlags.Ephemeral });
+
     const gs = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
     if (!gs || !gs.log_channel_id) {
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('ctx_report_nowarn_' + channelId + '_' + messageId).setLabel('確認送出').setStyle(ButtonStyle.Secondary));
-        return interaction.reply({ content: '此伺服器未設定日誌頻道，回報內容（含作者帳號、理由）將顯示在當前頻道，所有人可見。確定繼續？', components: [row], flags: MessageFlags.Ephemeral });
-    }
-    const modal = new ModalBuilder().setCustomId('ctx_report_modal_' + channelId + '_' + messageId).setTitle('黑名單回報')
-        .addComponents(
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('level').setLabel('請輸入等級 (1=僅提示, 2=防爆雷, 3=封鎖)').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(1).setPlaceholder('1 / 2 / 3')),
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('回報理由（可空白）').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(200))
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`ctx_report_nowarn_${channelId}_${messageId}`).setLabel('確認送出').setStyle(ButtonStyle.Secondary)
         );
-    return interaction.showModal(modal);
+        return interaction.reply({
+            content: '此伺服器未設定日誌頻道，回報內容（含作者帳號、理由）將顯示在當前頻道，所有人可見。確定繼續？',
+            components: [row],
+            flags: MessageFlags.Ephemeral
+        });
+    }
+    return showReportModal(interaction, channelId, messageId);
 }
-
 
 async function handleContextReportNoWarn(interaction) {
     const { channelId, messageId } = parseCtxId(interaction.customId);
-    const modal = new ModalBuilder().setCustomId('ctx_report_modal_' + channelId + '_' + messageId).setTitle('黑名單回報')
+    return showReportModal(interaction, channelId, messageId);
+}
+
+function showReportModal(interaction, channelId, messageId) {
+    const modal = new ModalBuilder()
+        .setCustomId(`ctx_report_modal_${channelId}_${messageId}`)
+        .setTitle('黑名單回報')
         .addComponents(
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('level').setLabel('請輸入等級 (1=僅提示, 2=防爆雷, 3=封鎖)').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(1).setPlaceholder('1 / 2 / 3')),
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('回報理由（可空白）').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(200))
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder().setCustomId('level').setLabel('請輸入等級 (1=僅提示, 2=防爆雷, 3=封鎖)')
+                    .setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(1).setPlaceholder('1 / 2 / 3')
+            ),
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder().setCustomId('reason').setLabel('回報理由（可空白）')
+                    .setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(200)
+            )
         );
     return interaction.showModal(modal);
 }
@@ -184,24 +247,57 @@ async function handleContextReportNoWarn(interaction) {
 async function handleReportModalSubmit(interaction) {
     const { channelId, messageId } = parseCtxId(interaction.customId);
     const lv = parseInt(interaction.fields.getTextInputValue('level').trim(), 10);
-    if (![1,2,3].includes(lv)) return interaction.reply({ content: '等級必須是 1、2 或 3', flags: MessageFlags.Ephemeral });
+    if (![1, 2, 3].includes(lv)) {
+        return interaction.reply({ content: '等級必須是 1、2 或 3', flags: MessageFlags.Ephemeral });
+    }
+
     const reason = interaction.fields.getTextInputValue('reason') || '';
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const t = await interaction.channel.messages.fetch(messageId).catch(() => null);
-    let ta = null, plat = 'unknown', ou = '';
-    if (t) { ta = resolveAuthorId(t); const um = (t.content||'').match(/https?:\/\/[^\s<>"]+/i); if (um) { ou=um[0]; if (ou.includes('twitter.com')) plat='twitter'; else if (ou.includes('pixiv.net')) plat='pixiv'; else if (ou.includes('youtube.com')) plat='youtube'; else if (ou.includes('instagram.com')) plat='instagram'; else if (ou.includes('threads.com')) plat='threads'; } }
+    const ou = t ? extractUrlFromMessage(t) : '';
+    const plat = detectPlatformFromUrl(ou);
+    const ta = t ? resolveAuthorId(t) : null;
+
     const gbm = getGBM();
-    const rid = gbm.createReport({ guildId: interaction.guildId, channelId, messageId, originalUrl: ou, targetAuthor: ta, platform: plat, reporterId: interaction.user.id, suggestedLevel: lv, reason });
+    const rid = gbm.createReport({
+        guildId: interaction.guildId, channelId, messageId,
+        originalUrl: ou, targetAuthor: ta, platform: plat,
+        reporterId: interaction.user.id, suggestedLevel: lv, reason
+    });
+    tlog.log('CtxMenu-黑名單回報', interaction, `回報 #${rid} (${plat}, 等級 ${lv})`);
+
     const gs = db.guilds.get(interaction.guildId);
-    if (gs && gs.log_channel_id) {
+    if (gs?.log_channel_id) {
         const lc = await interaction.client.channels.fetch(gs.log_channel_id).catch(() => null);
         if (lc) {
-            const { StringSelectMenuBuilder } = require('discord.js');
-            const sel = new StringSelectMenuBuilder().setCustomId('rbl_level_'+rid).setPlaceholder('選擇審核等級').addOptions({label:'1 - 僅提示',value:'1'},{label:'2 - 防爆雷',value:'2'},{label:'3 - 封鎖',value:'3'});
-            const bRow = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('rbl_confirm_'+rid).setLabel('確認核准').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId('rbl_reject_'+rid).setLabel('拒絕').setStyle(ButtonStyle.Danger));
-            const ad = ta || '未知';
-            const rmsg = await lc.send({ embeds: [{ color: 0xFEE75C, title: '黑名單回報 #'+rid, fields: [{ name: '回報者', value: '<@'+interaction.user.id+'>', inline: true },{ name: '平台', value: plat, inline: true },{ name: '作者', value: ad, inline: true },{ name: '建議等級', value: String(lv), inline: true },{ name: '原始 URL', value: ou||'無' },{ name: '理由', value: reason||'（無）' }], timestamp: new Date().toISOString() }], components: [new ActionRowBuilder().addComponents(sel), bRow] });
-            db.getDB().prepare('UPDATE blacklist_reports SET log_message_id = ? WHERE id = ?').run(rmsg.id, rid);
+            const sel = new StringSelectMenuBuilder()
+                .setCustomId(`rbl_level_${rid}`).setPlaceholder('選擇審核等級')
+                .addOptions(
+                    { label: '1 - 僅提示', value: '1' },
+                    { label: '2 - 防爆雷', value: '2' },
+                    { label: '3 - 封鎖', value: '3' }
+                );
+            const bRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`rbl_confirm_${rid}`).setLabel('確認核准').setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId(`rbl_reject_${rid}`).setLabel('拒絕').setStyle(ButtonStyle.Danger)
+            );
+            const rmsg = await lc.send({
+                embeds: [{
+                    color: 0xFEE75C, title: `黑名單回報 #${rid}`,
+                    fields: [
+                        { name: '回報者', value: `<@${interaction.user.id}>`, inline: true },
+                        { name: '平台', value: plat, inline: true },
+                        { name: '作者', value: ta || '未知', inline: true },
+                        { name: '建議等級', value: String(lv), inline: true },
+                        { name: '原始 URL', value: ou || '無' },
+                        { name: '理由', value: reason || '（無）' }
+                    ],
+                    timestamp: new Date().toISOString()
+                }],
+                components: [new ActionRowBuilder().addComponents(sel), bRow]
+            });
+            db.blacklistReports.setLogMessageId(rid, rmsg.id);
         }
     }
     return interaction.editReply({ content: '✅ 已送出回報，等待管理員審核' });

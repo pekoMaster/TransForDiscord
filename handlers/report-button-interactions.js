@@ -25,24 +25,17 @@ const {
 const db = require('../db');
 const { buildSpoilerComponents, sendSpoilerAndCleanup } = require('./spoiler-button-interactions');
 const { getInstance: getGBM } = require('../utils/guild-blacklist-manager');
+const { resolveAuthorId, detectPlatformFromUrl, extractUrlFromMessage } = require('../utils/embed-helpers');
+const { checkRecallLimit } = require('../utils/recall-limiter');
 
 const BTN_EXPIRE_MS = 86_400_000;
 const SUBMENU_EXPIRE_MS = 60_000;
 const COOLDOWN_MS = 5_000;
-const cooldowns = new Map(); // userId → timestamp
-const RECALL_LIMIT_MS = 600_000;
-const RECALL_LIMIT_COUNT = 3;
-const recallCounts = new Map(); // userId → [{ts},...]
+const cooldowns = new Map();
 
-// Periodic GC
 setInterval(() => {
     const now = Date.now();
     for (const [k, v] of cooldowns) { if (now - v > COOLDOWN_MS * 24) cooldowns.delete(k); }
-    for (const [k, arr] of recallCounts) {
-        const filtered = arr.filter(e => now - e.ts < RECALL_LIMIT_MS);
-        if (filtered.length === 0) recallCounts.delete(k);
-        else recallCounts.set(k, filtered);
-    }
 }, 60_000).unref();
 
 // ── Helpers ────────────────────────────────────────────
@@ -71,26 +64,6 @@ function checkCooldown(userId) {
     if (last && Date.now() - last < COOLDOWN_MS) return true;
     cooldowns.set(userId, Date.now());
     return false;
-}
-
-function extractAuthorFromMsg(msgOrContent) {
-    const content = (typeof msgOrContent === 'string' || !msgOrContent) ? msgOrContent : msgOrContent.content;
-    if (content) {
-        const lines = content.split('\n');
-        // Walk backwards to find the LAST -# line with a mention
-        for (let i = lines.length - 1; i >= 0; i--) {
-            const m = lines[i].match(/# <@!?(\d+)>/);
-            if (m) return m[1];
-        }
-    }
-    // V2 Container fallback
-    if (msgOrContent && typeof msgOrContent !== 'string') {
-        try {
-            const first = msgOrContent.components?.[0]?.components?.[0];
-            if (first) { const c = first.content || first.data?.content || ''; const m = c.match(/# <@!?(\d+)>/); if (m) return m[1]; }
-        } catch (_) {}
-    }
-    return null;
 }
 
 // ── Main Router ──────────────────────────────────────
@@ -172,16 +145,9 @@ async function handleRecallSubmenu(interaction) {
         return interaction.update({ content: '⏰ 操作已逾時', components: [], flags: MessageFlags.Ephemeral });
     }
 
-    // Rate limit check
-    const userId = interaction.user.id;
-    let arr = recallCounts.get(userId) || [];
-    const now = Date.now();
-    arr = arr.filter(e => now - e.ts < RECALL_LIMIT_MS);
-    if (arr.length >= RECALL_LIMIT_COUNT) {
+    if (!checkRecallLimit(interaction.user.id)) {
         return interaction.reply({ content: '⚠️ 你已達收回次數上限（每 10 分鐘 3 次）', flags: MessageFlags.Ephemeral });
     }
-    arr.push({ ts: now });
-    recallCounts.set(userId, arr);
 
     // Fetch target message
     let targetMsg;
@@ -192,7 +158,7 @@ async function handleRecallSubmenu(interaction) {
         return interaction.reply({ content: '❌ 原始訊息已不存在或無法存取', flags: MessageFlags.Ephemeral });
     }
 
-    const originalAuthorId = extractAuthorFromMsg(targetMsg);
+    const originalAuthorId = resolveAuthorId(targetMsg);
 
     // Non-author: block
     if (originalAuthorId && originalAuthorId !== interaction.user.id) {
@@ -410,7 +376,7 @@ async function handleRecallModal(interaction) {
         return interaction.editReply({ content: '❌ 原始訊息已不存在' });
     }
 
-    const originalAuthorId = extractAuthorFromMsg(targetMsg);
+    const originalAuthorId = resolveAuthorId(targetMsg);
     if (originalAuthorId && originalAuthorId !== interaction.user.id) return interaction.editReply({ content: '只有原作者可以收回訊息' });
     await targetMsg.delete().catch(() => {});
     await logRecall(interaction, targetMsg, originalAuthorId, reason);
@@ -422,9 +388,10 @@ async function logRecall(interaction, targetMsg, originalAuthorId, reason) {
     const logChannelId = guildSettings?.log_channel_id;
     const targetChannel = logChannelId
         ? await interaction.client.channels.fetch(logChannelId).catch(() => null)
-        : null; if (!targetChannel) return;
+        : null;
+    if (!targetChannel) return;
 
-    if (targetChannel) {
+    {
         const authorDesc = originalAuthorId ? `<@${originalAuthorId}>` : '未知用戶';
         await targetChannel.send({
             embeds: [{
@@ -460,24 +427,16 @@ async function handleBlacklistModal(interaction) {
     // Try to get author from message
     let targetMsg = null;
     let targetAuthor = null;
-    let platform = 'unknown';
     let originalUrl = '';
 
     try {
         const channel = await interaction.client.channels.fetch(channelId);
         targetMsg = await channel.messages.fetch(messageId);
-        targetAuthor = extractAuthorFromMsg(targetMsg);
-        if (targetMsg.content) {
-            const urlMatch = targetMsg.content.match(/https?:\/\/[^\s<>"{}|\\^`[\]]+/i);
-            if (urlMatch) originalUrl = urlMatch[0];
-        }
-        // Platform from embed URL
-        if (originalUrl && originalUrl.includes('twitter.com')) platform = 'twitter';
-        else if (originalUrl && originalUrl.includes('pixiv.net')) platform = 'pixiv';
-        else if (originalUrl && originalUrl.includes('youtube.com')) platform = 'youtube';
-        else if (originalUrl && originalUrl.includes('instagram.com')) platform = 'instagram';
-        else if (originalUrl && originalUrl.includes('threads.com')) platform = 'threads';
+        targetAuthor = resolveAuthorId(targetMsg);
+        originalUrl = extractUrlFromMessage(targetMsg);
     } catch (_) {}
+
+    const platform = detectPlatformFromUrl(originalUrl);
 
     const gbm = getGBM();
     const reportId = gbm.createReport({
@@ -531,9 +490,7 @@ async function handleBlacklistModal(interaction) {
             components: [new ActionRowBuilder().addComponents(levelSelect), buttonRow]
         });
 
-        // Save log message ID for future updates
-        db.getDB().prepare('UPDATE blacklist_reports SET log_message_id = ? WHERE id = ?')
-            .run(reviewMsg.id, reportId);
+        db.blacklistReports.setLogMessageId(reportId, reviewMsg.id);
     }
 
     return interaction.editReply({ content: '✅ 已送出回報，等待管理員審核' });

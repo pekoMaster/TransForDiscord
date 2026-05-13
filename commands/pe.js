@@ -25,6 +25,7 @@ const {
 const db = require('../db');
 const { PROVIDERS, saveKey, removeKey, getKeyStatus, hasAnyKey } = require('../utils/user-api-key-storage.js');
 const tlog = require('../utils/tfd-logger');
+const { getInstance: getGBM } = require('../utils/guild-blacklist-manager.js');
 
 const PROVIDER_CHOICES = [
     { name: 'OpenAI', value: 'openai' },
@@ -389,7 +390,6 @@ async function handleStatus(interaction, guildId) {
 // /pe blacklist（per-guild）
 // ────────────────────────────────────────────────────────────
 async function handleBlacklist(interaction, sub, guildId, userId) {
-    const { getInstance: getGBM } = require('../utils/guild-blacklist-manager.js');
     const gbm = getGBM();
 
     if (sub === 'switch') return handleBlacklistSwitch(interaction, guildId);
@@ -454,4 +454,14 @@ async function handleBlacklist(interaction, sub, guildId, userId) {
 
         return interaction.reply({ content, flags: MessageFlags.Ephemeral });
     }
+}
+
+async function handleBlacklistSwitch(interaction, guildId) {
+    const action = interaction.options.getString('action');
+    const enabled = action === 'on';
+    db.guilds.setBlacklistEnabled(guildId, enabled);
+    return interaction.reply({
+        content: enabled ? '✅ 已啟用本伺服器黑名單系統' : '✅ 已停用本伺服器黑名單系統',
+        flags: MessageFlags.Ephemeral
+    });
 }
