@@ -54,7 +54,9 @@ module.exports = {
             if (clickCooldown.has(cooldownKey)) {
                 const lastClick = clickCooldown.get(cooldownKey);
                 if (now - lastClick < cooldownTime) {
-                    tlog.sys('Pixiv翻頁', `用戶 ${interaction.user.tag} 點擊過於頻繁，跳過處理`);
+                    if (!interaction.deferred && !interaction.replied) {
+                        await interaction.deferUpdate();
+                    }
                     return;
                 }
             }

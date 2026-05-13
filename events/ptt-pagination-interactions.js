@@ -41,7 +41,9 @@ module.exports = {
             if (clickCooldown.has(cooldownKey)) {
                 const lastClick = clickCooldown.get(cooldownKey);
                 if (now - lastClick < cooldownTime) {
-                    tlog.sys('PTT翻頁', `用戶 ${interaction.user.tag} 點擊過於頻繁，跳過處理`);
+                    if (!interaction.deferred && !interaction.replied) {
+                        await interaction.deferUpdate();
+                    }
                     return;
                 }
             }
@@ -72,8 +74,7 @@ module.exports = {
             }
 
             if (!cachedData) {
-                // 快取已過期，要求用戶重新張貼網址
-                return interaction.reply({
+                return interaction.followUp({
                     content: '⏰ **頁面資料已過期**\n\n為了最佳效能，翻頁資料只保存24小時。\n請重新張貼 PTT 網址以載入最新資料。',
                     flags: MessageFlags.Ephemeral
                 });
@@ -89,18 +90,10 @@ module.exports = {
             const embeds = pageResult.embeds || [pageResult.embed];
             const components = pageResult.components || [];
 
-            // 更新訊息：多個嵌入式訊息 + 翻頁按鈕
-            if (interaction.deferred) {
-                await interaction.editReply({
-                    embeds: embeds,
-                    components: components
-                });
-            } else {
-                await interaction.update({
-                    embeds: embeds,
-                    components: components
-                });
-            }
+            await interaction.editReply({
+                embeds: embeds,
+                components: components
+            });
 
             tlog.sys('PTT翻頁', `成功切換到第 ${pageNumber + 1} 頁`);
 
