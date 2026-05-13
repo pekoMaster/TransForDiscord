@@ -836,6 +836,7 @@ class TFDTwitterExtractor {
             contentType: tweetType,
             videoUrls: formattedVideoUrls,
             mixedMedia: true,
+            tweetId: tweet.id,
             originalText: tweet.text // 保存原始文字用於翻譯
         };
     }
