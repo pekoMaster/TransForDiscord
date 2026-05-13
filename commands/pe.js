@@ -30,7 +30,8 @@ const { getInstance: getGBM } = require('../utils/guild-blacklist-manager.js');
 const PROVIDER_CHOICES = [
     { name: 'OpenAI', value: 'openai' },
     { name: 'Claude (Anthropic)', value: 'claude' },
-    { name: 'Gemini (Google)', value: 'gemini' }
+    { name: 'Gemini (Google)', value: 'gemini' },
+    { name: 'OpenRouter', value: 'openrouter' }
 ];
 
 module.exports = {
@@ -245,6 +246,7 @@ async function handleApi(interaction, sub, userId) {
             `• OpenAI: ${status.openai ? '✅ 已設定（加密儲存）' : '❌ 未設定'}`,
             `• Claude: ${status.claude ? '✅ 已設定（加密儲存）' : '❌ 未設定'}`,
             `• Gemini: ${status.gemini ? '✅ 已設定（加密儲存）' : '❌ 未設定'}`,
+            `• OpenRouter: ${status.openrouter ? '✅ 已設定（加密儲存）' : '❌ 未設定'}`,
             '',
             hasAnyKey(userId)
                 ? '翻譯時可點擊「改使用 AI 翻譯」按鈕使用你的 Key。'

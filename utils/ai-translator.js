@@ -181,11 +181,43 @@ async function translateWithGemini(text, apiKey, systemPrompt) {
     throw lastError || new Error('所有 Gemini 模型都無法使用');
 }
 
+/**
+ * 使用 OpenRouter API 翻譯（用戶自備 key，模型：openrouter/free）
+ */
+async function translateWithOpenRouter(text, apiKey, systemPrompt) {
+    const response = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+            model: 'openrouter/free',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: text }
+            ],
+            max_tokens: 2048,
+            temperature: 0.3
+        },
+        {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://github.com/TransForDiscord',
+                'X-Title': 'TransForDiscord'
+            },
+            timeout: 30000
+        }
+    );
+
+    const content = response.data?.choices?.[0]?.message?.content;
+    if (!content) throw new Error('OpenRouter 回傳空內容');
+    return content.trim();
+}
+
 // 廠商對應翻譯函數
 const TRANSLATE_FN = {
-    openai: translateWithOpenAI,
-    claude: translateWithClaude,
-    gemini: translateWithGemini
+    openai:     translateWithOpenAI,
+    claude:     translateWithClaude,
+    gemini:     translateWithGemini,
+    openrouter: translateWithOpenRouter
 };
 
 /**
@@ -255,7 +287,7 @@ async function translate(text, userId, options = {}) {
 function buildApiKeyTutorialEmbed() {
     return new EmbedBuilder()
         .setTitle('🔑 設定 AI 翻譯 API Key')
-        .setDescription('要使用 AI 翻譯功能，你需要先設定至少一組 API Key。\n支援以下三種 AI 服務，設定多組可自動輪調：')
+        .setDescription('要使用 AI 翻譯功能，你需要先設定至少一組 API Key。\n支援以下四種 AI 服務，設定多組可自動輪調：')
         .addFields(
             {
                 name: '🟢 OpenAI (GPT-4o-mini)',
@@ -273,8 +305,13 @@ function buildApiKeyTutorialEmbed() {
                 inline: false
             },
             {
+                name: '🔶 OpenRouter',
+                value: '1. 前往 [openrouter.ai](https://openrouter.ai/settings/keys)\n2. 建立新的 API Key\n3. 使用 `/pe api add` 指令設定\n\n金鑰格式：`sk-or-v1-...`',
+                inline: false
+            },
+            {
                 name: '📝 設定指令',
-                value: '```\n/pe api add provider:OpenAI apikey:你的金鑰\n/pe api add provider:Claude apikey:你的金鑰\n/pe api add provider:Gemini apikey:你的金鑰\n```\n設定多組 Key 時，翻譯會自動在可用的服務間輪調。',
+                value: '```\n/pe api add provider:OpenAI apikey:你的金鑰\n/pe api add provider:Claude apikey:你的金鑰\n/pe api add provider:Gemini apikey:你的金鑰\n/pe api add provider:OpenRouter apikey:你的金鑰\n```\n設定多組 Key 時，翻譯會自動在可用的服務間輪調。',
                 inline: false
             }
         )

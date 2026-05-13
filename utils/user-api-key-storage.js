@@ -12,9 +12,10 @@ const { encrypt, decrypt } = require('./crypto-helper.js');
 
 // 支援的 AI 廠商（保留與舊版一致）
 const PROVIDERS = {
-    openai: { name: 'OpenAI', prefix: 'sk-', placeholder: 'sk-proj-...' },
-    claude: { name: 'Claude (Anthropic)', prefix: 'sk-ant-', placeholder: 'sk-ant-...' },
-    gemini: { name: 'Gemini (Google)', prefix: 'AIza', placeholder: 'AIzaSy...' }
+    openai:      { name: 'OpenAI',             prefix: 'sk-',     placeholder: 'sk-proj-...' },
+    claude:      { name: 'Claude (Anthropic)', prefix: 'sk-ant-', placeholder: 'sk-ant-...' },
+    gemini:      { name: 'Gemini (Google)',     prefix: 'AIza',    placeholder: 'AIzaSy...' },
+    openrouter:  { name: 'OpenRouter',          prefix: 'sk-or-',  placeholder: 'sk-or-v1-...' }
 };
 
 const VALID_PROVIDERS = new Set(Object.keys(PROVIDERS));
