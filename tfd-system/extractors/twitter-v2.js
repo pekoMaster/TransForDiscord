@@ -1402,64 +1402,6 @@ class TFDTwitterExtractor {
     }
 
     /**
-     * 建立引用推文切換按鈕（返回 ActionRowBuilder，向後兼容）
-     * @param {string} tweetId - 推文 ID
-     * @param {boolean} isShowing - 是否顯示原文狀態
-     * @returns {ActionRowBuilder|null}
-     */
-    buildQuoteToggleButton(tweetId, isShowing) {
-        try {
-            const button = this.buildQuoteToggleButtonComponent(tweetId, isShowing);
-            return new ActionRowBuilder().addComponents(button);
-        } catch (error) {
-            console.error('[Twitter] 建立引用按鈕失敗:', error);
-            return null;
-        }
-    }
-
-    /**
-     * 建立引用推文切換按鈕組件（返回 ButtonBuilder）
-     * @param {string} tweetId - 推文 ID
-     * @param {boolean} isShowing - 是否顯示原文狀態
-     * @returns {ButtonBuilder}
-     */
-    buildQuoteToggleButtonComponent(tweetId, isShowing) {
-        return new ButtonBuilder()
-            .setCustomId(isShowing ? `twitter_hide_quote_${tweetId}` : `twitter_show_quote_${tweetId}`)
-            .setLabel(isShowing ? '收起引用' : '展開引用')
-            .setStyle(ButtonStyle.Secondary);
-    }
-
-    /**
-     * 建立回覆推文切換按鈕（返回 ActionRowBuilder，向後兼容）
-     * @param {string} tweetId - 推文 ID
-     * @param {boolean} isShowing - 是否顯示原文狀態
-     * @returns {ActionRowBuilder|null}
-     */
-    buildReplyToggleButton(tweetId, isShowing) {
-        try {
-            const button = this.buildReplyToggleButtonComponent(tweetId, isShowing);
-            return new ActionRowBuilder().addComponents(button);
-        } catch (error) {
-            console.error('[Twitter] 建立回覆按鈕失敗:', error);
-            return null;
-        }
-    }
-
-    /**
-     * 建立回覆推文切換按鈕組件（返回 ButtonBuilder）
-     * @param {string} tweetId - 推文 ID
-     * @param {boolean} isShowing - 是否顯示原文狀態
-     * @returns {ButtonBuilder}
-     */
-    buildReplyToggleButtonComponent(tweetId, isShowing) {
-        return new ButtonBuilder()
-            .setCustomId(isShowing ? `twitter_hide_reply_${tweetId}` : `twitter_show_reply_${tweetId}`)
-            .setLabel(isShowing ? '收起回覆' : '展開回覆')
-            .setStyle(ButtonStyle.Secondary);
-    }
-
-    /**
      * 建立顯示全文切換按鈕組件（返回 ButtonBuilder）
      * @param {string} tweetId - 推文 ID
      * @param {boolean} isExpanded - 是否已展開狀態

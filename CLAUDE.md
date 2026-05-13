@@ -129,10 +129,12 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | Button | `ctx_*` | tfd-context-actions |
 | Button/Select | `report_*` / `rbl_*` | report-button-interactions |
 | Button | `v2_*` | twitter-v2-interactions |
+| Button | `twitter_expand_all_` / `twitter_collapse_all_` | twitter-all-interactions（必須在 expand_ 之前） |
 | Button | `twitter_expand_` / `twitter_collapse_` | twitter-expand-interactions |
 | Button | `twitter_translate_` / `twitter_original_` | twitter-translate-interactions |
 | Button | `twitter_reload_` | twitter-reload-interactions |
 | Button | `twitter_page_` | twitter-pagination-interactions |
+| Button | `pixiv_reload_` | pixiv-reload-interactions（必須在 pixiv_ 之前） |
 | Button | `pixiv_*` | pixiv-pagination-interactions |
 | Button | `ptt_*` | ptt-pagination-interactions |
 
