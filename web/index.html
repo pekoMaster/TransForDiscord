@@ -50,7 +50,7 @@
             讓破圖的連結、消失的預覽通通復活
         </p>
         <div class="cta-group">
-            <a href="https://discord.com/oauth2/authorize?client_id=1483257652812320998&permissions=536955904&scope=bot" class="btn btn-discord" target="_blank" rel="noopener">
+            <a href="https://discord.com/oauth2/authorize?client_id=1483257652812320998" class="btn btn-discord" target="_blank" rel="noopener">
                 ＋ 加入你的伺服器
             </a>
             <a href="#donate" class="btn btn-donate">
@@ -227,7 +227,7 @@
     <div class="container">
         <h2>準備好了嗎？</h2>
         <p class="subtitle">只需要一個按鈕，就能讓你的伺服器擁有完美的網址預覽。</p>
-        <a href="https://discord.com/oauth2/authorize?client_id=1483257652812320998&permissions=536955904&scope=bot" class="btn btn-discord" target="_blank" rel="noopener">
+        <a href="https://discord.com/oauth2/authorize?client_id=1483257652812320998" class="btn btn-discord" target="_blank" rel="noopener">
             ＋ 將 Peko Embed 加入伺服器
         </a>
     </div>
@@ -298,7 +298,12 @@
                     <div class="cmd-desc">從本伺服器黑名單中移除指定作者。</div>
                 </div>
                 <div class="cmd-card">
-                    <div class="cmd-name">/pe blacklist list</div>
+                    <div class="cmd-name">/pe blacklist switch</div>
+                <div class="cmd-params">action: <em>on</em> | <em>off</em></div>
+                <div class="cmd-desc">啟用或停用本伺服器的黑名單系統。切換黑名單系統的啟用狀態。</div>
+            </div>
+            <div class="cmd-card">
+                <div class="cmd-name">/pe blacklist list</div>
                     <div class="cmd-params">platform: <em>平台</em>（選填）</div>
                     <div class="cmd-desc">列出本伺服器黑名單。可選平台過濾。每頁最多顯示 10 條記錄。</div>
                 </div>
@@ -372,6 +377,11 @@
         </div>
     </div>
 </section>
+
+
+        <div class="cmd-tip" style="margin-top:20px">
+            <strong>💡 注意：</strong>黑名單系統預設<strong>啟用</strong>。訊息上的回報按鈕（有效期 24 小時）與右鍵 PekoEmbed 操作才會生效。關閉時按鈕會顯示「本功能尚未啟用」。
+        </div>
 
 <!-- ── Footer ── -->
 <footer>
