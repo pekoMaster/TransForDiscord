@@ -15,7 +15,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('
 const PixivExtractor = require('../tfd-system/extractors/pixiv.js');
 const PixivCacheManager = require('../utils/pixiv-cache-manager.js');
 const { editWebhookMessage } = require('../utils/webhook-manager.js');
-const { appendSpoilerButton } = require('../utils/spoiler-button-helper.js');
+const { appendReportButton } = require('../utils/spoiler-button-helper.js');
 const tlog = require('../utils/tfd-logger');
 
 function getTimePrefix() {
@@ -149,8 +149,8 @@ module.exports = {
                 ];
             }
 
-            // 4. 編輯訊息（原訊息由 Webhook 發送），重新附加防爆雷按鈕
-            components = appendSpoilerButton(components);
+            // 4. 編輯訊息（原訊息由 Webhook 發送），重新附加回報按鈕
+            components = appendReportButton(components);
             const updatePayload = { embeds, components };
             try {
                 await editWebhookMessage(interaction.channel, interaction.message.id, updatePayload);

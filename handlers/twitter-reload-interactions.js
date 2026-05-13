@@ -10,7 +10,7 @@
 
 const { EmbedBuilder, MessageFlags } = require('discord.js');
 const TFDTwitterExtractor = require('../tfd-system/extractors/twitter-v2.js');
-const { appendSpoilerButton } = require('../utils/spoiler-button-helper.js');
+const { appendReportButton } = require('../utils/spoiler-button-helper.js');
 const tlog = require('../utils/tfd-logger');
 
 module.exports = {
@@ -41,7 +41,7 @@ module.exports = {
         return interaction.followUp({ content: '無法載入推文資料。', flags: MessageFlags.Ephemeral });
       }
 
-      const components = appendSpoilerButton(result.components || []);
+      const components = appendReportButton(result.components || []);
 
       // 多圖片推文：重建多嵌入式訊息
       if (result.embed && result.multipleImages && result.multipleImages.length > 0) {
