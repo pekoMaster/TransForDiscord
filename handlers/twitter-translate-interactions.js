@@ -6,6 +6,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { getInstance: getApiKeyService } = require('../utils/user-api-key-service.js');
 const { getInstance: getGeminiTranslator } = require('../utils/gemini-translator.js');
+const { translate: openrouterTranslate } = require('../utils/openrouter-translator.js');
 
 // 引入快取系統以取得完整文字
 const { getCachedContent } = require('./content-translation-interactions.js');
@@ -254,27 +255,33 @@ async function handleTranslateButton(interaction) {
             );
 
             if (!translateResult.success) {
-                let errorMessage = '❌ 翻譯失敗';
+                // Gemini 失敗（含 HK 地區封鎖）→ 嘗試 OpenRouter fallback
+                tlog.sys('Twitter-翻譯', `Gemini 失敗 (${translateResult.errorType})，嘗試 OpenRouter fallback`);
+                const orOptions = {};
+                if (translateOptions.authorName) orOptions.authorName = translateOptions.authorName;
+                const orResult = await openrouterTranslate(textToTranslate, orOptions);
 
-                switch (translateResult.errorType) {
-                    case 'QUOTA_EXHAUSTED':
-                        errorMessage = '⚠️ 翻譯服務目前無法使用，請和開發者聯絡。';
-                        break;
-                    case 'INVALID_API_KEY':
-                        errorMessage = '❌ API Key 無效\n\n請使用 `/pe api add` 重新設定正確的 API Key。';
-                        break;
-                    case 'TIMEOUT':
-                        errorMessage = '⏰ 翻譯超時，請稍後再試';
-                        break;
-                    default:
-                        errorMessage = `❌ 翻譯失敗：${translateResult.error || '未知錯誤'}`;
+                if (orResult.success) {
+                    translateResult.success = true;
+                    translateResult.text = orResult.text;
+                } else {
+                    let errorMessage = '❌ 翻譯失敗';
+                    switch (translateResult.errorType) {
+                        case 'QUOTA_EXHAUSTED':
+                            errorMessage = '⚠️ 翻譯配額已用盡，請和開發者聯絡。';
+                            break;
+                        case 'INVALID_API_KEY':
+                            errorMessage = '❌ API Key 無效\n\n請使用 `/pe api add` 重新設定正確的 API Key。';
+                            break;
+                        case 'TIMEOUT':
+                            errorMessage = '⏰ 翻譯超時，請稍後再試';
+                            break;
+                        default:
+                            errorMessage = `❌ 翻譯失敗：${translateResult.error || '未知錯誤'}`;
+                    }
+                    await interaction.followUp({ content: errorMessage, flags: MessageFlags.Ephemeral });
+                    return;
                 }
-
-                await interaction.followUp({
-                    content: errorMessage,
-                    flags: MessageFlags.Ephemeral
-                });
-                return;
             }
 
             // 拆分翻譯結果（主推文 + 引用推文 + 回覆推文）

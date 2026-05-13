@@ -1,10 +1,9 @@
 /**
  * OpenRouter 輪調翻譯器
- * ⚠️ 暫時停用 — 改為 DeepL 預設 + 用戶自備 AI Key 模式
- * 保留程式碼以備未來重新啟用
+ * VPS 在 HK，Gemini 直接 API 被 Google 地區封鎖，改用 OpenRouter 作為翻譯 fallback
  */
 
-const DISABLED = true; // 暫時停用
+const DISABLED = false;
 
 const axios = require('axios');
 
@@ -193,7 +192,7 @@ function detectManagerPost(text) {
 /**
  * 建立 VTuber 優化翻譯提示詞
  */
-function buildPrompt(text) {
+function buildPrompt(text, options = {}) {
     const managerDetection = detectManagerPost(text);
 
     let systemPrompt = `你是一位專業的 VTuber 文化翻譯專家。請將以下文字翻譯成繁體中文（台灣用語）。
@@ -234,13 +233,23 @@ function buildPrompt(text) {
         }
     }
 
+    if (options.authorName) {
+        const ruleNum = managerDetection.isManagerPost ? 6 : 5;
+        systemPrompt += `
+
+${ruleNum}. 帳號自稱判定：
+   - 發文者的帳號名稱為「${options.authorName}」
+   - 如果推文內容中出現與帳號名稱相同或部分相同的詞彙，這很可能是發文者用自己的名字自稱
+   - 翻譯時應將這類自稱翻譯為第一人稱「我」，而非直接保留或翻譯名字`;
+    }
+
     return systemPrompt;
 }
 
 /**
  * 呼叫單一 OpenRouter 模型
  */
-async function callModel(modelId, text) {
+async function callModel(modelId, text, options = {}) {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY 未設定');
 
@@ -249,7 +258,7 @@ async function callModel(modelId, text) {
         {
             model: modelId,
             messages: [
-                { role: 'system', content: buildPrompt(text) },
+                { role: 'system', content: buildPrompt(text, options) },
                 { role: 'user', content: text }
             ],
             max_tokens: 2048,
@@ -280,7 +289,7 @@ async function callModel(modelId, text) {
  * @param {string} text - 要翻譯的文字
  * @returns {{ success: boolean, text: string, model: string, error?: string, errorType?: string }}
  */
-async function translate(text) {
+async function translate(text, options = {}) {
     if (DISABLED) {
         return { success: false, error: 'OpenRouter 已暫時停用', errorType: 'DISABLED' };
     }
@@ -302,7 +311,7 @@ async function translate(text) {
 
         try {
             console.log(`[OpenRouter] [${idx + 1}/${total}] 使用 ${model.label} 翻譯 (${text.length} 字)`);
-            const result = await callModel(model.id, text);
+            const result = await callModel(model.id, text, options);
 
             // 成功：指標移到下一個，讓下次從不同模型開始
             currentModelIndex = (idx + 1) % total;
