@@ -247,6 +247,7 @@ async function handleV2Translate(interaction) {
     });
 
     tlog.log('V2-翻譯', interaction, `翻譯完成: ${tweetId}`);
+    try { require('../db').tfdStats.record('translation', interaction.guildId, interaction.user.id); } catch (_) {}
 }
 
 /**

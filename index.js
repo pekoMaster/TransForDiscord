@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Events } = require('discord.js');
+const express = require('express');
 const TFDMessageHandler = require('./tfd-system/core/message-handler-v2.js');
 const interactionCreate = require('./events/interactionCreate.js');
 
@@ -73,6 +74,29 @@ client.on(Events.InteractionCreate, async (interaction) => {
     } catch (err) {
         console.error('互動處理錯誤:', err.message);
     }
+});
+
+// ── Express API（供 Vercel bot-stats 查詢 TFD 統計）──
+const app = express();
+const TFD_API_PORT = parseInt(process.env.TFD_API_PORT, 10) || 3456;
+
+app.get('/api/tfd-stats', (req, res) => {
+    try {
+        const apiKey = req.headers['x-api-key'];
+        if (!process.env.TFD_API_KEY || apiKey !== process.env.TFD_API_KEY) {
+            return res.status(403).json({ error: '未授權' });
+        }
+        const db = require('./db');
+        const stats = db.tfdStats.getAllStats();
+        res.json(stats);
+    } catch (e) {
+        console.error('[TFD API] 錯誤:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.listen(TFD_API_PORT, '0.0.0.0', () => {
+    console.log(`[TFD API] Express 已啟動於 port ${TFD_API_PORT}`);
 });
 
 client.login(process.env.BOT_TOKEN);

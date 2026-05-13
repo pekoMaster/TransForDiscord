@@ -155,6 +155,22 @@ function _prepareStatements() {
     `);
     stmts.abuseCleanup = db.prepare('DELETE FROM abuse_records WHERE created_at < ?');
 
+    // tfd_stats
+    stmts.tfdStatsInsert = db.prepare(
+        'INSERT INTO tfd_stats (stat_type, guild_id, user_id, created_at) VALUES (?, ?, ?, ?)'
+    );
+    stmts.tfdStatsTotal = db.prepare(
+        'SELECT COUNT(*) AS cnt FROM tfd_stats WHERE stat_type = ?'
+    );
+    stmts.tfdStatsDaily = db.prepare(`
+        SELECT date(created_at, 'unixepoch') AS day, COUNT(*) AS cnt
+        FROM tfd_stats WHERE stat_type = ? AND created_at >= ?
+        GROUP BY day ORDER BY day
+    `);
+    stmts.tfdStatsApiUserCount = db.prepare(
+        'SELECT COUNT(DISTINCT user_id) AS cnt FROM user_api_keys'
+    );
+
     // user_preferences
     stmts.userPrefGet = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?');
     stmts.userPrefUpsert = db.prepare(`
@@ -489,6 +505,46 @@ const blacklistReports = {
     }
 };
 
+// ============================================================
+// tfd_stats API（功能統計計數器）
+// ============================================================
+
+const tfdStats = {
+    record(statType, guildId = null, userId = null) {
+        return _stmt('tfdStatsInsert').run(statType, guildId, userId, now());
+    },
+
+    getTotal(statType) {
+        const row = _stmt('tfdStatsTotal').get(statType);
+        return row ? row.cnt : 0;
+    },
+
+    getDaily(statType, days = 30) {
+        const since = now() - days * 86400;
+        return _stmt('tfdStatsDaily').all(statType, since);
+    },
+
+    getApiUserCount() {
+        const row = _stmt('tfdStatsApiUserCount').get();
+        return row ? row.cnt : 0;
+    },
+
+    getAllStats() {
+        const types = ['translation', 'anti_spoiler', 'recall', 'reload'];
+        const totals = {};
+        const daily = {};
+        for (const t of types) {
+            totals[t] = tfdStats.getTotal(t);
+            daily[t] = tfdStats.getDaily(t);
+        }
+        return {
+            totals,
+            daily,
+            apiUserCount: tfdStats.getApiUserCount()
+        };
+    }
+};
+
 module.exports = {
     init,
     close,
@@ -502,5 +558,6 @@ module.exports = {
     blacklist,
     blacklistReports,
     abuse,
-    userPrefs
+    userPrefs,
+    tfdStats
 };

@@ -105,6 +105,7 @@ async function handleContextDelete(interaction) {
 
     if (originalAuthorId && originalAuthorId === userId) {
         await t.delete().catch(() => {});
+        try { db.tfdStats.record('recall', interaction.guildId, userId); } catch (_) {}
         tlog.log('CtxMenu-收回', interaction, '收回了自己的轉發訊息');
         await sendLogEmbed(interaction, {
             color: 0xED4245,
@@ -194,6 +195,7 @@ async function handleSpoilerModalSubmit(interaction) {
         timestamp: new Date().toISOString()
     });
     await sendSpoilerAndCleanup(t, container);
+    try { db.tfdStats.record('anti_spoiler', interaction.guildId, interaction.user.id); } catch (_) {}
     return interaction.editReply({ content: '🕶️ 已套用防爆雷' });
 }
 

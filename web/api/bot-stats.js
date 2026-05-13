@@ -70,6 +70,22 @@ module.exports = async (req, res) => {
 
             guilds.sort((a, b) => b.approximate_member_count - a.approximate_member_count);
 
+            // 從 Bot Express API 取得 TFD 功能統計
+            let tfdStats = null;
+            try {
+                const tfdApiUrl = process.env.TFD_API_URL;
+                const tfdApiKey = process.env.TFD_API_KEY;
+                if (tfdApiUrl && tfdApiKey) {
+                    const tfdRes = await fetch(`${tfdApiUrl}/api/tfd-stats`, {
+                        headers: { 'x-api-key': tfdApiKey },
+                        signal: AbortSignal.timeout(5000),
+                    });
+                    if (tfdRes.ok) tfdStats = await tfdRes.json();
+                }
+            } catch (e) {
+                console.error('[bot-stats] TFD API 查詢失敗:', e.message);
+            }
+
             return res.json({
                 bot: botUser,
                 application: appInfo,
@@ -77,6 +93,7 @@ module.exports = async (req, res) => {
                 totalGuilds: guilds.length,
                 totalMembers: guilds.reduce((s, g) => s + g.approximate_member_count, 0),
                 totalOnline: guilds.reduce((s, g) => s + g.approximate_presence_count, 0),
+                tfdStats,
                 fetchedAt: new Date().toISOString()
             });
         } catch (err) {

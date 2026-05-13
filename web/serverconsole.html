@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --bg: #0b0e14;
@@ -181,6 +182,7 @@
         .stat-blue { color: var(--blue); }
         .stat-accent { color: var(--accent); }
         .stat-purple { color: var(--purple); }
+        .stat-red { color: var(--red); }
 
         /* Table section */
         .table-section {
@@ -378,12 +380,12 @@
 
         /* Responsive */
         @media (max-width: 900px) {
-            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .stats-row { grid-template-columns: repeat(3, 1fr) !important; }
             .table-header { flex-direction: column; gap: 12px; }
             .search-input { width: 100%; }
         }
         @media (max-width: 600px) {
-            .stats-row { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: repeat(2, 1fr) !important; }
             .topbar { flex-direction: column; gap: 8px; padding: 12px 16px; }
             .content { padding: 16px; }
             table { font-size: .8rem; }
@@ -433,23 +435,50 @@
 
     <div class="content">
         <!-- Stats -->
-        <div class="stats-row">
+        <div class="stats-row" style="grid-template-columns: repeat(6, 1fr);">
             <div class="stat-card">
                 <div class="stat-value stat-accent" id="s-guilds">—</div>
                 <div class="stat-label">伺服器數量</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value stat-blue" id="s-members">—</div>
-                <div class="stat-label">總成員數（約）</div>
+                <div class="stat-value stat-accent" id="s-translation">—</div>
+                <div class="stat-label">📝 翻譯成功</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value stat-green" id="s-online">—</div>
-                <div class="stat-label">在線人數（約）</div>
+                <div class="stat-value stat-red" id="s-spoiler">—</div>
+                <div class="stat-label">🛡️ 防爆雷</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value stat-purple" id="s-largest">—</div>
-                <div class="stat-label">最大伺服器</div>
-                <div class="stat-sub" id="s-largest-name"></div>
+                <div class="stat-value stat-blue" id="s-recall">—</div>
+                <div class="stat-label">🗑️ 收回</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-green" id="s-reload">—</div>
+                <div class="stat-label">🔄 重整</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-purple" id="s-api-users">—</div>
+                <div class="stat-label">👤 登記API</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
+            <div class="table-section" style="padding: 20px;">
+                <h2 style="font-size: 1rem; margin-bottom: 12px;">📈 翻譯趨勢（30天）</h2>
+                <canvas id="chart-translation" height="180"></canvas>
+            </div>
+            <div class="table-section" style="padding: 20px;">
+                <h2 style="font-size: 1rem; margin-bottom: 12px;">🛡️ 防爆雷趨勢（30天）</h2>
+                <canvas id="chart-spoiler" height="180"></canvas>
+            </div>
+            <div class="table-section" style="padding: 20px;">
+                <h2 style="font-size: 1rem; margin-bottom: 12px;">🗑️ 收回趨勢（30天）</h2>
+                <canvas id="chart-recall" height="180"></canvas>
+            </div>
+            <div class="table-section" style="padding: 20px;">
+                <h2 style="font-size: 1rem; margin-bottom: 12px;">🔄 重整趨勢（30天）</h2>
+                <canvas id="chart-reload" height="180"></canvas>
             </div>
         </div>
 
@@ -465,10 +494,6 @@
                         <tr>
                             <th class="no-sort" style="width:48px"></th>
                             <th onclick="sortBy('name')">名稱</th>
-                            <th onclick="sortBy('members')" style="width:100px">成員</th>
-                            <th onclick="sortBy('online')" style="width:90px">在線</th>
-                            <th class="no-sort">權限</th>
-                            <th onclick="sortBy('boost')" style="width:70px">Boost</th>
                             <th class="no-sort">ID</th>
                         </tr>
                     </thead>
@@ -489,7 +514,7 @@
 /* ── State ── */
 let idToken = null;
 let guildData = [];
-let sortField = 'members';
+let sortField = 'name';
 let sortAsc = false;
 let searchQuery = '';
 
@@ -640,43 +665,61 @@ function renderBotInfo(data) {
 
 function renderStats(data) {
     document.getElementById('s-guilds').textContent = fmt(data.totalGuilds);
-    document.getElementById('s-members').textContent = fmt(data.totalMembers);
-    document.getElementById('s-online').textContent = fmt(data.totalOnline);
 
-    if (data.guilds.length > 0) {
-        const top = data.guilds[0];
-        document.getElementById('s-largest').textContent = fmt(top.approximate_member_count);
-        document.getElementById('s-largest-name').textContent = top.name;
-    }
+    const s = data.tfdStats?.totals || {};
+    document.getElementById('s-translation').textContent = fmt(s.translation || 0);
+    document.getElementById('s-spoiler').textContent = fmt(s.anti_spoiler || 0);
+    document.getElementById('s-recall').textContent = fmt(s.recall || 0);
+    document.getElementById('s-reload').textContent = fmt(s.reload || 0);
+    document.getElementById('s-api-users').textContent = fmt(data.tfdStats?.apiUserCount || 0);
+
+    renderCharts(data.tfdStats);
 }
 
-/* ── Permission helpers ── */
-const PERMS = {
-    ADMINISTRATOR:     [0x8n,     '管理員',     true],
-    MANAGE_GUILD:      [0x20n,    '管理伺服器', false],
-    MANAGE_MESSAGES:   [0x2000n,  '管理訊息',   false],
-    SEND_MESSAGES:     [0x800n,   '發送訊息',   false],
-    EMBED_LINKS:       [0x4000n,  'Embed',      false],
-    ATTACH_FILES:      [0x8000n,  '附件',       false],
-};
+const chartInstances = {};
+function renderCharts(tfdStats) {
+    const daily = tfdStats?.daily || {};
+    const configs = [
+        { id: 'chart-translation', key: 'translation', label: '翻譯', color: '#f59e42' },
+        { id: 'chart-spoiler',     key: 'anti_spoiler', label: '防爆雷', color: '#ef4444' },
+        { id: 'chart-recall',      key: 'recall',       label: '收回', color: '#3b82f6' },
+        { id: 'chart-reload',      key: 'reload',       label: '重整', color: '#22c55e' },
+    ];
+    for (const cfg of configs) {
+        const points = daily[cfg.key] || [];
+        const labels = points.map(p => p.day.slice(5));
+        const values = points.map(p => p.cnt);
 
-function getPermBadges(permStr) {
-    if (!permStr) return '';
-    const p = BigInt(permStr);
-    const isAdmin = (p & 0x8n) === 0x8n;
-    if (isAdmin) return '<span class="perm-badge perm-admin">管理員</span>';
+        if (chartInstances[cfg.id]) chartInstances[cfg.id].destroy();
+        const ctx = document.getElementById(cfg.id);
+        if (!ctx) continue;
 
-    let html = '';
-    for (const [, [bit, label]] of Object.entries(PERMS)) {
-        if (bit === 0x8n) continue;
-        if ((p & bit) === bit) {
-            html += `<span class="perm-badge">${label}</span>`;
-        }
+        chartInstances[cfg.id] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: cfg.label,
+                    data: values,
+                    borderColor: cfg.color,
+                    backgroundColor: cfg.color + '20',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { color: '#8492a6' }, grid: { color: '#1e2636' } },
+                    x: { ticks: { color: '#8492a6', maxRotation: 45 }, grid: { display: false } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
     }
-    return html || '<span class="perm-badge">基本</span>';
 }
-
-const BOOST_TIER = ['—', 'Lv.1', 'Lv.2', 'Lv.3'];
 
 function guildIconUrl(g) {
     if (!g.icon) return null;
@@ -698,16 +741,11 @@ function getFiltered() {
         );
     }
     list = [...list].sort((a, b) => {
-        let va, vb;
-        switch (sortField) {
-            case 'name':    va = a.name.toLowerCase(); vb = b.name.toLowerCase();
-                            return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-            case 'members': va = a.approximate_member_count; vb = b.approximate_member_count; break;
-            case 'online':  va = a.approximate_presence_count; vb = b.approximate_presence_count; break;
-            case 'boost':   va = a.premium_tier; vb = b.premium_tier; break;
-            default:        va = a.approximate_member_count; vb = b.approximate_member_count;
+        if (sortField === 'name') {
+            const va = a.name.toLowerCase(), vb = b.name.toLowerCase();
+            return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
         }
-        return sortAsc ? va - vb : vb - va;
+        return 0;
     });
     return list;
 }
@@ -717,7 +755,7 @@ function renderTable() {
     const list = getFiltered();
 
     if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-dim)">
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:32px;color:var(--text-dim)">
             ${searchQuery ? '找不到符合的伺服器' : '尚無資料'}</td></tr>`;
         return;
     }
@@ -730,20 +768,12 @@ function renderTable() {
         const desc = g.description
             ? `<div class="guild-desc" title="${g.description.replace(/"/g, '&quot;')}">${g.description}</div>`
             : '';
-        const boostTier = BOOST_TIER[g.premium_tier] || '—';
-        const boostClass = g.premium_tier > 0 ? ' badge-boost' : '';
 
         return `<tr>
             <td>${iconHtml}</td>
             <td><div class="guild-name-cell"><div>
-                <div class="guild-name-text">${esc(g.name)}</div>${desc}
+                <div class="guild-name-text">${esc(g.name)} <span class="guild-id">(${g.id})</span></div>${desc}
             </div></div></td>
-            <td>${fmt(g.approximate_member_count)}</td>
-            <td>${g.approximate_presence_count > 0
-                ? `<span class="online-dot"></span>${fmt(g.approximate_presence_count)}`
-                : '<span style="color:var(--text-dim)">—</span>'}</td>
-            <td><div class="perm-badges">${getPermBadges(g.permissions)}</div></td>
-            <td><span class="badge${boostClass}">${boostTier}</span></td>
             <td><span class="guild-id" onclick="copyId('${g.id}')" title="點擊複製">${g.id}</span></td>
         </tr>`;
     }).join('');

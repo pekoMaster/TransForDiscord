@@ -183,3 +183,16 @@ CREATE TABLE IF NOT EXISTS user_preferences (
   created_at         INTEGER NOT NULL,
   updated_at         INTEGER NOT NULL
 );
+
+-- ============================================================
+-- 13. TFD 功能統計（翻譯/防爆雷/收回/重整）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS tfd_stats (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  stat_type  TEXT NOT NULL,
+  guild_id   TEXT,
+  user_id    TEXT,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tfd_stats_type_date ON tfd_stats(stat_type, created_at);

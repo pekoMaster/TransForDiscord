@@ -155,6 +155,7 @@ module.exports = {
             try {
                 await editWebhookMessage(interaction.channel, interaction.message.id, updatePayload);
                 tlog.sys('Pixiv-Reload', `已重新載入 ${artworkId} (proxy[${safeProxyIndex}])`);
+                try { require('../db').tfdStats.record('reload', interaction.guildId, interaction.user.id); } catch (_) {}
             } catch (editError) {
                 tlog.sys('Pixiv-Reload', `⚠️ Webhook 編輯失敗 (${editError.message})，改用 followUp`);
                 try {

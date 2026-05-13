@@ -378,6 +378,8 @@ async function handleTranslateButton(interaction) {
             components: updatedComponents
         });
 
+        try { require('../db').tfdStats.record('translation', interaction.guildId, interaction.user.id); } catch (_) {}
+
     } catch (error) {
         tlog.sysError('Twitter-翻譯', `翻譯錯誤:`, error);
 

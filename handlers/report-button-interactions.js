@@ -168,6 +168,7 @@ async function handleRecallSubmenu(interaction) {
     // If caller is the original author: delete directly
     if (originalAuthorId && originalAuthorId === interaction.user.id) {
         await targetMsg.delete().catch(() => {});
+        try { db.tfdStats.record('recall', interaction.guildId, interaction.user.id); } catch (_) {}
         await logRecall(interaction, targetMsg, originalAuthorId, null);
         return interaction.update({ content: '✅ 已收回訊息', components: [], flags: MessageFlags.Ephemeral });
     }
@@ -357,6 +358,7 @@ async function handleSpoilerModal(interaction) {
     } catch (_) {}
 
     await sendSpoilerAndCleanup(targetMessage, container);
+    try { db.tfdStats.record('anti_spoiler', interaction.guildId, interaction.user.id); } catch (_) {}
     return interaction.editReply({ content: '🕶️ 已套用防爆雷' });
 }
 
@@ -379,6 +381,7 @@ async function handleRecallModal(interaction) {
     const originalAuthorId = resolveAuthorId(targetMsg);
     if (originalAuthorId && originalAuthorId !== interaction.user.id) return interaction.editReply({ content: '只有原作者可以收回訊息' });
     await targetMsg.delete().catch(() => {});
+    try { db.tfdStats.record('recall', interaction.guildId, interaction.user.id); } catch (_) {}
     await logRecall(interaction, targetMsg, originalAuthorId, reason);
     return interaction.editReply({ content: '✅ 已收回訊息' });
 }

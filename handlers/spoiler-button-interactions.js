@@ -405,6 +405,7 @@ async function handleSpoilerModalSubmit(interaction) {
 
         // Send spoiler version + delete original
         await sendSpoilerAndCleanup(targetMessage, container);
+        try { require('../db').tfdStats.record('anti_spoiler', interaction.guildId, interaction.user.id); } catch (_) {}
 
         await interaction.editReply({ content: '🕶️ 已套用防爆雷' });
 

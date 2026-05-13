@@ -41,6 +41,7 @@ module.exports = {
         return interaction.followUp({ content: '無法載入推文資料。', flags: MessageFlags.Ephemeral });
       }
 
+      try { require('../db').tfdStats.record('reload', interaction.guildId, interaction.user.id); } catch (_) {}
       const components = appendReportButton(result.components || []);
 
       // 多圖片推文：重建多嵌入式訊息
