@@ -223,7 +223,7 @@ async function handleApi(interaction, sub, userId) {
         saveKey(userId, provider, apiKey);
         const action = sub === 'add' ? '新增' : '更新';
         return interaction.reply({
-            content: `✅ 已${action}你的 ${providerName} API Key（**已加密儲存**）。\n翻譯時點擊「改使用 AI 翻譯」即可使用。\n\n⚠️ 提醒：建議不要在公開頻道使用此指令；對話結束後請手動刪除你輸入指令的訊息。`,
+            content: `✅ 已${action}你的 ${providerName} API Key（**已加密儲存**）。\n翻譯時點擊「改使用 AI 翻譯」即可使用。`,
             flags: MessageFlags.Ephemeral
         });
     }
