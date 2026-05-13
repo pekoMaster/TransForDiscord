@@ -5,7 +5,6 @@
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { translate: aiTranslate, buildApiKeyTutorialEmbed, getAvailableProviders } = require('../utils/ai-translator.js');
-const { translate: openrouterTranslate } = require('../utils/openrouter-translator.js');
 
 // 引入快取系統以取得完整文字
 const { getCachedContent } = require('./content-translation-interactions.js');
@@ -233,22 +232,11 @@ async function handleTranslateButton(interaction) {
             const translateResult = await aiTranslate(textToTranslate, userId, translateOptions);
 
             if (!translateResult.success) {
-                // 用戶所有 key 都失敗 → 嘗試 OpenRouter 系統 fallback
-                tlog.sys('Twitter-翻譯', `用戶 AI key 全部失敗 (${translateResult.errorType})，嘗試 OpenRouter fallback`);
-                const orOptions = {};
-                if (translateOptions.authorName) orOptions.authorName = translateOptions.authorName;
-                const orResult = await openrouterTranslate(textToTranslate, orOptions);
-
-                if (orResult.success) {
-                    translateResult.success = true;
-                    translateResult.text = orResult.text;
-                } else {
-                    await interaction.followUp({
-                        content: '❌ 翻譯失敗，所有翻譯引擎均無法使用，請稍後再試',
-                        flags: MessageFlags.Ephemeral
-                    });
-                    return;
-                }
+                await interaction.followUp({
+                    content: '❌ 翻譯失敗，請確認你的 API Key 是否有效，或改用其他廠商的 Key',
+                    flags: MessageFlags.Ephemeral
+                });
+                return;
             }
 
             // 拆分翻譯結果（主推文 + 引用推文 + 回覆推文）

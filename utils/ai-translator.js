@@ -170,8 +170,14 @@ async function translateWithGemini(text, apiKey, systemPrompt) {
         } catch (err) {
             lastError = err;
             const msg = err.message || '';
+
+            // 地區限制：不重試，直接拋出
+            if (msg.includes('FAILED_PRECONDITION') || msg.includes('location is not supported')) {
+                throw err;
+            }
+
             const retryable = ['503', 'UNAVAILABLE', '429', '404', 'quota', 'RESOURCE_EXHAUSTED',
-                'rate limit', 'not found', 'not supported', 'INVALID_ARGUMENT', 'timeout', 'ETIMEDOUT']
+                'rate limit', 'not found', 'INVALID_ARGUMENT', 'timeout', 'ETIMEDOUT']
                 .some(k => msg.includes(k));
 
             if (!retryable || i === GEMINI_MODEL_FALLBACKS.length - 1) break;
