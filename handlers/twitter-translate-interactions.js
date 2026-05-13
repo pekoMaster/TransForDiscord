@@ -255,6 +255,10 @@ async function handleTranslateButton(interaction) {
             const translateResult = await aiTranslate(textToTranslate, userId, translateOptions);
 
             if (!translateResult.success) {
+                await interaction.editReply({
+                    embeds: originalMessage.embeds.map(e => e.toJSON()),
+                    components: originalMessage.components
+                }).catch(() => {});
                 await interaction.followUp({
                     content: '❌ 翻譯失敗，請確認你的 API Key 是否有效，或改用其他廠商的 Key',
                     flags: MessageFlags.Ephemeral
@@ -379,6 +383,10 @@ async function handleTranslateButton(interaction) {
 
         try {
             if (interaction.deferred) {
+                await interaction.editReply({
+                    embeds: interaction.message.embeds.map(e => e.toJSON()),
+                    components: interaction.message.components
+                }).catch(() => {});
                 await interaction.followUp({
                     content: '❌ 翻譯時發生錯誤，請稍後再試',
                     flags: MessageFlags.Ephemeral
