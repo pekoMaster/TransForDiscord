@@ -18,6 +18,8 @@ const { getInstance: getGBM } = require('../../utils/guild-blacklist-manager.js'
 // URL 統計（footer N/M/O 顯示用）
 const { recordUrl } = require('../utils/url-stats');
 
+const db = require('../../db');
+
 class TFDMessageHandler {
     constructor() {
         this.linkProcessor = new LinkProcessor();
@@ -1833,7 +1835,6 @@ class TFDMessageHandler {
 
         // 檢查 per-guild 設定（從 SQLite 讀取，已隔離各伺服器）
         const guildId = message.guild.id;
-        const db = require('../../db');
 
         // 此伺服器是否啟用 TFD
         const guildSettings = db.guilds.get(guildId);
