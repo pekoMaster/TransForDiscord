@@ -259,7 +259,7 @@ class TFDMessageHandler {
             if (options.isReply !== false) {
                 const sendOptions = {
                     files: safeFiles,
-                    allowedMentions: { repliedUser: false },
+                    allowedMentions: { parse: [], repliedUser: false },
                     flags: options.flags  // 2026-04-11: 支援 V2 Components flags
                 };
                 // V2 Components 不使用 content 和 embeds
@@ -274,6 +274,7 @@ class TFDMessageHandler {
             } else {
                 const sendOptions = {
                     files: safeFiles,
+                    allowedMentions: { parse: [] },
                     flags: options.flags  // 2026-04-11: 支援 V2 Components flags
                 };
                 // V2 Components 不使用 content 和 embeds
@@ -292,7 +293,7 @@ class TFDMessageHandler {
             try {
                 if (options.isReply !== false) {
                     const sendOptions = {
-                        allowedMentions: { repliedUser: false },
+                        allowedMentions: { parse: [], repliedUser: false },
                         flags: options.flags  // 2026-04-11: 支援 V2 Components flags
                     };
                     if (!isV2Components) {
@@ -305,6 +306,7 @@ class TFDMessageHandler {
                     sentMsg = await message.reply(sendOptions);
                 } else {
                     const sendOptions = {
+                        allowedMentions: { parse: [] },
                         flags: options.flags  // 2026-04-11: 支援 V2 Components flags
                     };
                     if (!isV2Components) {

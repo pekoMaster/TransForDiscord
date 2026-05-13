@@ -135,7 +135,8 @@ async function sendWithWebhook(channel, options) {
             files: options.files,
             embeds: options.embeds,
             components: options.components,
-            flags: options.flags
+            flags: options.flags,
+            allowedMentions: options.allowedMentions ?? { parse: [] },
         };
         if (threadId) opts.threadId = threadId;
         return opts;
