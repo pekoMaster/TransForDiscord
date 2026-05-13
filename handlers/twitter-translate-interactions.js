@@ -4,8 +4,7 @@
  */
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
-const { getInstance: getApiKeyService } = require('../utils/user-api-key-service.js');
-const { getInstance: getGeminiTranslator } = require('../utils/gemini-translator.js');
+const { translate: aiTranslate, buildApiKeyTutorialEmbed, getAvailableProviders } = require('../utils/ai-translator.js');
 const { translate: openrouterTranslate } = require('../utils/openrouter-translator.js');
 
 // 引入快取系統以取得完整文字
@@ -51,26 +50,10 @@ async function handleTranslateButton(interaction) {
         // 必須在任何耗時操作（如資料庫查詢）之前執行
         await interaction.deferUpdate();
 
-        // 檢查用戶是否有 API Key
-        const apiKeyService = getApiKeyService();
-        const userApiKey = await apiKeyService.getApiKey(userId, 'gemini');
-
-        if (!userApiKey) {
-            // 用戶沒有 API Key，顯示引導訊息（使用 followUp 因為已經 defer）
+        // 檢查用戶是否有任何 AI API Key（openai / claude / gemini 任一）
+        if (getAvailableProviders(userId).length === 0) {
             await interaction.followUp({
-                content: `## 🌐 翻譯功能需要設定 API Key
-
-此功能使用 **Google Gemini AI** 進行翻譯，需要你提供自己的 API Key。
-
-### 📝 設定步驟：
-1. 前往 [Google AI Studio](https://aistudio.google.com/app/apikey) 取得免費 API Key
-2. 使用 \`/pe api add\` 指令登記你的 API Key
-
-### 💡 免費額度：
-- 每分鐘 15 次請求
-- 每日 1500 次請求
-
-設定完成後即可使用翻譯功能！`,
+                embeds: [buildApiKeyTutorialEmbed()],
                 flags: MessageFlags.Ephemeral
             });
             return;
@@ -234,7 +217,6 @@ async function handleTranslateButton(interaction) {
             // 執行翻譯（主推文 + 引用推文 + 回覆推文一起翻，用上下文提高準確度）
             tlog.log('Twitter-翻譯', interaction, `開始翻譯推文: ${tweetId} (主文: ${fullOriginalText.length}字, 引用: ${quoteOriginalText.length}字, 回覆: ${replyOriginalText.length}字, 上下文: ${quoteContext.length}字)`);
 
-            const geminiTranslator = getGeminiTranslator();
 
             const translateOptions = { targetLanguage: '繁體中文' };
             // 傳入發文者帳號名稱（用於自稱判定）
@@ -248,15 +230,11 @@ async function handleTranslateButton(interaction) {
                 translateOptions.context = quoteContext;
             }
 
-            const translateResult = await geminiTranslator.translateWithUserKey(
-                textToTranslate,
-                userApiKey,
-                translateOptions
-            );
+            const translateResult = await aiTranslate(textToTranslate, userId, translateOptions);
 
             if (!translateResult.success) {
-                // Gemini 失敗（含 HK 地區封鎖）→ 嘗試 OpenRouter fallback
-                tlog.sys('Twitter-翻譯', `Gemini 失敗 (${translateResult.errorType})，嘗試 OpenRouter fallback`);
+                // 用戶所有 key 都失敗 → 嘗試 OpenRouter 系統 fallback
+                tlog.sys('Twitter-翻譯', `用戶 AI key 全部失敗 (${translateResult.errorType})，嘗試 OpenRouter fallback`);
                 const orOptions = {};
                 if (translateOptions.authorName) orOptions.authorName = translateOptions.authorName;
                 const orResult = await openrouterTranslate(textToTranslate, orOptions);
@@ -265,21 +243,10 @@ async function handleTranslateButton(interaction) {
                     translateResult.success = true;
                     translateResult.text = orResult.text;
                 } else {
-                    let errorMessage = '❌ 翻譯失敗';
-                    switch (translateResult.errorType) {
-                        case 'QUOTA_EXHAUSTED':
-                            errorMessage = '⚠️ 翻譯配額已用盡，請和開發者聯絡。';
-                            break;
-                        case 'INVALID_API_KEY':
-                            errorMessage = '❌ API Key 無效\n\n請使用 `/pe api add` 重新設定正確的 API Key。';
-                            break;
-                        case 'TIMEOUT':
-                            errorMessage = '⏰ 翻譯超時，請稍後再試';
-                            break;
-                        default:
-                            errorMessage = `❌ 翻譯失敗：${translateResult.error || '未知錯誤'}`;
-                    }
-                    await interaction.followUp({ content: errorMessage, flags: MessageFlags.Ephemeral });
+                    await interaction.followUp({
+                        content: '❌ 翻譯失敗，所有翻譯引擎均無法使用，請稍後再試',
+                        flags: MessageFlags.Ephemeral
+                    });
                     return;
                 }
             }
@@ -306,9 +273,6 @@ async function handleTranslateButton(interaction) {
 
             // 儲存完整翻譯到快取（包含引用和回覆翻譯）
             saveToCache(cacheKey, { fullText: translatedFullText, quoteText: translatedQuoteText, replyText: translatedReplyText });
-
-            // 更新使用次數
-            await apiKeyService.incrementUsageCount(userId, 'gemini');
         }
 
         // 檢查當前是展開還是收起狀態（檢查是否有 expand/collapse 按鈕）
