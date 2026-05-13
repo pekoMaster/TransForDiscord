@@ -31,6 +31,11 @@ class BahamutExtractor {
     async extract(matchResult, message = null, isSpoiler = false) {
         const { extractedData, originalURL } = matchResult;
 
+        // GNN 新聞走獨立路徑
+        if (originalURL.includes('gnn.gamer.com.tw')) {
+            return this.extractGNN(originalURL, message, isSpoiler);
+        }
+
         try {
             console.log(`[Bahamut] 開始處理: ${originalURL}`);
 
@@ -114,6 +119,106 @@ class BahamutExtractor {
                 error: error.message
             };
         }
+    }
+
+    /**
+     * 處理 GNN 新聞 URL
+     */
+    async extractGNN(url, message, isSpoiler) {
+        try {
+            console.log(`[Bahamut-GNN] 開始處理: ${url}`);
+            const response = await this.makeRequest(url, false);
+            if (!response.data) throw new Error('無法取得頁面內容');
+
+            const $ = cheerio.load(response.data);
+            const data = this.parseGNNArticleData($, url);
+
+            if (message) URLConverterLogger.logConversion('bahamut-gnn', url, message);
+
+            return {
+                success: true,
+                embed: this.createGNNEmbed(data, isSpoiler),
+                siteName: 'bahamut',
+                contentType: 'news',
+                data
+            };
+        } catch (error) {
+            console.error(`[Bahamut-GNN] 處理失敗: ${error.message}`);
+            URLConverterLogger.logError('bahamut-gnn', url, error.message);
+            return this.createErrorResponse(error.message, url);
+        }
+    }
+
+    /**
+     * 解析 GNN 新聞資料
+     */
+    parseGNNArticleData($, url) {
+        // 標題
+        const title = $('meta[property="og:title"]').attr('content')
+            || $('.gnn-detail-cont h1').first().text().trim()
+            || $('h1').first().text().trim()
+            || '巴哈 GNN 新聞';
+
+        // 內文（.GN-lbox3B）
+        let description = '';
+        const contentEl = $('.GN-lbox3B');
+        if (contentEl.length > 0) {
+            // 去掉 script/style/iframe，取純文字
+            contentEl.find('script, style, iframe, .article_gamercard').remove();
+            description = contentEl.text().replace(/\s+/g, ' ').trim();
+        }
+        if (!description) {
+            description = $('meta[property="og:description"]').attr('content') || '無法取得文章內容';
+        }
+        if (description.length > 150) {
+            description = description.substring(0, 150) + '...（詳見原文）';
+        }
+
+        // 記者名稱 & 時間（格式：「（GNN 記者 Akito 報導） 2026-05-13 17:20:08」）
+        const infoText = $('.GN-lbox3C').first().text().trim();
+        let reporterName = 'GNN 記者';
+        let publishTime = null;
+        if (infoText) {
+            const reporterMatch = infoText.match(/GNN\s+記者\s+([^\s）]+)/);
+            if (reporterMatch) reporterName = `GNN 記者 ${reporterMatch[1]}`;
+            const timeMatch = infoText.match(/(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/);
+            if (timeMatch) publishTime = new Date(timeMatch[1]);
+        }
+
+        // 第一張圖片
+        let imageURL = $('img[name="gnnPIC"]').first().attr('src')
+            || $('meta[property="og:image"]').attr('content')
+            || null;
+
+        // 標籤
+        const tags = [];
+        $('.gnn-label .label').each((_, el) => {
+            const tag = $(el).text().trim();
+            if (tag) tags.push(tag);
+        });
+
+        return { title, description, reporterName, publishTime, imageURL, tags, url };
+    }
+
+    /**
+     * 建立 GNN 新聞 Embed
+     */
+    createGNNEmbed(data, isSpoiler = false) {
+        let desc = isSpoiler ? `||${data.description}||` : data.description;
+
+        const embed = new EmbedBuilder()
+            .setColor('#1976D2')
+            .setTitle(data.title)
+            .setURL(data.url)
+            .setDescription(desc)
+            .setAuthor({ name: data.reporterName })
+            .setFooter({ text: isSpoiler ? 'Peko Embed 🔒 防爆雷模式 | 巴哈 GNN' : 'Peko Embed | 巴哈 GNN' });
+
+        if (data.imageURL) embed.setImage(data.imageURL);
+        if (data.publishTime) embed.setTimestamp(data.publishTime);
+        else embed.setTimestamp();
+
+        return embed;
     }
 
     /**

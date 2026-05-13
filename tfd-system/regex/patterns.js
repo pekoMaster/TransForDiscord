@@ -59,7 +59,8 @@ const patterns = {
     bahamut: {
         forum: /https?:\/\/forum\.gamer\.com\.tw\/Co?\.php\?bsn=(\d+)&snA?=(\d+)/i,
         home: /https?:\/\/home\.gamer\.com\.tw\/artwork\.php\?sn=(\d+)/i,
-        creationDetail: /https?:\/\/home\.gamer\.com\.tw\/creationDetail\.php\?sn=(\d+)/i
+        creationDetail: /https?:\/\/home\.gamer\.com\.tw\/creationDetail\.php\?sn=(\d+)/i,
+        gnn: /https?:\/\/gnn\.gamer\.com\.tw\/detail\.php\?sn=(\d+)/i
     },
 
     // dcard: 已移除 (2026-04-12) - 無對應 extractor

@@ -190,7 +190,8 @@ class URLMatcher {
             bahamut: {
                 forum: (m) => ({ bsn: m[1], snA: m[2] }),
                 home: (m) => ({ sn: m[1] }),
-                creationDetail: (m) => ({ sn: m[1] })
+                creationDetail: (m) => ({ sn: m[1] }),
+                gnn: (m) => ({ sn: m[1] })
             },
             // dcard: 已移除 (2026-04-12)
             pixiv: {
