@@ -141,16 +141,24 @@ class PTTExtractor {
     parseArticleHTML(html, board) {
         const $ = this.domParser.parse(html);
 
-        // 提取文章標題
-        let title = $('#main-content .article-meta-value[data-time]').first().parent()
-            .find('.article-meta-value').first().text().trim() ||
-            $('.title').text().trim() ||
-            $('title').text().replace(' - PTT 網頁版', '').trim();
+        // 判斷是否為 pttweb.cc（Nuxt SSR，使用 schema.org itemprop）
+        const isPttweb = $.html().includes('pttweb.cc') || $('span[itemprop="headline"]').length > 0;
 
-        // 🔍 清理標題：移除「 - 看板 XXX - 批踢踢實業坊」等後綴
+        // 提取文章標題
+        let title = '';
+        if (isPttweb) {
+            title = $('span[itemprop="headline"]').first().text().trim();
+        }
+        if (!title) {
+            title = $('#main-content .article-meta-value[data-time]').first().parent()
+                .find('.article-meta-value').first().text().trim() ||
+                $('.article-metaline:contains("標題") .article-meta-value').text().trim() ||
+                $('.title').text().trim() ||
+                $('title').text().replace(' - PTT 網頁版', '').trim();
+        }
+
         title = this.cleanTitle(title);
 
-        // 🔧 備援：從 og:title meta 標籤提取標題（適用於 pttweb.cc）
         if (!title || title === '404') {
             const ogTitle = $('meta[property="og:title"]').attr('content');
             if (ogTitle) {
@@ -158,27 +166,38 @@ class PTTExtractor {
             }
         }
 
-        // 提取作者資訊（作者是第一個 .article-meta-value）
-        const authorElements = $('.article-meta-value');
-        let author = authorElements.length > 0 ? authorElements.eq(0).text().trim() : '';
-
-        // 🔧 備援：從 HTML 中尋找作者模式（適用於 pttweb.cc SSR 資料）
+        // 提取作者資訊
+        let author = '';
+        if (isPttweb) {
+            const authorName = $('span[itemprop="name"]').first().text().trim();
+            const authorNick = $('.e7-head-small').first().text().trim();
+            if (authorName) {
+                author = authorNick ? `${authorName} ${authorNick}` : authorName;
+            }
+        }
         if (!author) {
-            // 嘗試從頁面內容或 script 標籤中提取
+            const authorElements = $('.article-meta-value');
+            author = authorElements.length > 0 ? authorElements.eq(0).text().trim() : '';
+        }
+        if (!author) {
             const htmlText = $.html();
             const authorMatch = htmlText.match(/"author":\s*"([^"]+)"/);
-            if (authorMatch) {
-                author = authorMatch[1];
-            } else {
-                author = '未知';
-            }
+            author = authorMatch ? authorMatch[1] : '未知';
         }
 
         // 提取發文時間
-        const timeElement = $('.article-meta-line:contains("時間") .article-meta-value');
-        let publishTime = timeElement.text().trim();
-
-        // 🔧 備援：從 JSON 或 meta 標籤提取時間
+        let publishTime = '';
+        if (isPttweb) {
+            const datePublished = $('meta[itemprop="datePublished"]').attr('content');
+            if (datePublished) {
+                const d = new Date(datePublished);
+                publishTime = d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+            }
+        }
+        if (!publishTime) {
+            const timeElement = $('.article-metaline:contains("時間") .article-meta-value');
+            publishTime = timeElement.text().trim();
+        }
         if (!publishTime) {
             const htmlText = $.html();
             const timeMatch = htmlText.match(/"date":\s*"([^"]+)"/) ||
@@ -189,23 +208,40 @@ class PTTExtractor {
         }
 
         // 提取文章內容
-        let content = this.extractArticleContent($);
-
-        // 🔧 備援：從 og:description meta 標籤提取內容（適用於 pttweb.cc JavaScript 渲染頁面）
+        let content = '';
+        if (isPttweb) {
+            content = this.extractPttwebContent($);
+        }
+        if (!content || content.length < 10) {
+            content = this.extractArticleContent($);
+        }
         if (!content || content.length < 10) {
             const ogDescription = $('meta[property="og:description"]').attr('content');
             if (ogDescription && ogDescription.length > 10) {
-                // og:description 內容通常用 ". " 分隔行
                 content = ogDescription.replace(/\. /g, '\n').trim();
             }
         }
 
         // 提取推文統計
-        const pushStats = this.extractPushStats($);
+        let pushStats;
+        if (isPttweb) {
+            pushStats = this.extractPttwebPushStats($);
+        }
+        if (!pushStats || pushStats.total === 0) {
+            const classicStats = this.extractPushStats($);
+            if (classicStats.total > 0) pushStats = classicStats;
+        }
+        if (!pushStats) pushStats = { likes: 0, dislikes: 0, neutrals: 0, total: 0, score: 0 };
 
         // 提取看板資訊
-        const boardElement = $('.article-meta-line:contains("看板") .article-meta-value');
-        const boardName = boardElement.text().trim() || board;
+        let boardName = '';
+        if (isPttweb) {
+            boardName = $('.e7-board-name-standalone').first().text().trim();
+        }
+        if (!boardName) {
+            const boardElement = $('.article-metaline-right .article-meta-value');
+            boardName = boardElement.text().trim() || board;
+        }
 
         return {
             title: title,
@@ -255,6 +291,91 @@ class PTTExtractor {
             description: boardDescription,
             articles: articles
         };
+    }
+
+    /**
+     * 提取 pttweb.cc 文章內容
+     * @param {Object} $ - Cheerio 物件
+     * @returns {string}
+     */
+    extractPttwebContent($) {
+        const mainContent = $('.e7-main-content');
+        if (mainContent.length === 0) return '';
+
+        let text = '';
+        mainContent.each((_, el) => {
+            text += $(el).text() + '\n';
+        });
+
+        // 移除簽名檔和發信站資訊
+        const sendStationMarker = '※ 發信站: 批踢踢實業坊(ptt.cc)';
+        const markerIndex = text.indexOf(sendStationMarker);
+        if (markerIndex !== -1) {
+            text = text.substring(0, markerIndex);
+        }
+
+        text = this.removeQuotedText(text);
+        text = text.replace(/--[\s\S]*?--/g, '');
+        text = text.replace(/\n{3,}/g, '\n\n').trim();
+
+        return this.truncateContent(text);
+    }
+
+    /**
+     * 提取 pttweb.cc 推文統計
+     * @param {Object} $ - Cheerio 物件
+     * @returns {Object}
+     */
+    extractPttwebPushStats($) {
+        const counters = $('span[itemprop="userInteractionCount"]');
+        if (counters.length < 2) return null;
+
+        const likes = parseInt(counters.eq(0).text().trim()) || 0;
+        const dislikes = parseInt(counters.eq(1).text().trim()) || 0;
+        const neutrals = counters.length >= 3 ? (parseInt(counters.eq(2).text().trim()) || 0) : 0;
+
+        return {
+            likes,
+            dislikes,
+            neutrals,
+            total: likes + dislikes + neutrals,
+            score: likes - dislikes
+        };
+    }
+
+    /**
+     * 截斷內容（100中文字限制）
+     * @param {string} content
+     * @returns {string}
+     */
+    truncateContent(content) {
+        if (!content) return '';
+
+        const urlPattern = /https?:\/\/[^\s]+/g;
+        const urls = content.match(urlPattern) || [];
+        let contentWithoutUrls = content;
+        urls.forEach(url => { contentWithoutUrls = contentWithoutUrls.replace(url, ''); });
+
+        const chineseCharCount = (contentWithoutUrls.match(/[一-鿿]/g) || []).length;
+        if (chineseCharCount <= 100) return content;
+
+        let charCount = 0;
+        let truncated = '';
+        let i = 0;
+        while (i < content.length && charCount < 100) {
+            if (content.substr(i).match(/^https?:\/\//)) {
+                const urlMatch = content.substr(i).match(/^https?:\/\/[^\s]+/);
+                if (urlMatch) {
+                    truncated += urlMatch[0];
+                    i += urlMatch[0].length;
+                    continue;
+                }
+            }
+            if (content[i].match(/[一-鿿]/)) charCount++;
+            truncated += content[i];
+            i++;
+        }
+        return truncated + '...(詳全文)';
     }
 
     /**
@@ -455,21 +576,31 @@ class PTTExtractor {
      */
     extractImagesFromArticle($) {
         try {
-            const mainContent = $('#main-content');
+            // 支援 ptt.cc (#main-content) 和 pttweb.cc (.e7-main-content)
+            let mainContent = $('#main-content');
+            if (mainContent.length === 0) {
+                mainContent = $('.e7-main-content');
+            }
             const contentText = mainContent.text();
 
-            // 1️⃣ 提取所有圖片網址
             const imageUrlRegex = /https?:\/\/[^\s<>"]+?\.(?:jpg|jpeg|png|gif|webp)/gi;
             const allImageUrls = [];
 
-            // 從文章內容中提取圖片URL
             const textMatches = contentText.match(imageUrlRegex) || [];
             allImageUrls.push(...textMatches);
+
+            // 從 <img> 標籤提取（pttweb.cc 用 img 顯示圖片）
+            mainContent.find('img').each((_, element) => {
+                const src = $(element).attr('src');
+                if (src && /\.(?:jpg|jpeg|png|gif|webp)/i.test(src)) {
+                    allImageUrls.push(src);
+                }
+            });
 
             // 從 <a> 標籤的 href 屬性中提取圖片URL
             mainContent.find('a').each((index, element) => {
                 const href = $(element).attr('href');
-                if (href && imageUrlRegex.test(href)) {
+                if (href && /\.(?:jpg|jpeg|png|gif|webp)/i.test(href)) {
                     allImageUrls.push(href);
                 }
             });
