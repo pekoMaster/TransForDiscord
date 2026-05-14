@@ -173,6 +173,11 @@ const patterns = {
         profile: /https?:\/\/(?:www\.)?threads\.com\/@([A-Za-z0-9_.-]+)\/?$/i
     },
 
+    // 電商平台 - Hololive Shop
+    hololiveshop: {
+        product: /https?:\/\/shop\.hololivepro\.com\/products\/([a-zA-Z0-9_-]+)/i
+    },
+
     // 影片平台 - YouTube
     youtube: {
         // /live/ 格式直播連結（含可選 si 參數）

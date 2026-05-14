@@ -24,6 +24,7 @@ const PokeWikiExtractor = require('./52poke');
 const FourGamersExtractor = require('./4gamers');
 const ThreadsExtractor = require('./threads');
 const YouTubeExtractor = require('./youtube');
+const HololiveShopExtractor = require('./hololive-shop');
 
 class ExtractorManager {
     constructor() {
@@ -76,6 +77,9 @@ class ExtractorManager {
 
         // 社群平台
         this.extractors.set('threads', new ThreadsExtractor());
+
+        // 電商平台 - Hololive Shop
+        this.extractors.set('hololiveshop', new HololiveShopExtractor());
 
         // 影片平台 - YouTube /live/ 連結轉換
         this.extractors.set('youtube', new YouTubeExtractor());
@@ -212,7 +216,8 @@ class ExtractorManager {
                 nikke: './nikke',
                 pokewiki: './52poke',
                 '4gamers': './4gamers',
-                threads: './threads'
+                threads: './threads',
+                hololiveshop: './hololive-shop'
             };
 
             if (extractorPaths[siteName]) {

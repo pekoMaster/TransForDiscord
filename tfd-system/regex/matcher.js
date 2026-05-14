@@ -261,6 +261,9 @@ class URLMatcher {
             pokewiki: {
                 page: (m) => ({ pageName: m[1] })
             },
+            hololiveshop: {
+                product: (m) => ({ productSlug: m[1] })
+            },
             youtube: {
                 live: (m) => ({ videoId: m[1] })
             }
