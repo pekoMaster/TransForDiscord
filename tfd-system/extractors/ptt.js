@@ -649,7 +649,7 @@ class PTTExtractor {
             // 🔘 如果總圖片數 > 4，添加翻頁按鈕
             if (validImages.length > 4) {
                 const totalPages = Math.ceil(validImages.length / imagesPerPage);
-                const articleHash = this.extractArticleHash(originalURL);
+                const articleHash = this.cacheManager.extractArticleHash(originalURL);
 
                 let pageFooterText = 'PTT 批踢踢實業坊';
                 pageFooterText += ` • 第 ${pageIndex + 1}/${totalPages} 頁 • 共 ${validImages.length} 張圖片`;
@@ -699,7 +699,7 @@ class PTTExtractor {
         }
 
         // 🔄 重整按鈕（所有文章都加入）
-        const articleHash = this.extractArticleHash(originalURL);
+        const articleHash = this.cacheManager.extractArticleHash(originalURL);
         const reloadBtn = new ButtonBuilder()
             .setCustomId(`ptt_reload_${articleHash}`)
             .setLabel('重整')
