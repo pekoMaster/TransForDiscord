@@ -9,6 +9,7 @@
 
 const db = require('../db');
 const { encrypt, decrypt } = require('./crypto-helper.js');
+const tfd = require('./tfd-logger');
 
 // 支援的 AI 廠商（保留與舊版一致）
 const PROVIDERS = {
@@ -52,7 +53,7 @@ function getKey(userId, provider) {
         db.apiKeys.touchUsed(userId, provider);
         return plain;
     } catch (e) {
-        console.error(`[user-api-key] 解密失敗 user=${userId} provider=${provider}:`, e.message);
+        tfd.sysError('UserApiKey', `解密失敗 user=${userId} provider=${provider}: ${e.message}`);
         return null;
     }
 }

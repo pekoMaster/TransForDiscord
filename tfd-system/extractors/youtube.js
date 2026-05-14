@@ -9,6 +9,7 @@
  * 回傳 contentType: 'url_conversion'，由 message-handler-v2.js 統一用 webhook 發送
  */
 
+const tfd = require('../../utils/tfd-logger');
 class YouTubeExtractor {
     constructor() {
         this.name = 'YouTube';
@@ -29,7 +30,7 @@ class YouTubeExtractor {
 
         const convertedURL = `https://www.youtube.com/watch?v=${videoId}`;
 
-        console.log(`[YouTube] /live/ → /watch/ 轉換: ${originalURL} → ${convertedURL}`);
+        tfd.sys('YouTube', `/live/ → /watch/ 轉換: ${originalURL} → ${convertedURL}`);
 
         return {
             success: true,

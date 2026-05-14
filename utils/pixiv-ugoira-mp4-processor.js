@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { AttachmentBuilder, EmbedBuilder } = require('discord.js');
+const tfd = require('./tfd-logger');
 
 class PixivUgoiraMp4Processor {
     constructor() {
@@ -22,13 +23,13 @@ class PixivUgoiraMp4Processor {
      * @returns {Promise<Object>} 處理結果
      */
     async processUgoiraToMp4(artworkData, originalURL, channel) {
-        console.log(`[Pixiv-Ugoira-MP4] 開始處理動圖: ${artworkData.id}`);
+        tfd.sys('Pixiv-Ugoira-MP4', `開始處理動圖: ${artworkData.id}`);
 
         try {
             // 1. 下載 MP4 檔案
             const downloadResult = await this.downloadMP4(artworkData.id);
             if (!downloadResult.success) {
-                console.log(`[Pixiv-Ugoira-MP4] 下載失敗: ${downloadResult.error}`);
+                tfd.sys('Pixiv-Ugoira-MP4', `下載失敗: ${downloadResult.error}`);
                 return { success: false, error: downloadResult.error };
             }
 
@@ -65,21 +66,21 @@ class PixivUgoiraMp4Processor {
             }
 
             // 5. 分別發送：先 embed，後檔案
-            console.log('[Pixiv-Ugoira-MP4] 發送嵌入式訊息...');
+            tfd.sys('Pixiv-Ugoira-MP4', '發送嵌入式訊息...');
             await channel.send({ embeds: [embed] });
 
-            console.log('[Pixiv-Ugoira-MP4] 發送影片檔案...');
+            tfd.sys('Pixiv-Ugoira-MP4', '發送影片檔案...');
             await channel.send({ files: [attachment] });
 
             // 6. 清理本地檔案
             try {
                 fs.unlinkSync(downloadResult.filepath);
-                console.log('[Pixiv-Ugoira-MP4] 已自動清理本地檔案');
+                tfd.sys('Pixiv-Ugoira-MP4', '已自動清理本地檔案');
             } catch (deleteError) {
-                console.log(`[Pixiv-Ugoira-MP4] 清理檔案警告: ${deleteError.message}`);
+                tfd.sys('Pixiv-Ugoira-MP4', `清理檔案警告: ${deleteError.message}`);
             }
 
-            console.log(`[Pixiv-Ugoira-MP4] 處理完成: ${artworkData.id}`);
+            tfd.sys('Pixiv-Ugoira-MP4', `處理完成: ${artworkData.id}`);
             return {
                 success: true,
                 uploaded: true,
@@ -90,7 +91,7 @@ class PixivUgoiraMp4Processor {
             };
 
         } catch (error) {
-            console.error(`[Pixiv-Ugoira-MP4] 處理過程發生錯誤: ${error.message}`);
+            tfd.sysError('Pixiv-Ugoira-MP4', `處理過程發生錯誤: ${error.message}`);
             return {
                 success: false,
                 error: error.message
@@ -110,7 +111,7 @@ class PixivUgoiraMp4Processor {
 
         // 檢查檔案是否已存在
         if (fs.existsSync(filepath)) {
-            console.log(`[Pixiv-Ugoira-MP4] 檔案已存在，跳過下載: ${filename}`);
+            tfd.sys('Pixiv-Ugoira-MP4', `檔案已存在，跳過下載: ${filename}`);
             const stats = fs.statSync(filepath);
             return {
                 success: true,
@@ -152,7 +153,7 @@ class PixivUgoiraMp4Processor {
 
                 response.on('end', () => {
                     writeStream.end();
-                    console.log(`[Pixiv-Ugoira-MP4] 下載完成: ${filename} (${(downloadedBytes / 1024 / 1024).toFixed(2)} MB)`);
+                    tfd.sys('Pixiv-Ugoira-MP4', `下載完成: ${filename} (${(downloadedBytes / 1024 / 1024).toFixed(2)} MB)`);
 
                     resolve({
                         success: true,

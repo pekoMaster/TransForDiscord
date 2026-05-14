@@ -96,7 +96,7 @@ class ThreadsExtractor {
                     throw new Error(`不支援的 Threads 模式: ${patternName}`);
             }
         } catch (error) {
-            console.error(`[TFD-Threads] 提取失敗: ${error.message}`);
+            tfd.sysError('TFD-Threads', `提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -107,7 +107,7 @@ class ThreadsExtractor {
      */
     async extractPost(username, postId, originalURL) {
         try {
-            console.log(`[TFD-Threads] 抓取貼文: @${username}/post/${postId}`);
+            tfd.sys('TFD-Threads', `抓取貼文: @${username}/post/${postId}`);
 
             const [postHtml, profHtml] = await Promise.all([
                 _fetchHtml(`https://fixthreads.seria.moe/@${username}/post/${postId}`),
@@ -133,7 +133,7 @@ class ThreadsExtractor {
                 } catch (e) { quoteInfo.originalAvatar = null; }
             }
 
-            console.log(`[TFD-Threads] card:${twitterCard} isVideo:${isVideo} images:${images.length} isQuote:${!!quoteInfo}`);
+            tfd.sys('TFD-Threads', `card:${twitterCard} isVideo:${isVideo} images:${images.length} isQuote:${!!quoteInfo}`);
 
             const r = { username, postId, realName, rawText, videoUrl, images, avatar, twitterCard, isVideo, hasRealImg, isQuote: !!quoteInfo, quoteInfo, url: originalURL };
 
@@ -165,7 +165,7 @@ class ThreadsExtractor {
             };
 
         } catch (error) {
-            console.error(`[TFD-Threads] fixthreads 失敗 (${error.message})，切換舊版 proxy`);
+            tfd.sysError('TFD-Threads', `fixthreads 失敗 (${error.message})，切換舊版 proxy`);
             return this._extractPostLegacy(username, postId, originalURL);
         }
     }
@@ -250,10 +250,10 @@ class ThreadsExtractor {
      */
     async _extractPostLegacy(username, postId, originalURL) {
         try {
-            console.log(`[TFD-Threads] 舊版轉址: @${username}/post/${postId}`);
+            tfd.sys('TFD-Threads', `舊版轉址: @${username}/post/${postId}`);
             const proxyHost = await this.pickVideoProxy();
             const fixUrl = this.buildProxyUrl(originalURL, proxyHost);
-            console.log(`[TFD-Threads] 轉址 (${proxyHost}): ${fixUrl}`);
+            tfd.sys('TFD-Threads', `轉址 (${proxyHost}): ${fixUrl}`);
             return {
                 success: true,
                 siteName: 'threads',
@@ -265,7 +265,7 @@ class ThreadsExtractor {
                 embed: null
             };
         } catch (error) {
-            console.error(`[TFD-Threads] 轉址失敗: ${error.message}`);
+            tfd.sysError('TFD-Threads', `轉址失敗: ${error.message}`);
             return this.buildBasicPostEmbed(username, postId, originalURL);
         }
     }
@@ -288,7 +288,7 @@ class ThreadsExtractor {
                     });
 
                     if (meta && meta.success) {
-                        console.log(`[TFD-Threads] fetchPageMeta: used Lightpanda for ${url}`);
+                        tfd.sys('TFD-Threads', `fetchPageMeta: used Lightpanda for ${url}`);
                         return {
                             ogTitle: meta.title || null,
                             ogDescription: meta.description || null,
@@ -363,7 +363,7 @@ class ThreadsExtractor {
                     // ignore
                 }
 
-                console.log(`[TFD-Threads] fetchPageMeta: used Playwright for ${url}`);
+                tfd.sys('TFD-Threads', `fetchPageMeta: used Playwright for ${url}`);
                 return data;
             } finally {
                 try { if (page) await page.close(); } catch (e) {}
@@ -374,6 +374,7 @@ class ThreadsExtractor {
             // 3) 最後 fallback：Puppeteer minimal
             try {
                 const puppeteer = require('puppeteer');
+const tfd = require('../../utils/tfd-logger');
                 const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
                 try {
                     const page = await browser.newPage();
@@ -409,7 +410,7 @@ class ThreadsExtractor {
                         };
                     });
 
-                    console.log(`[TFD-Threads] fetchPageMeta: used Puppeteer fallback for ${url}`);
+                    tfd.sys('TFD-Threads', `fetchPageMeta: used Puppeteer fallback for ${url}`);
                     return data;
                 } finally {
                     await browser.close().catch(() => {});
@@ -425,7 +426,7 @@ class ThreadsExtractor {
      */
     async extractProfile(username, originalURL) {
         try {
-            console.log(`[TFD-Threads] 抓取個人資料: @${username}`);
+            tfd.sys('TFD-Threads', `抓取個人資料: @${username}`);
 
             const profileData = await this.fetchPageMeta(originalURL, {
                 extraWaitMs: 1000,
@@ -445,7 +446,7 @@ class ThreadsExtractor {
                 return { success: true, siteName: 'threads', embed };
             }
         } catch (error) {
-            console.log(`[TFD-Threads] 抓取失敗: ${error.message}`);
+            tfd.sys('TFD-Threads', `抓取失敗: ${error.message}`);
         }
 
         return this.buildBasicProfileEmbed(username, originalURL);
@@ -455,7 +456,7 @@ class ThreadsExtractor {
      * 建立基本貼文 embed（轉址失敗時的最後備援）
      */
     buildBasicPostEmbed(username, postId, originalURL) {
-        console.log(`[TFD-Threads] 建立基本貼文 embed: @${username}`);
+        tfd.sys('TFD-Threads', `建立基本貼文 embed: @${username}`);
 
         const embed = this.embedBuilder.createBasicEmbed({
             title: `@${username} 的 Threads 貼文`,
@@ -476,7 +477,7 @@ class ThreadsExtractor {
      * 建立基本個人資料 embed
      */
     buildBasicProfileEmbed(username, originalURL) {
-        console.log(`[TFD-Threads] 建立基本個人資料 embed: @${username}`);
+        tfd.sys('TFD-Threads', `建立基本個人資料 embed: @${username}`);
 
         const embed = this.embedBuilder.createBasicEmbed({
             title: `@${username} • Threads`,
@@ -513,7 +514,7 @@ class ThreadsExtractor {
     async pickVideoProxy() {
         const ok = await this.probeHost(ThreadsExtractor.VIDEO_PROXY_PRIMARY);
         if (ok) return ThreadsExtractor.VIDEO_PROXY_PRIMARY;
-        console.log(`[TFD-Threads] ${ThreadsExtractor.VIDEO_PROXY_PRIMARY} 不可用，切換備援 ${ThreadsExtractor.VIDEO_PROXY_FALLBACK}`);
+        tfd.sys('TFD-Threads', `${ThreadsExtractor.VIDEO_PROXY_PRIMARY} 不可用，切換備援 ${ThreadsExtractor.VIDEO_PROXY_FALLBACK}`);
         return ThreadsExtractor.VIDEO_PROXY_FALLBACK;
     }
 

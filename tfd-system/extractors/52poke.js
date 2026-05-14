@@ -77,7 +77,7 @@ class PokeWikiExtractor {
                 embed.setThumbnail(thumbnail);
             }
 
-            URLConverterLogger.logConversion('pokewiki', message, null, null, `${title}`);
+            URLConverterLogger.logConversion('pokewiki', message, `${title}`);
 
             return {
                 success: true,

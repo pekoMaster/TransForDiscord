@@ -6,6 +6,7 @@
 const axios = require('axios');
 const { getAllKeys, PROVIDERS } = require('./user-api-key-storage.js');
 const { EmbedBuilder } = require('discord.js');
+const tfd = require('./tfd-logger');
 
 // VTuber 優化翻譯提示詞（基礎版）
 const BASE_SYSTEM_PROMPT = `你是一位專業的 VTuber 文化翻譯專家。請將以下文字翻譯成繁體中文（台灣用語）。
@@ -165,7 +166,7 @@ async function translateWithGemini(text, apiKey, systemPrompt) {
 
             const content = response.text;
             if (!content) throw new Error('Gemini 回傳空內容');
-            console.log(`[AI-Translate] Gemini 翻譯成功 (${modelName})`);
+            tfd.sys('AI-Translate', `Gemini 翻譯成功 (${modelName})`);
             return content.trim();
         } catch (err) {
             lastError = err;
@@ -181,7 +182,7 @@ async function translateWithGemini(text, apiKey, systemPrompt) {
                 .some(k => msg.includes(k));
 
             if (!retryable || i === GEMINI_MODEL_FALLBACKS.length - 1) break;
-            console.warn(`[AI-Translate] Gemini ${modelName} 失敗 (${msg})，切換下一個模型`);
+            tfd.sysWarn('AI-Translate', `Gemini ${modelName} 失敗 (${msg})，切換下一個模型`);
         }
     }
     throw lastError || new Error('所有 Gemini 模型都無法使用');
@@ -267,19 +268,19 @@ async function translate(text, userId, options = {}) {
         if (!translateFn) continue;
 
         try {
-            console.log(`[AI-Translate] 使用 ${PROVIDERS[provider].name} 翻譯 (${text.length} 字)`);
+            tfd.sys('AI-Translate', `使用 ${PROVIDERS[provider].name} 翻譯 (${text.length} 字)`);
             const result = await translateFn(text, apiKey, systemPrompt);
-            console.log(`[AI-Translate] ${PROVIDERS[provider].name} 翻譯成功`);
+            tfd.sys('AI-Translate', `${PROVIDERS[provider].name} 翻譯成功`);
             return { success: true, text: result, model: provider };
         } catch (err) {
             const status = err.response?.status;
-            console.warn(`[AI-Translate] ${PROVIDERS[provider].name} 失敗 (${status || err.message})`);
+            tfd.sysWarn('AI-Translate', `${PROVIDERS[provider].name} 失敗 (${status || err.message})`);
 
             // 判斷錯誤類型
             if (status === 401 || status === 403) {
-                console.error(`[AI-Translate] ${PROVIDERS[provider].name} API Key 無效`);
+                tfd.sysError('AI-Translate', `${PROVIDERS[provider].name} API Key 無效`);
             } else if (status === 429) {
-                console.warn(`[AI-Translate] ${PROVIDERS[provider].name} 配額用盡`);
+                tfd.sysWarn('AI-Translate', `${PROVIDERS[provider].name} 配額用盡`);
             }
             // 繼續嘗試下一個廠商
         }

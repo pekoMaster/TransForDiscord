@@ -36,7 +36,7 @@ class DynamicExtractor {
                 });
             }
 
-            console.log(`[Dynamic Extractor] 處理: ${url}`);
+            tfd.sys('Dynamic Extractor', `處理: ${url}`);
 
             // 開啟頁面
             await this.browser.open(url);
@@ -49,7 +49,7 @@ class DynamicExtractor {
             const snapshot = await this.browser.snapshot();
             const elements = this.browser.parseSnapshot(snapshot);
 
-            console.log(`[Dynamic Extractor] 找到 ${elements.length} 個元素`);
+            tfd.sys('Dynamic Extractor', `找到 ${elements.length} 個元素`);
 
             // 提取圖片
             const images = await this._extractImages(elements);
@@ -66,6 +66,7 @@ class DynamicExtractor {
 
             // 確保 temp 目錄存在
             const fs = require('fs').promises;
+const tfd = require('../../utils/tfd-logger');
             await fs.mkdir(path.dirname(screenshotPath), { recursive: true }).catch(() => {});
 
             await this.browser.screenshot(screenshotPath);
@@ -73,7 +74,7 @@ class DynamicExtractor {
             // 取得頁面標題
             const title = await this._getPageTitle(elements);
 
-            console.log(`[Dynamic Extractor] ✅ 提取完成: ${images.length} 張圖片, ${links.length} 個連結`);
+            tfd.sys('Dynamic Extractor', `✅ 提取完成: ${images.length} 張圖片, ${links.length} 個連結`);
 
             return {
                 success: true,
@@ -91,7 +92,7 @@ class DynamicExtractor {
             };
 
         } catch (error) {
-            console.error('[Dynamic Extractor] 錯誤:', error.message);
+            tfd.sysError('Dynamic Extractor', `錯誤: ${error.message}`);
 
             return {
                 success: false,
@@ -135,7 +136,7 @@ class DynamicExtractor {
                     }
                 }
             } catch (error) {
-                console.error('[Dynamic Extractor] 傳統圖片提取失敗:', error.message);
+                tfd.sysError('Dynamic Extractor', `傳統圖片提取失敗: ${error.message}`);
             }
         }
 
@@ -209,7 +210,7 @@ class DynamicExtractor {
         if (this.browser) {
             await this.browser.close();
             this.browser = null;
-            console.log('[Dynamic Extractor] 瀏覽器已關閉');
+            tfd.sys('Dynamic Extractor', '瀏覽器已關閉');
         }
     }
 

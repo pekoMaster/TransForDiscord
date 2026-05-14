@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const tfd = require('../../utils/tfd-logger');
 
 const STATS_FILE = path.join(__dirname, '../../data/url-stats.json');
 const WINDOW_DAYS = 7;
@@ -32,7 +33,7 @@ function saveStats(stats) {
     try {
         fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2), 'utf8');
     } catch (e) {
-        console.error('[url-stats] 儲存失敗:', e.message);
+        tfd.sysError('url-stats', `儲存失敗: ${e.message}`);
     }
 }
 
@@ -154,10 +155,10 @@ function pruneStats(stats, now) {
             removedOverflow++;
         }
         if (removedOverflow > 0) {
-            console.log(`[url-stats] GC: 移除 ${removedTTL} 個過期、${removedOverflow} 個超量條目（剩 ${TARGET_URL_ENTRIES}）`);
+            tfd.sys('url-stats', `GC: 移除 ${removedTTL} 個過期、${removedOverflow} 個超量條目（剩 ${TARGET_URL_ENTRIES}）`);
         }
     } else if (removedTTL > 0) {
-        console.log(`[url-stats] GC: 移除 ${removedTTL} 個過期條目`);
+        tfd.sys('url-stats', `GC: 移除 ${removedTTL} 個過期條目`);
     }
 }
 

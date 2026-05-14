@@ -6,6 +6,7 @@
 const { EmbedBuilder } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
+const tfd = require('../../utils/tfd-logger');
 
 class TFDLineTodayExtractor {
     constructor() {
@@ -25,7 +26,7 @@ class TFDLineTodayExtractor {
         const { language, articleId } = extractedData;
 
         try {
-            console.log(`[LINE-TODAY] 獲取文章: ${articleId} (${language})`);
+            tfd.sys('LINE-TODAY', `獲取文章: ${articleId} (${language})`);
 
             // 獲取頁面 HTML
             const html = await this.httpClient.fetchHTML(originalURL, {
@@ -43,13 +44,13 @@ class TFDLineTodayExtractor {
                 throw new Error('無法解析文章資料');
             }
 
-            console.log(`[LINE-TODAY] 成功獲取文章: ${articleData.title}`);
+            tfd.sys('LINE-TODAY', `成功獲取文章: ${articleData.title}`);
 
             // 建立 Embed
             const embed = this.buildArticleEmbed(articleData, originalURL);
 
             // 記錄網址轉換
-            URLConverterLogger.logConversion('linetoday', message, null, null, `文章: ${articleData.title}`);
+            URLConverterLogger.logConversion('linetoday', message, `文章: ${articleData.title}`);
 
             return {
                 success: true,
@@ -60,7 +61,7 @@ class TFDLineTodayExtractor {
             };
 
         } catch (error) {
-            console.error(`[LINE-TODAY] 處理失敗: ${error.message}`);
+            tfd.sysError('LINE-TODAY', `處理失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }

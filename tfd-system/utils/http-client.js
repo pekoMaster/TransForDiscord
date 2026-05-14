@@ -5,6 +5,7 @@
 
 const axios = require('axios');
 const config = require('../config/tfd-config.json');
+const tfd = require('../../utils/tfd-logger');
 
 /**
  * 預期的反爬蟲 HTTP 狀態碼 — 重試也不會成功，且不應被視為錯誤：
@@ -195,11 +196,11 @@ class HTTPClient {
         const prefix = `[${hours}:${minutes}] [TFD-HTTP]`;
 
         if (level === 'error') {
-            console.error(`${prefix} ❌ ${message}`);
+            tfd.sysError('HTTPClient', `${prefix} ❌ ${message}`);
         } else if (level === 'warn') {
-            console.warn(`${prefix} ⚠️ ${message}`);
+            tfd.sysWarn('HTTPClient', `${prefix} ⚠️ ${message}`);
         } else {
-            console.log(`${prefix} 🌐 ${message}`);
+            tfd.sys('HTTPClient', `${prefix} 🌐 ${message}`);
         }
     }
 }

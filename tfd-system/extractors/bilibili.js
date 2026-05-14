@@ -25,7 +25,7 @@ class BilibiliExtractor {
             const result = this.convertToVxBilibili(originalURL, patternName, extractedData);
 
             // 記錄網址轉換
-            URLConverterLogger.logConversion('bilibili', message, null, null, result.convertedURL);
+            URLConverterLogger.logConversion('bilibili', message, result.convertedURL);
 
             return {
                 success: true,

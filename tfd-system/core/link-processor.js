@@ -38,7 +38,7 @@ class LinkProcessor {
 
             // 檢查用戶速率限制
             if (!this.checkRateLimit(message.author.id)) {
-                console.log(`[TFD-LinkProcessor] 用戶 ${message.author.id} 觸發速率限制`);
+                tfd.sys('TFD-LinkProcessor', `用戶 ${message.author.id} 觸發速率限制`);
                 return [];
             }
 
@@ -63,7 +63,7 @@ class LinkProcessor {
                         results.push(result);
                     }
                 } catch (error) {
-                    console.error(`[TFD-LinkProcessor] 處理 URL 失敗: ${url} - ${error.message}`);
+                    tfd.sysError('TFD-LinkProcessor', `處理 URL 失敗: ${url} - ${error.message}`);
                     // 繼續處理其他 URL
                 }
             }
@@ -71,7 +71,7 @@ class LinkProcessor {
             return results;
 
         } catch (error) {
-            console.error(`[TFD-LinkProcessor] 處理訊息失敗: ${error.message}`);
+            tfd.sysError('TFD-LinkProcessor', `處理訊息失敗: ${error.message}`);
             return [];
         }
     }
@@ -89,10 +89,10 @@ class LinkProcessor {
             if (Date.now() - cached.timestamp < 300000) { // 5分鐘快取
                 // 如果快取結果是 null 或有錯誤，清除快取重新處理
                 if (!cached.result || (cached.result && cached.result.success === false)) {
-                    console.log(`[TFD-LinkProcessor] 清除無效快取: ${url}`);
+                    tfd.sys('TFD-LinkProcessor', `清除無效快取: ${url}`);
                     this.processedCache.delete(url);
                 } else {
-                    console.log(`[TFD-LinkProcessor] 使用快取結果: ${url}`);
+                    tfd.sys('TFD-LinkProcessor', `使用快取結果: ${url}`);
                     return cached.result;
                 }
             }
@@ -107,7 +107,7 @@ class LinkProcessor {
 
         // 檢查網站是否啟用
         if (!this.isSiteEnabled(matchResult.siteName)) {
-            console.log(`[TFD-LinkProcessor] 網站已停用: ${matchResult.siteName}`);
+            tfd.sys('TFD-LinkProcessor', `網站已停用: ${matchResult.siteName}`);
             return null;
         }
 
@@ -128,7 +128,7 @@ class LinkProcessor {
             return result;
 
         } catch (error) {
-            console.error(`[TFD-LinkProcessor] 提取失敗: ${matchResult.siteName} - ${error.message}`);
+            tfd.sysError('TFD-LinkProcessor', `提取失敗: ${matchResult.siteName} - ${error.message}`);
             return null;
         }
     }
@@ -143,6 +143,7 @@ class LinkProcessor {
         // 公開版：只用 per-guild blocked channels（不再支援全域 allowedChannels）
         if (!guildId) return true;
         const db = require('../../db');
+const tfd = require('../../utils/tfd-logger');
         return !db.blockedChannels.has(guildId, channelId);
     }
 
@@ -228,7 +229,7 @@ class LinkProcessor {
      */
     clearCache() {
         this.processedCache.clear();
-        console.log('[TFD-LinkProcessor] 快取已清空');
+        tfd.sys('TFD-LinkProcessor', '快取已清空');
     }
 
     /**
@@ -238,10 +239,10 @@ class LinkProcessor {
         try {
             delete require.cache[require.resolve('../config/tfd-config.json')];
             this.config = require('../config/tfd-config.json');
-            console.log('[TFD-LinkProcessor] 配置已重新載入');
+            tfd.sys('TFD-LinkProcessor', '配置已重新載入');
             return true;
         } catch (error) {
-            console.error(`[TFD-LinkProcessor] 重新載入配置失敗: ${error.message}`);
+            tfd.sysError('TFD-LinkProcessor', `重新載入配置失敗: ${error.message}`);
             return false;
         }
     }

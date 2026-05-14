@@ -3,6 +3,7 @@
  * 支援中日文雙字元計算的智能截斷功能
  */
 
+const tfd = require('../../utils/tfd-logger');
 class TextTruncator {
     constructor() {
         this.maxCharacters = 300; // 最大字元限制
@@ -259,9 +260,9 @@ class TextTruncator {
         };
 
         if (result.isTruncated) {
-            // console.log(`[${getTimeStamp()}] [TextTruncator] ${context} 內容已截斷: ${result.characterCount} 字元 -> ${this.calculateCharacterCount(result.truncatedText)} 字元`);
+            // tfd.sys('${getTimeStamp()}', `[TextTruncator] ${context} 內容已截斷: ${result.characterCount} 字元 -> ${this.calculateCharacterCount(result.truncatedText)} 字元`);
         } else {
-            // console.log(`[${getTimeStamp()}] [TextTruncator] ${context} 內容未超過限制: ${result.characterCount} 字元`);
+            // tfd.sys('${getTimeStamp()}', `[TextTruncator] ${context} 內容未超過限制: ${result.characterCount} 字元`);
         }
 
         // 返回物件格式，包含更多資訊供按鈕使用

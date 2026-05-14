@@ -7,6 +7,7 @@ const { AttachmentBuilder } = require('discord.js');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const tfd = require('../../utils/tfd-logger');
 
 class TwitterVideoAttachmentOptimizer {
     constructor() {
@@ -43,7 +44,7 @@ class TwitterVideoAttachmentOptimizer {
                 const sizeMB = parseInt(contentLength) / 1024 / 1024;
                 const isSmallEnough = sizeMB <= 25;
 
-                console.log(`[VideoOptimizer] 影片大小: ${sizeMB.toFixed(2)}MB, 適合附件: ${isSmallEnough}`);
+                tfd.sys('VideoOptimizer', `影片大小: ${sizeMB.toFixed(2)}MB, 適合附件: ${isSmallEnough}`);
 
                 return {
                     suitable: isSmallEnough,
@@ -54,7 +55,7 @@ class TwitterVideoAttachmentOptimizer {
 
             return { suitable: false, sizeMB: 0, sizeBytes: 0 };
         } catch (error) {
-            console.error(`[VideoOptimizer] 檢查影片失敗: ${error.message}`);
+            tfd.sysError('VideoOptimizer', `檢查影片失敗: ${error.message}`);
             return { suitable: false, sizeMB: 0, sizeBytes: 0 };
         }
     }
@@ -82,7 +83,7 @@ class TwitterVideoAttachmentOptimizer {
      * 下載影片作為附件
      */
     async downloadVideoAsAttachment(videoUrl, tweetId) {
-        console.log(`[VideoOptimizer] 開始下載影片: ${videoUrl}`);
+        tfd.sys('VideoOptimizer', `開始下載影片: ${videoUrl}`);
 
         const fileName = `twitter_video_${tweetId}_${Date.now()}.mp4`;
         const filePath = path.join(this.tempDir, fileName);
@@ -95,7 +96,7 @@ class TwitterVideoAttachmentOptimizer {
                 description: 'Twitter 影片'
             });
 
-            console.log(`[VideoOptimizer] ✅ 影片下載完成並創建附件: ${fileName}`);
+            tfd.sys('VideoOptimizer', `✅ 影片下載完成並創建附件: ${fileName}`);
 
             return {
                 attachment,
@@ -103,7 +104,7 @@ class TwitterVideoAttachmentOptimizer {
             };
 
         } catch (error) {
-            console.error(`[VideoOptimizer] 下載影片失敗: ${error.message}`);
+            tfd.sysError('VideoOptimizer', `下載影片失敗: ${error.message}`);
             this.cleanupFile(filePath);
             throw error;
         }
@@ -155,10 +156,10 @@ class TwitterVideoAttachmentOptimizer {
         try {
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
-                console.log(`[VideoOptimizer] 🗑️ 臨時檔案已清理: ${path.basename(filePath)}`);
+                tfd.sys('VideoOptimizer', `🗑️ 臨時檔案已清理: ${path.basename(filePath)}`);
             }
         } catch (error) {
-            console.error(`[VideoOptimizer] 清理檔案失敗: ${error.message}`);
+            tfd.sysError('VideoOptimizer', `清理檔案失敗: ${error.message}`);
         }
     }
 
@@ -173,7 +174,7 @@ class TwitterVideoAttachmentOptimizer {
             return null; // 不需要優化，使用原本邏輯
         }
 
-        console.log(`[VideoOptimizer] 🎯 針對特定推文進行影片附件優化: ${tweetId}`);
+        tfd.sys('VideoOptimizer', `🎯 針對特定推文進行影片附件優化: ${tweetId}`);
 
         // 提取影片
         const videos = [];
@@ -189,7 +190,7 @@ class TwitterVideoAttachmentOptimizer {
             return null; // 沒有影片
         }
 
-        console.log(`[VideoOptimizer] 找到 ${videos.length} 個影片`);
+        tfd.sys('VideoOptimizer', `找到 ${videos.length} 個影片`);
 
         // 對於測試推文，我們強制嘗試下載第一個影片作為附件（即使超過限制）
         const firstVideo = videos[0];
@@ -200,7 +201,7 @@ class TwitterVideoAttachmentOptimizer {
 
             // 對於測試，即使超過限制也嘗試處理（演示功能）
             if (tweetId === this.testTweetId) {
-                console.log(`[VideoOptimizer] 🧪 測試模式：強制處理影片附件（忽略大小限制）`);
+                tfd.sys('VideoOptimizer', `🧪 測試模式：強制處理影片附件（忽略大小限制）`);
 
                 // 注意：這裡只是演示，實際上 Discord 仍會拒絕超過 25MB 的附件
                 const videoAttachment = await this.downloadVideoAsAttachment(firstVideo.url, tweetId);
@@ -231,7 +232,7 @@ class TwitterVideoAttachmentOptimizer {
             }
 
         } catch (error) {
-            console.error(`[VideoOptimizer] 處理影片附件失敗: ${error.message}`);
+            tfd.sysError('VideoOptimizer', `處理影片附件失敗: ${error.message}`);
         }
 
         return null; // 處理失敗或不適合，回到原本邏輯

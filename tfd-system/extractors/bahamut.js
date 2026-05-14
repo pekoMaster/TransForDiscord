@@ -8,6 +8,7 @@ const cheerio = require('cheerio');
 const { EmbedBuilder } = require('discord.js');
 const BahamutAuth = require('../../utils/bahamut-auth');
 const URLConverterLogger = require('../utils/url-converter-logger');
+const tfd = require('../../utils/tfd-logger');
 
 class BahamutExtractor {
     constructor() {
@@ -37,7 +38,7 @@ class BahamutExtractor {
         }
 
         try {
-            console.log(`[Bahamut] 開始處理: ${originalURL}`);
+            tfd.sys('Bahamut', `開始處理: ${originalURL}`);
 
             // 先嘗試無認證請求
             let response = await this.makeRequest(originalURL, false);
@@ -48,7 +49,7 @@ class BahamutExtractor {
 
                 // 檢查是否需要認證
                 if (this.isAgeRestrictionPage($)) {
-                    console.log('[Bahamut] 檢測到年齡限制，嘗試使用認證...');
+                    tfd.sys('Bahamut', '檢測到年齡限制，嘗試使用認證...');
                     needsAuth = true;
                 } else {
                     // 無需認證，直接處理
@@ -59,7 +60,7 @@ class BahamutExtractor {
 
             // 需要認證或第一次請求失敗
             if (needsAuth || !response.data) {
-                console.log('[Bahamut] 使用認證模式請求...');
+                tfd.sys('Bahamut', '使用認證模式請求...');
                 response = await this.makeRequest(originalURL, true);
 
                 if (response.data) {
@@ -78,7 +79,7 @@ class BahamutExtractor {
             throw new Error('無法取得頁面內容');
 
         } catch (error) {
-            console.error(`[Bahamut] 處理失敗: ${error.message}`);
+            tfd.sysError('Bahamut', `處理失敗: ${error.message}`);
             URLConverterLogger.logError('bahamut', originalURL, error.message);
             return this.createErrorResponse(error.message, originalURL);
         }
@@ -97,7 +98,7 @@ class BahamutExtractor {
             if (useAuth) {
                 const cookieString = await this.auth.getCookieString();
                 headers.Cookie = cookieString;
-                console.log('[Bahamut] 使用認證 Cookie 請求');
+                tfd.sys('Bahamut', '使用認證 Cookie 請求');
             }
 
             const response = await axios.get(url, {
@@ -113,7 +114,7 @@ class BahamutExtractor {
             };
 
         } catch (error) {
-            console.error(`[Bahamut] 請求失敗: ${error.message}`);
+            tfd.sysError('Bahamut', `請求失敗: ${error.message}`);
             return {
                 success: false,
                 error: error.message
@@ -126,14 +127,14 @@ class BahamutExtractor {
      */
     async extractGNN(url, message, isSpoiler) {
         try {
-            console.log(`[Bahamut-GNN] 開始處理: ${url}`);
+            tfd.sys('Bahamut-GNN', `開始處理: ${url}`);
             const response = await this.makeRequest(url, false);
             if (!response.data) throw new Error('無法取得頁面內容');
 
             const $ = cheerio.load(response.data);
             const data = this.parseGNNArticleData($, url);
 
-            if (message) URLConverterLogger.logConversion('bahamut-gnn', url, message);
+            if (message) URLConverterLogger.logConversion('bahamut-gnn', message, url);
 
             return {
                 success: true,
@@ -143,7 +144,7 @@ class BahamutExtractor {
                 data
             };
         } catch (error) {
-            console.error(`[Bahamut-GNN] 處理失敗: ${error.message}`);
+            tfd.sysError('Bahamut-GNN', `處理失敗: ${error.message}`);
             URLConverterLogger.logError('bahamut-gnn', url, error.message);
             return this.createErrorResponse(error.message, url);
         }
@@ -332,7 +333,7 @@ class BahamutExtractor {
                 }
             }
         } catch (e) {
-            console.log('[Bahamut] JSON-LD 解析失敗');
+            tfd.sys('Bahamut', 'JSON-LD 解析失敗');
         }
 
         // 方法2: 從用戶名連結提取
@@ -400,7 +401,7 @@ class BahamutExtractor {
                 }
             }
         } catch (e) {
-            console.log('[Bahamut] JSON-LD 圖片解析失敗');
+            tfd.sys('Bahamut', 'JSON-LD 圖片解析失敗');
         }
 
         // 方法2: 從文章內容中找圖片
@@ -441,11 +442,11 @@ class BahamutExtractor {
      * 建立成功回應
      */
     createSuccessResponse(data, authUsed, originalURL, message, isSpoiler = false) {
-        console.log(`[Bahamut] 成功提取文章: ${data.title}`);
+        tfd.sys('Bahamut', `成功提取文章: ${data.title}`);
 
         // 記錄網址轉換
         if (message) {
-            URLConverterLogger.logConversion('bahamut', originalURL, message);
+            URLConverterLogger.logConversion('bahamut', message, originalURL);
         }
 
         return {

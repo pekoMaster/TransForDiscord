@@ -6,6 +6,7 @@
 
 const translate = require('@iamtraction/google-translate');
 const OpenCC = require('opencc-js');
+const tfd = require('./tfd-logger');
 
 class Translator {
     constructor() {
@@ -25,12 +26,12 @@ class Translator {
                 throw new Error('沒有可翻譯的內容');
             }
 
-            console.log(`[Translator] 翻譯到繁體中文: "${text.substring(0, 50)}..."`);
+            tfd.sys('Translator', `翻譯到繁體中文: "${text.substring(0, 50)}..."`);
 
             // 使用 Google Translate 翻譯到繁體中文
             const result = await translate(text, { to: 'zh-TW' });
 
-            console.log(`[Translator] 翻譯成功 (來源語言: ${result.from.language.iso})`);
+            tfd.sys('Translator', `翻譯成功 (來源語言: ${result.from.language.iso})`);
 
             return {
                 text: result.text,
@@ -39,7 +40,7 @@ class Translator {
             };
 
         } catch (error) {
-            console.error('[Translator] 翻譯失敗:', error.message);
+            tfd.sysError('Translator', `翻譯失敗: ${error.message}`);
             throw new Error(`翻譯失敗：${error.message}`);
         }
     }
@@ -55,16 +56,16 @@ class Translator {
                 throw new Error('沒有可轉換的內容');
             }
 
-            console.log(`[Translator] 繁→簡轉換: "${text.substring(0, 50)}..."`);
+            tfd.sys('Translator', `繁→簡轉換: "${text.substring(0, 50)}..."`);
 
             const result = this.converterToSimplified(text);
 
-            console.log('[Translator] 繁→簡轉換成功');
+            tfd.sys('Translator', '繁→簡轉換成功');
 
             return result;
 
         } catch (error) {
-            console.error('[Translator] 繁→簡轉換失敗:', error.message);
+            tfd.sysError('Translator', `繁→簡轉換失敗: ${error.message}`);
             throw new Error(`繁→簡轉換失敗：${error.message}`);
         }
     }
@@ -80,16 +81,16 @@ class Translator {
                 throw new Error('沒有可轉換的內容');
             }
 
-            console.log(`[Translator] 簡→繁轉換: "${text.substring(0, 50)}..."`);
+            tfd.sys('Translator', `簡→繁轉換: "${text.substring(0, 50)}..."`);
 
             const result = this.converterToTraditional(text);
 
-            console.log('[Translator] 簡→繁轉換成功');
+            tfd.sys('Translator', '簡→繁轉換成功');
 
             return result;
 
         } catch (error) {
-            console.error('[Translator] 簡→繁轉換失敗:', error.message);
+            tfd.sysError('Translator', `簡→繁轉換失敗: ${error.message}`);
             throw new Error(`簡→繁轉換失敗：${error.message}`);
         }
     }
@@ -109,7 +110,7 @@ class Translator {
             return result.from.language.iso;
 
         } catch (error) {
-            console.error('[Translator] 語言檢測失敗:', error.message);
+            tfd.sysError('Translator', `語言檢測失敗: ${error.message}`);
             return 'unknown';
         }
     }

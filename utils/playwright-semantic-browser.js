@@ -32,7 +32,7 @@ class PlaywrightSemanticBrowser {
         if (this.browser) return;
 
         if (this.options.debug) {
-            console.log('[SemanticBrowser] 初始化瀏覽器...');
+            tfd.sys('SemanticBrowser', '初始化瀏覽器...');
         }
 
         this.browser = await chromium.launch({
@@ -55,7 +55,7 @@ class PlaywrightSemanticBrowser {
         await this.init();
 
         if (this.options.debug) {
-            console.log(`[SemanticBrowser] 開啟: ${url}`);
+            tfd.sys('SemanticBrowser', `開啟: ${url}`);
         }
 
         await this.page.goto(url, { waitUntil: 'domcontentloaded' });
@@ -299,6 +299,7 @@ class PlaywrightSemanticBrowser {
         if (!this.context) throw new Error('未初始化瀏覽器');
 
         const fs = require('fs').promises;
+const tfd = require('./tfd-logger');
         const data = JSON.parse(await fs.readFile(filePath, 'utf-8'));
 
         // 恢復 Cookies
@@ -343,7 +344,7 @@ class PlaywrightSemanticBrowser {
     async close() {
         if (this.browser) {
             if (this.options.debug) {
-                console.log('[SemanticBrowser] 關閉瀏覽器');
+                tfd.sys('SemanticBrowser', '關閉瀏覽器');
             }
             await this.browser.close();
             this.browser = null;

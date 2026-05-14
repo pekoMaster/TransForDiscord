@@ -14,6 +14,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const tfd = require('./tfd-logger');
 
 const ALGO = 'aes-256-gcm';
 const IV_LENGTH = 12;
@@ -49,9 +50,9 @@ function _loadOrGenerateKey() {
     const buf = crypto.randomBytes(KEY_LENGTH);
     fs.writeFileSync(KEY_FILE, buf.toString('hex'), { mode: 0o600 });
 
-    console.warn('[crypto-helper] 已自動產生新的加密金鑰並寫入 data/.encryption-key');
-    console.warn('[crypto-helper] 請務必備份此檔案！遺失將導致所有已加密的 API Key 無法還原。');
-    console.warn('[crypto-helper] 建議改設環境變數 TFD_ENCRYPTION_KEY 並刪除此檔以提升安全性。');
+    tfd.sysWarn('crypto-helper', '已自動產生新的加密金鑰並寫入 data/.encryption-key');
+    tfd.sysWarn('crypto-helper', '請務必備份此檔案！遺失將導致所有已加密的 API Key 無法還原。');
+    tfd.sysWarn('crypto-helper', '建議改設環境變數 TFD_ENCRYPTION_KEY 並刪除此檔以提升安全性。');
 
     return buf;
 }

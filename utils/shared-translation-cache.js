@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const tfd = require('./tfd-logger');
 
 const CACHE_DIR = path.join(__dirname, '../data/translation_cache');
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
@@ -20,7 +21,7 @@ const memoryIndex = new Map();
 function init() {
     if (!fs.existsSync(CACHE_DIR)) {
         fs.mkdirSync(CACHE_DIR, { recursive: true });
-        console.log('[SharedCache] 建立快取目錄:', CACHE_DIR);
+        tfd.sys('SharedCache', `建立快取目錄: ${CACHE_DIR}`);
     }
 
     let loaded = 0;
@@ -48,7 +49,7 @@ function init() {
         }
     } catch (_) {}
 
-    console.log(`[SharedCache] 載入 ${loaded} 筆翻譯快取，清理 ${cleaned} 筆過期快取`);
+    tfd.sys('SharedCache', `載入 ${loaded} 筆翻譯快取，清理 ${cleaned} 筆過期快取`);
 }
 
 /**
@@ -94,7 +95,7 @@ function set(tweetId, data) {
             'utf8'
         );
     } catch (err) {
-        console.error('[SharedCache] 寫入失敗:', err.message);
+        tfd.sysError('SharedCache', `寫入失敗: ${err.message}`);
     }
 }
 
@@ -115,7 +116,7 @@ function cleanup() {
     }
 
     if (count > 0) {
-        console.log(`[SharedCache] 清理 ${count} 筆過期翻譯快取`);
+        tfd.sys('SharedCache', `清理 ${count} 筆過期翻譯快取`);
     }
 }
 

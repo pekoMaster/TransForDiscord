@@ -4,6 +4,7 @@
  * 支援多組 API Key 輪替和自動回退機制
  */
 
+const tfd = require('./tfd-logger');
 class GeminiTranslator {
     constructor() {
         // 載入多組 API Keys（過濾重複的 KEY_4）
@@ -27,7 +28,7 @@ class GeminiTranslator {
         this.GoogleGenAI = null; // 延遲載入 ES Module
 
         if (this.apiKeys.length === 0) {
-            console.error('❌ [Gemini翻譯] API Keys 未設定！');
+            tfd.sysError('Gemini', '❌ [Gemini翻譯] API Keys 未設定！');
             this.isAvailable = false;
         } else {
             this.isAvailable = true;
@@ -64,17 +65,6 @@ class GeminiTranslator {
     }
 
     /**
-     * 時間戳記函數
-     * @returns {string} [HH:mm] 格式的時間戳記
-     */
-    getTimeStamp() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        return `[${hours}:${minutes}]`;
-    }
-
-    /**
      * 翻譯到繁體中文（台灣用語）
      * 支援自動回退到 Google Translate
      * @param {string} text 要翻譯的文字
@@ -91,7 +81,7 @@ class GeminiTranslator {
 
         // 檢查文字長度（Gemini 有輸入限制）
         if (text.length > 10000) {
-            console.warn(`${this.getTimeStamp()} [Gemini翻譯] 文字過長 (${text.length} 字元)，使用 Google Translate`);
+            tfd.sysWarn('Gemini', `文字過長 (${text.length} 字元)，使用 Google Translate`);
             const result = await this.googleTranslator.toTraditionalChinese(text);
             return {
                 text: result.text,
@@ -102,7 +92,7 @@ class GeminiTranslator {
         }
 
         if (!this.isAvailable) {
-            console.warn(`${this.getTimeStamp()} [Gemini翻譯] API Keys 未設定，使用 Google Translate`);
+            tfd.sysWarn('Gemini', `API Keys 未設定，使用 Google Translate`);
             const result = await this.googleTranslator.toTraditionalChinese(text);
             return {
                 text: result.text,
@@ -127,7 +117,7 @@ class GeminiTranslator {
 
 ${text}`;
 
-            console.log(`${this.getTimeStamp()} [Gemini翻譯] 開始翻譯 (${text.length} 字元)`);
+            tfd.sys('Gemini', `開始翻譯 (${text.length} 字元)`);
 
             const response = await ai.models.generateContent({
                 model: this.model,
@@ -136,7 +126,7 @@ ${text}`;
 
             const translatedText = response.text.trim();
 
-            console.log(`${this.getTimeStamp()} [Gemini翻譯] ✅ 翻譯成功`);
+            tfd.sys('Gemini', `✅ 翻譯成功`);
 
             return {
                 text: translatedText,
@@ -145,7 +135,7 @@ ${text}`;
             };
 
         } catch (error) {
-            console.error(`${this.getTimeStamp()} [Gemini翻譯] ❌ 錯誤: ${error.message}`);
+            tfd.sysError('Gemini', `❌ 錯誤: ${error.message}`);
 
             // 檢查是否為配額錯誤
             const isQuotaError =
@@ -155,9 +145,9 @@ ${text}`;
                 error.message.includes('rate limit');
 
             if (isQuotaError) {
-                console.warn(`${this.getTimeStamp()} [Gemini翻譯] 配額已用盡，回退到 Google Translate`);
+                tfd.sysWarn('Gemini', `配額已用盡，回退到 Google Translate`);
             } else {
-                console.warn(`${this.getTimeStamp()} [Gemini翻譯] API 錯誤，回退到 Google Translate`);
+                tfd.sysWarn('Gemini', `API 錯誤，回退到 Google Translate`);
             }
 
             // 自動回退到 Google Translate
@@ -171,7 +161,7 @@ ${text}`;
                     originalError: error.message
                 };
             } catch (fallbackError) {
-                console.error(`${this.getTimeStamp()} [Gemini翻譯] ❌ 回退也失敗: ${fallbackError.message}`);
+                tfd.sysError('Gemini', `❌ 回退也失敗: ${fallbackError.message}`);
                 throw new Error(`翻譯失敗：${fallbackError.message}`);
             }
         }
@@ -194,7 +184,7 @@ ${text}`;
 
         // 檢查文字長度
         if (text.length > 10000) {
-            console.warn(`${this.getTimeStamp()} [Gemini翻譯] 文字過長 (${text.length} 字元)，無法翻譯`);
+            tfd.sysWarn('Gemini', `文字過長 (${text.length} 字元)，無法翻譯`);
             return {
                 text: text, // 返回原文
                 from: 'unknown',
@@ -204,7 +194,7 @@ ${text}`;
         }
 
         if (!this.isAvailable) {
-            console.warn(`${this.getTimeStamp()} [Gemini翻譯] API Keys 未設定，無法翻譯`);
+            tfd.sysWarn('Gemini', `API Keys 未設定，無法翻譯`);
             return {
                 text: text, // 返回原文
                 from: 'unknown',
@@ -245,7 +235,7 @@ ${text}`;
 原文：
 ${text}`;
 
-                console.log(`${this.getTimeStamp()} [Gemini翻譯] 開始翻譯成 5CH 風格日文 (${text.length} 字元)${attempt > 0 ? ` [重試 ${attempt}/${maxRetries}]` : ''}`);
+                tfd.sys('Gemini', `開始翻譯成 5CH 風格日文 (${text.length} 字元)${attempt > 0 ? ` [重試 ${attempt}/${maxRetries}]` : ''}`);
 
                 const response = await ai.models.generateContent({
                     model: this.model,
@@ -254,9 +244,9 @@ ${text}`;
 
                 const translatedText = response.text.trim();
 
-                console.log(`${this.getTimeStamp()} [Gemini翻譯] ✅ 5CH 風格翻譯成功${attempt > 0 ? ` (重試 ${attempt} 次後成功)` : ''}`);
-                console.log(`${this.getTimeStamp()} [Gemini翻譯] 原文: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
-                console.log(`${this.getTimeStamp()} [Gemini翻譯] 譯文: ${translatedText.substring(0, 50)}${translatedText.length > 50 ? '...' : ''}`);
+                tfd.sys('Gemini', `✅ 5CH 風格翻譯成功${attempt > 0 ? ` (重試 ${attempt} 次後成功)` : ''}`);
+                tfd.sys('Gemini', `原文: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
+                tfd.sys('Gemini', `譯文: ${translatedText.substring(0, 50)}${translatedText.length > 50 ? '...' : ''}`);
 
                 return {
                     text: translatedText,
@@ -278,19 +268,19 @@ ${text}`;
                     error.message.includes('rate limit');
 
                 if (isQuotaError) {
-                    console.warn(`${this.getTimeStamp()} [Gemini翻譯] ⚠️ API Key #${keyIndex + 1} 配額已用盡 (429 錯誤)`);
+                    tfd.sysWarn('Gemini', `⚠️ API Key #${keyIndex + 1} 配額已用盡 (429 錯誤)`);
 
                     // 如果還有其他 Key 可以嘗試，繼續下一輪
                     if (attempt < maxRetries - 1) {
-                        console.log(`${this.getTimeStamp()} [Gemini翻譯] 🔄 嘗試下一個 API Key...`);
+                        tfd.sys('Gemini', `🔄 嘗試下一個 API Key...`);
                         continue;
                     }
                 } else {
                     // 非配額錯誤，記錄後繼續嘗試
-                    console.error(`${this.getTimeStamp()} [Gemini翻譯] ❌ API Key #${keyIndex + 1} 發生錯誤: ${error.message}`);
+                    tfd.sysError('Gemini', `❌ API Key #${keyIndex + 1} 發生錯誤: ${error.message}`);
 
                     if (attempt < maxRetries - 1) {
-                        console.log(`${this.getTimeStamp()} [Gemini翻譯] 🔄 嘗試下一個 API Key...`);
+                        tfd.sys('Gemini', `🔄 嘗試下一個 API Key...`);
                         continue;
                     }
                 }
@@ -298,9 +288,9 @@ ${text}`;
         }
 
         // 所有 API Keys 都失敗了
-        console.error(`${this.getTimeStamp()} [Gemini翻譯] ❌ 所有 API Keys 都失敗了`);
-        console.error(`${this.getTimeStamp()} [Gemini翻譯] 失敗的 Keys: #${failedKeys.join(', #')}`);
-        console.error(`${this.getTimeStamp()} [Gemini翻譯] 最後錯誤: ${lastError?.message || '未知錯誤'}`);
+        tfd.sysError('Gemini', `❌ 所有 API Keys 都失敗了`);
+        tfd.sysError('Gemini', `失敗的 Keys: #${failedKeys.join(', #')}`);
+        tfd.sysError('Gemini', `最後錯誤: ${lastError?.message || '未知錯誤'}`);
 
         // 返回原文並附帶錯誤資訊
         return {
@@ -484,7 +474,7 @@ ${text}`;
 
             // 如果偵測到經紀人代發文，加入特殊處理規則
             if (managerDetection.isManagerPost) {
-                console.log(`${this.getTimeStamp()} [Gemini用戶翻譯] 偵測到${managerDetection.managerType}代發文`);
+                tfd.sys('Gemini', `偵測到${managerDetection.managerType}代發文`);
 
                 prompt += `
 
@@ -520,10 +510,8 @@ ${text}`;
                 const modelName = this.translationModelFallbacks[i];
 
                 try {
-                    console.log(
-                        `${this.getTimeStamp()} [Gemini用戶翻譯] 開始翻譯 (${text.length} 字元)` +
-                        `${i === 0 ? '' : ` [模型切換: ${modelName}]`}`
-                    );
+                    tfd.sys('Gemini', `開始翻譯 (${text.length} 字元)` +
+                        `${i === 0 ? '' : ` [模型切換: ${modelName}]`}`);
 
                     const response = await ai.models.generateContent({
                         model: modelName,
@@ -532,7 +520,7 @@ ${text}`;
 
                     const translatedText = response.text.trim();
 
-                    console.log(`${this.getTimeStamp()} [Gemini用戶翻譯] ✅ 翻譯成功 (${modelName})`);
+                    tfd.sys('Gemini', `✅ 翻譯成功 (${modelName})`);
 
                     return {
                         success: true,
@@ -574,7 +562,7 @@ ${text}`;
             throw lastError || new Error('所有翻譯模型都無法使用');
 
         } catch (error) {
-            console.error(`${this.getTimeStamp()} [Gemini用戶翻譯] ❌ 錯誤: ${error.message}`);
+            tfd.sysError('Gemini', `❌ 錯誤: ${error.message}`);
 
             // 判斷錯誤類型
             let errorType = 'UNKNOWN_ERROR';

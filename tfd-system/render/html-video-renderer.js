@@ -3,6 +3,7 @@
  * 基於 FxEmbed 的技術實現 Discord 嵌入式影片播放
  */
 
+const tfd = require('../../utils/tfd-logger');
 class HTMLVideoRenderer {
     constructor() {
         this.defaultThumbnail = 'https://ermiana.canaria.cc/pic/twitter.png';
@@ -35,7 +36,7 @@ class HTMLVideoRenderer {
         const videoFormat = this.getVideoFormat(video.url);
         const thumbnailUrl = video.thumbnail_url || this.defaultThumbnail;
 
-        console.log(`[HTMLVideoRenderer] 渲染影片: ${video.url}, 原始尺寸: ${video.width}x${video.height}, 調整後: ${adjustedWidth}x${adjustedHeight}`);
+        tfd.sys('HTMLVideoRenderer', `渲染影片: ${video.url}, 原始尺寸: ${video.width}x${video.height}, 調整後: ${adjustedWidth}x${adjustedHeight}`);
 
         return [
             // Open Graph 影片標籤
@@ -69,7 +70,7 @@ class HTMLVideoRenderer {
             return tags;
         }
 
-        console.log(`[HTMLVideoRenderer] 渲染 ${videos.length} 個影片`);
+        tfd.sys('HTMLVideoRenderer', `渲染 ${videos.length} 個影片`);
 
         // 為每個影片生成標籤
         videos.forEach((video, index) => {
@@ -102,7 +103,7 @@ class HTMLVideoRenderer {
             return tags;
         }
 
-        console.log(`[HTMLVideoRenderer] 渲染 ${images.length} 張圖片`);
+        tfd.sys('HTMLVideoRenderer', `渲染 ${images.length} 張圖片`);
 
         images.forEach((image) => {
             if (image && image.url) {
@@ -158,7 +159,7 @@ class HTMLVideoRenderer {
         const { videos = [], images = [], tweetData = {} } = options;
         const tags = [];
 
-        console.log(`[HTMLVideoRenderer] 渲染混合媒體: ${videos.length} 個影片, ${images.length} 張圖片`);
+        tfd.sys('HTMLVideoRenderer', `渲染混合媒體: ${videos.length} 個影片, ${images.length} 張圖片`);
 
         // Twitter Card 類型
         const cardType = this.getTwitterCardType(videos, images);

@@ -6,6 +6,7 @@
 const DISABLED = false;
 
 const axios = require('axios');
+const tfd = require('./tfd-logger');
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -166,7 +167,7 @@ function setCooldown(modelId, durationMs) {
     modelCooldowns.set(modelId, Date.now() + durationMs);
     const label = MODELS.find(m => m.id === modelId)?.label || modelId;
     const minutes = Math.round(durationMs / 60000);
-    console.log(`[OpenRouter] ${label} 觸發限流，冷卻 ${minutes} 分鐘`);
+    tfd.sys('OpenRouter', `${label} 觸發限流，冷卻 ${minutes} 分鐘`);
 }
 
 /**
@@ -310,12 +311,12 @@ async function translate(text, options = {}) {
         }
 
         try {
-            console.log(`[OpenRouter] [${idx + 1}/${total}] 使用 ${model.label} 翻譯 (${text.length} 字)`);
+            tfd.sys('OpenRouter', `[${idx + 1}/${total}] 使用 ${model.label} 翻譯 (${text.length} 字)`);
             const result = await callModel(model.id, text, options);
 
             // 成功：指標移到下一個，讓下次從不同模型開始
             currentModelIndex = (idx + 1) % total;
-            console.log(`[OpenRouter] ${model.label} 翻譯成功，下次從 ${MODELS[currentModelIndex].label} 開始`);
+            tfd.sys('OpenRouter', `${model.label} 翻譯成功，下次從 ${MODELS[currentModelIndex].label} 開始`);
 
             return { success: true, text: result, model: model.id };
 
@@ -329,13 +330,13 @@ async function translate(text, options = {}) {
 
             if (status === 402) {
                 // 額度不足（免費模型不應發生，但保險起見）
-                console.error(`[OpenRouter] ${model.label} 額度不足`);
+                tfd.sysError('OpenRouter', `${model.label} 額度不足`);
                 setCooldown(model.id, 60 * 60 * 1000); // 冷卻 1 小時
                 continue;
             }
 
             // 其他錯誤（網路/超時/模型錯誤）→ 嘗試下一個，不設冷卻
-            console.warn(`[OpenRouter] ${model.label} 失敗 (${status || err.code || err.message})，切換到下一個`);
+            tfd.sysWarn('OpenRouter', `${model.label} 失敗 (${status || err.code || err.message})，切換到下一個`);
         }
     }
 
@@ -368,7 +369,7 @@ function getModelStatus() {
  */
 function resetIndex() {
     currentModelIndex = 0;
-    console.log('[OpenRouter] Round-robin 指標已重置');
+    tfd.sys('OpenRouter', 'Round-robin 指標已重置');
 }
 
 module.exports = { translate, getModelStatus, resetIndex };

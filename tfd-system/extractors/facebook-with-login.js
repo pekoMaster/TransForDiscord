@@ -7,6 +7,7 @@
 const path = require('path');
 const fs = require('fs').promises;
 const { chromium } = require('playwright');
+const tfd = require('../../utils/tfd-logger');
 
 class FacebookWithLoginExtractor {
     constructor() {
@@ -35,10 +36,10 @@ class FacebookWithLoginExtractor {
                 timeout: 30000
             });
             this.browser = null;
-            console.log('[FB Extractor] ✅ 使用已保存的持久化登入狀態');
+            tfd.sys('FB Extractor', '✅ 使用已保存的持久化登入狀態');
             return;
         } catch (error) {
-            console.warn(`[FB Extractor] 持久化登入狀態啟動失敗，改用 storageState: ${error.message}`);
+            tfd.sysWarn('FB Extractor', `持久化登入狀態啟動失敗，改用 storageState: ${error.message}`);
         }
 
         await fs.access(this.storageStatePath);
@@ -51,12 +52,12 @@ class FacebookWithLoginExtractor {
             locale: 'zh-TW',
             storageState: this.storageStatePath
         });
-        console.log('[FB Extractor] ✅ 使用 storageState 登入狀態');
+        tfd.sys('FB Extractor', '✅ 使用 storageState 登入狀態');
     }
 
     async extract(url, extractedData = {}, message = null) {
         try {
-            console.log(`[FB Extractor] 開始提取: ${url}`);
+            tfd.sys('FB Extractor', `開始提取: ${url}`);
 
             if (!this.context) {
                 await this.initContext();
@@ -64,7 +65,7 @@ class FacebookWithLoginExtractor {
 
             const page = await this.context.newPage();
 
-            console.log('[FB Extractor] 開啟頁面...');
+            tfd.sys('FB Extractor', '開啟頁面...');
             await page.goto(url, {
                 waitUntil: 'domcontentloaded',
                 timeout: 30000
@@ -72,14 +73,14 @@ class FacebookWithLoginExtractor {
 
             await page.waitForTimeout(3000);
 
-            console.log('[FB Extractor] 取得語義化快照...');
+            tfd.sys('FB Extractor', '取得語義化快照...');
             const snapshot = await page.accessibility.snapshot();
             const lines = [];
             this._convertToLines(snapshot, lines, 0);
             const snapshotText = lines.join('\n');
             const elements = this._parseSnapshot(snapshotText);
 
-            console.log(`[FB Extractor] 找到 ${elements.length} 個元素`);
+            tfd.sys('FB Extractor', `找到 ${elements.length} 個元素`);
 
             const result = {
                 success: true,
@@ -105,16 +106,16 @@ class FacebookWithLoginExtractor {
             await page.screenshot({ path: screenshotPath, fullPage: false });
             result.data.screenshot = screenshotPath;
 
-            console.log('[FB Extractor] ✅ 提取完成');
-            console.log(`  作者: ${result.data.author}`);
-            console.log(`  社團: ${result.data.groupName || '(無)'}`);
-            console.log(`  標題: ${result.data.headline || '(無)'}`);
-            console.log(`  內容: ${result.data.content.substring(0, 100)}...`);
+            tfd.sys('FB Extractor', '✅ 提取完成');
+            tfd.sys('Facebook-Login', `  作者: ${result.data.author}`);
+            tfd.sys('Facebook-Login', `  社團: ${result.data.groupName || '(無)'}`);
+            tfd.sys('Facebook-Login', `  標題: ${result.data.headline || '(無)'}`);
+            tfd.sys('Facebook-Login', `  內容: ${result.data.content.substring(0, 100)}...`);
 
             await page.close();
             return result;
         } catch (error) {
-            console.error('[FB Extractor] 錯誤:', error.message);
+            tfd.sysError('FB Extractor', `錯誤: ${error.message}`);
             return {
                 success: false,
                 siteName: 'facebook',
@@ -287,7 +288,7 @@ class FacebookWithLoginExtractor {
         if (this.context) {
             await this.context.close();
             this.context = null;
-            console.log('[FB Extractor] 上下文已關閉');
+            tfd.sys('FB Extractor', '上下文已關閉');
         }
         if (this.browser) {
             await this.browser.close().catch(() => {});

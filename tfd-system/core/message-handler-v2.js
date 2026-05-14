@@ -438,7 +438,6 @@ class TFDMessageHandler {
     async sendPixivWithMultipleEmbeds(message, result) {
         try {
             const isR18 = result.contentType === 'r18_artwork' || result.data?.isR18;
-            tlog.log('Pixiv', message, `多圖 ${result.multipleImages.length} 張, R18=${isR18}`);
 
             const originalURL = result.pagination.originalURL || 'https://www.pixiv.net';
 
@@ -529,8 +528,6 @@ class TFDMessageHandler {
             // 🔥 最多顯示 4 張圖片
             const totalImages = result.multipleImages.length;
             const imagesToShow = result.multipleImages.slice(0, 4);
-
-            tlog.log('Facebook', message, `多圖 ${imagesToShow.length}/${totalImages} 張`);
 
             // 準備多個嵌入式訊息
             const embeds = [];
@@ -701,8 +698,6 @@ class TFDMessageHandler {
      */
     async sendTwitterV2(message, result) {
         try {
-            tlog.log('Twitter-V2', message, message._currentOriginalUrl || result.originalURL || '(URL 未知)');
-
             // 快取原始文字供翻譯按鈕使用
             if (result.originalText && result.tweetId) {
                 cacheContent(result.tweetId, result.originalText);
@@ -788,8 +783,6 @@ class TFDMessageHandler {
      */
     async sendTwitterWithPagination(message, result) {
         try {
-            tlog.log('Twitter', message, result.originalURL || result.url || '(URL 未知)');
-
             // 🌐 使用 Webhook 發送回應：嵌入式訊息 + 分頁按鈕
             await this.sendViaWebhook(message, {
                 embeds: [result.embed],
@@ -1067,7 +1060,6 @@ class TFDMessageHandler {
                             );
                         components.push(row);
                     }
-                    tlog.log('Twitter', message, `🎨 已加入合併圖片按鈕 tweetId=${result.tweetId} url=${result.originalURL || message._currentOriginalUrl || ''}`);
                 }
             }
 
@@ -1107,8 +1099,6 @@ class TFDMessageHandler {
         try {
             const embeds = [];
             const originalURL = result.originalURL || 'https://www.threads.com';
-            tlog.log('Threads', message, originalURL);
-
             // 📊 Footer 統計注入
             try {
                 if (originalURL && message.guildId && message.channelId) {
@@ -2210,8 +2200,6 @@ class TFDMessageHandler {
      */
     async sendPTTWithPagination(message, result) {
         try {
-            tlog.log('PTT', message, message._currentOriginalUrl || result.embeds?.[0]?.data?.url || '(URL 未知)');
-
             const embeds = result.embeds || [result.embed];
             const components = result.components || [];
 
@@ -2232,7 +2220,6 @@ class TFDMessageHandler {
      */
     async sendPTTWithMultipleEmbeds(message, result) {
         try {
-            tlog.log('PTT', message, message._currentOriginalUrl || result.embeds?.[0]?.data?.url || '(URL 未知)');
 
             const embeds = result.embeds || [result.embed];
 
@@ -2253,8 +2240,6 @@ class TFDMessageHandler {
      */
     async sendPTTWithSpoiler(message, result) {
         try {
-            tlog.log('PTT-防爆雷', message, message._currentOriginalUrl || result.embeds?.[0]?.data?.url || '(URL 未知)');
-
             // 取得主要 embed
             const mainEmbed = result.embeds ? result.embeds[0] : result.embed;
             if (!mainEmbed) {

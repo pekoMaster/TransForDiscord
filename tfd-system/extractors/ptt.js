@@ -6,6 +6,7 @@
 const HTTPClient = require('../utils/http-client');
 const DOMParser = require('../utils/dom-parser');
 const TFDEmbedBuilder = require('../utils/embed-builder');
+const tfd = require('../../utils/tfd-logger');
 
 class PTTExtractor {
     constructor() {
@@ -53,7 +54,7 @@ class PTTExtractor {
                     throw new Error(`不支援的 PTT 模式: ${patternName}`);
             }
         } catch (error) {
-            console.error(`[TFD-PTT] 提取失敗: ${error.message}`);
+            tfd.sysError('TFD-PTT', `提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -496,7 +497,7 @@ class PTTExtractor {
 
             return validImages;
         } catch (error) {
-            console.error('[PTT-Extractor] 圖片提取失敗:', error.message);
+            tfd.sysError('PTT-Extractor', `圖片提取失敗: ${error.message}`);
             return [];
         }
     }
@@ -533,7 +534,7 @@ class PTTExtractor {
 
             return signatureUrls;
         } catch (error) {
-            console.error('[PTT-Extractor] 簽名檔圖片提取失敗:', error.message);
+            tfd.sysError('PTT-Extractor', `簽名檔圖片提取失敗: ${error.message}`);
             return new Set();
         }
     }
@@ -551,11 +552,11 @@ class PTTExtractor {
 
         try {
             if (!articleData || !articleData.title || !articleData.author || !articleData.content) {
-                console.error('[PTT-Extractor] articleData 資料不完整:', {
+                tfd.sysError('PTT-Extractor', `articleData 資料不完整: ${{
                     hasTitle: !!articleData?.title,
                     hasAuthor: !!articleData?.author,
                     hasContent: !!articleData?.content
-                });
+                }}`);
                 throw new Error('文章資料不完整');
             }
 
@@ -597,7 +598,7 @@ class PTTExtractor {
                 // 🔧 驗證圖片 URL 格式
                 let rawImageUrl = currentPageImages[0];
                 if (!rawImageUrl || typeof rawImageUrl !== 'string' || !rawImageUrl.startsWith('http')) {
-                    console.error('[PTT-Extractor] 無效的圖片 URL:', rawImageUrl);
+                    tfd.sysError('PTT-Extractor', `無效的圖片 URL: ${rawImageUrl}`);
                     throw new Error(`無效的圖片 URL: ${rawImageUrl}`);
                 }
 
@@ -609,9 +610,9 @@ class PTTExtractor {
                 try {
                     embed.setImage(rawImageUrl);
                 } catch (imageError) {
-                    console.error('[PTT-Extractor] setImage 失敗:', imageError.message);
-                    console.error('[PTT-Extractor] 圖片 URL:', rawImageUrl);
-                    console.error('[PTT-Extractor] 圖片 URL 長度:', rawImageUrl?.length);
+                    tfd.sysError('PTT-Extractor', `setImage 失敗: ${imageError.message}`);
+                    tfd.sysError('PTT-Extractor', `圖片 URL: ${rawImageUrl}`);
+                    tfd.sysError('PTT-Extractor', `圖片 URL 長度: ${rawImageUrl?.length}`);
                     throw imageError;
                 }
             }
@@ -622,7 +623,7 @@ class PTTExtractor {
                     // 🔧 驗證圖片 URL 格式
                     let rawImageUrl = currentPageImages[i];
                     if (!rawImageUrl || typeof rawImageUrl !== 'string' || !rawImageUrl.startsWith('http')) {
-                        console.error(`[PTT-Extractor] 無效的圖片 URL [${i}]:`, rawImageUrl);
+                        tfd.sysError('PTT-Extractor', `無效的圖片 URL [${i}]: ${rawImageUrl}`);
                         continue; // 跳過無效圖片
                     }
 
@@ -702,8 +703,8 @@ class PTTExtractor {
                 embed: embeds[0]
             };
         } catch (error) {
-            console.error('[PTT-Extractor] createArticleResponse 失敗:', error.message);
-            console.error('[PTT-Extractor] 錯誤堆疊:', error.stack);
+            tfd.sysError('PTT-Extractor', `createArticleResponse 失敗: ${error.message}`);
+            tfd.sysError('PTT-Extractor', `錯誤堆疊: ${error.stack}`);
             throw error;
         }
     }

@@ -25,7 +25,7 @@ class FacebookExtractor {
         const { originalURL, patternName } = matchResult;
 
         try {
-            console.log(`[TFD-Facebook] 開始提取: ${originalURL} (模式: ${patternName})`);
+            tfd.sys('TFD-Facebook', `開始提取: ${originalURL} (模式: ${patternName})`);
 
             // 公開發文格式：需要先檢查是否為社團貼文
             // story.php 可能是公開貼文或社團貼文，需要動態檢測
@@ -33,13 +33,13 @@ class FacebookExtractor {
             const needGroupCheck = ['story']; // 需要檢查社團的格式
 
             if (publicPatterns.includes(patternName)) {
-                console.log(`[TFD-Facebook] 檢測到公開發文格式 (${patternName})，使用快速 URL 轉換`);
+                tfd.sys('TFD-Facebook', `檢測到公開發文格式 (${patternName})，使用快速 URL 轉換`);
 
                 // 直接轉換 URL
                 const facebedURL = this.convertToFacebed(originalURL);
 
                 // 記錄 URL 轉換日誌
-                URLConverterLogger.logConversion('facebook', message, originalURL, facebedURL, originalURL);
+                URLConverterLogger.logConversion('facebook', message, originalURL);
 
                 // 返回簡單的 URL 轉換結果
                 return {
@@ -59,24 +59,24 @@ class FacebookExtractor {
 
             // story.php 格式：需要先檢查是否為社團貼文
             if (needGroupCheck.includes(patternName)) {
-                console.log(`[TFD-Facebook] 檢測到 story.php 格式，先檢查是否為社團貼文...`);
+                tfd.sys('TFD-Facebook', `檢測到 story.php 格式，先檢查是否為社團貼文...`);
 
                 // 快速檢查是否為社團貼文
                 const isGroup = await this.quickGroupCheck(originalURL);
 
                 if (isGroup) {
-                    console.log(`[TFD-Facebook] ⚠️ 檢測到社團貼文，使用 Puppeteer 提取內容`);
+                    tfd.sys('TFD-Facebook', `⚠️ 檢測到社團貼文，使用 Puppeteer 提取內容`);
                     // 社團貼文使用 Puppeteer 爬蟲處理，繼續往下執行
                 } else {
-                    console.log(`[TFD-Facebook] ✅ 公開貼文，使用 Playwright 提取 Open Graph 資料`);
+                    tfd.sys('TFD-Facebook', `✅ 公開貼文，使用 Playwright 提取 Open Graph 資料`);
 
                     // 使用 Playwright 提取 Open Graph 資料
                     const ogData = await this.extractOpenGraphData(originalURL);
 
                     if (!ogData || !ogData.title) {
-                        console.log(`[TFD-Facebook] OG 提取失敗，改用 URL 轉換`);
+                        tfd.sys('TFD-Facebook', `OG 提取失敗，改用 URL 轉換`);
                         const facebedURL = this.convertToFacebed(originalURL);
-                        URLConverterLogger.logConversion('facebook', message, originalURL, facebedURL, originalURL);
+                        URLConverterLogger.logConversion('facebook', message, originalURL);
                         return {
                             success: true,
                             siteName: 'facebook',
@@ -96,7 +96,7 @@ class FacebookExtractor {
                     const embed = this.createOGEmbed(ogData);
 
                     // 記錄日誌
-                    URLConverterLogger.logConversion('facebook', message, originalURL, ogData.url || originalURL, originalURL);
+                    URLConverterLogger.logConversion('facebook', message, originalURL);
 
                     return {
                         success: true,
@@ -115,7 +115,7 @@ class FacebookExtractor {
             }
 
             // 私人/社團內容：使用 Puppeteer 爬蟲
-            console.log(`[TFD-Facebook] 私人/社團內容 (${patternName})，使用 Puppeteer 提取`);
+            tfd.sys('TFD-Facebook', `私人/社團內容 (${patternName})，使用 Puppeteer 提取`);
 
             const postData = await this.scrapeFacebookPost(originalURL);
 
@@ -124,13 +124,13 @@ class FacebookExtractor {
             }
 
             // 只記錄關鍵資訊，避免輸出大量頁面文字資料
-            console.log(`[TFD-Facebook] 提取成功: author=${postData.author || 'N/A'}, hasVideo=${postData.hasVideo}, contentLength=${postData.content?.length || 0}`);
+            tfd.sys('TFD-Facebook', `提取成功: author=${postData.author || 'N/A'}, hasVideo=${postData.hasVideo}, contentLength=${postData.content?.length || 0}`);
 
             // 轉換為 facebed URL（類似 vxinstagram）
             const facebedURL = this.convertToFacebed(originalURL);
 
             // 記錄 URL 轉換日誌
-            URLConverterLogger.logConversion('facebook', message, originalURL, facebedURL, originalURL);
+            URLConverterLogger.logConversion('facebook', message, originalURL);
 
             // 創建 Embed
             const embed = this.createEmbed(facebedURL, postData);
@@ -152,7 +152,7 @@ class FacebookExtractor {
             return result;
 
         } catch (error) {
-            console.error(`[TFD-Facebook] 提取失敗: ${error.message}`);
+            tfd.sysError('TFD-Facebook', `提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -169,9 +169,9 @@ class FacebookExtractor {
 
         try {
             if (retryCount > 0) {
-                console.log(`[TFD-Facebook] 第 ${retryCount} 次重試提取...`);
+                tfd.sys('TFD-Facebook', `第 ${retryCount} 次重試提取...`);
             } else {
-                console.log(`[TFD-Facebook] 啟動 Puppeteer...`);
+                tfd.sys('TFD-Facebook', `啟動 Puppeteer...`);
             }
 
             browser = await puppeteer.launch({
@@ -186,7 +186,7 @@ class FacebookExtractor {
             const page = await browser.newPage();
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-            console.log(`[TFD-Facebook] 正在訪問頁面...`);
+            tfd.sys('TFD-Facebook', `正在訪問頁面...`);
             await page.goto(url, {
                 waitUntil: 'networkidle2',
                 timeout: 30000
@@ -201,7 +201,7 @@ class FacebookExtractor {
                 if (isWatchVideo) {
                     // Watch 影片：等待影片元素
                     await page.waitForSelector('video', { timeout: 8000 });
-                    console.log(`[TFD-Facebook] Watch 影片載入完成`);
+                    tfd.sys('TFD-Facebook', `Watch 影片載入完成`);
                 } else if (isGroupPost) {
                     // 社團文章：等待文章內容或標題
                     await Promise.race([
@@ -209,23 +209,23 @@ class FacebookExtractor {
                         page.waitForSelector('[role="article"]', { timeout: 8000 }),
                         page.waitForSelector('h2', { timeout: 8000 })
                     ]);
-                    console.log(`[TFD-Facebook] 社團文章載入完成`);
+                    tfd.sys('TFD-Facebook', `社團文章載入完成`);
                 } else {
                     // 一般貼文：等待主要內容
                     await Promise.race([
                         page.waitForSelector('[data-ad-preview="message"]', { timeout: 8000 }),
                         page.waitForSelector('[role="article"]', { timeout: 8000 })
                     ]);
-                    console.log(`[TFD-Facebook] 一般貼文載入完成`);
+                    tfd.sys('TFD-Facebook', `一般貼文載入完成`);
                 }
             } catch (waitError) {
-                console.log(`[TFD-Facebook] 元素等待超時，繼續處理...`);
+                tfd.sys('TFD-Facebook', `元素等待超時，繼續處理...`);
                 // 繼續執行，嘗試提取任何可用資料
             }
 
             // 額外等待動態內容載入（社團文章需要更長時間等待圖片）
             const waitTime = isGroupPost ? 5000 : 2000;
-            console.log(`[TFD-Facebook] 等待 ${waitTime/1000} 秒讓動態內容載入...`);
+            tfd.sys('TFD-Facebook', `等待 ${waitTime/1000} 秒讓動態內容載入...`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
 
             // 圖片提取功能已移除
@@ -268,7 +268,7 @@ class FacebookExtractor {
 
                 // 記錄檢測結果（方便除錯）
                 if (result.hasLoginWall) {
-                    console.log('[FB-Debug] 登入牆檢測: 表單=' + hasLoginForm + ', 登入頁=' + isLoginPage + ', 訊息=' + hasLoginWallMessage);
+                    tfd.sys('FB-Debug', '登入牆檢測: 表單=' + hasLoginForm + ', 登入頁=' + isLoginPage + ', 訊息=');
                 }
 
                 // 🔍 提取完整的文字內容（用於關鍵字搜尋）
@@ -291,7 +291,7 @@ class FacebookExtractor {
                     }
                 }
 
-                console.log('[FB-Debug] 文字提取完成: bodyText=' + result.bodyText.length + '字, textNodes=' + result.allTextNodes.length + '個');
+                tfd.sys('FB-Debug', '文字提取完成: bodyText=' + result.bodyText.length + '字, textNodes=' + result.allTextNodes.length + '個');
 
                 // 🔍 動態檢測社團貼文（即使 URL 不包含 /groups/）
                 if (!isGroup) {
@@ -306,7 +306,7 @@ class FacebookExtractor {
                             // 過濾掉太短或太長的文字，以及包含數字的連結
                             if (text && text.length > 3 && text.length < 100 && !text.match(/^\d/)) {
                                 result.groupName = text;
-                                console.log('[FB Debug] 檢測到社團貼文，社團名稱:', text);
+                                tfd.sys('FB Debug', `檢測到社團貼文，社團名稱: ${text}`);
                                 break;
                             }
                         }
@@ -320,7 +320,7 @@ class FacebookExtractor {
                             bodyText.includes('Private group') ||
                             bodyText.includes('Public group')) {
                             result.isGroupPost = true;
-                            console.log('[FB Debug] 通過關鍵字檢測到社團貼文');
+                            tfd.sys('FB Debug', '通過關鍵字檢測到社團貼文');
                         }
                     }
                 }
@@ -383,7 +383,7 @@ class FacebookExtractor {
 
                 // 社團文章的專門處理
                 if (isGroup) {
-                    console.log('[FB Debug] 處理社團文章...');
+                    tfd.sys('FB Debug', '處理社團文章...');
 
                     // 1. 提取作者 - 使用 h2 span[0]，去除「的貼文」
                     const h2Span = document.querySelector('h2 span');
@@ -391,27 +391,27 @@ class FacebookExtractor {
                         const authorText = h2Span.innerText.trim();
                         // 去除「的貼文」或 "'s post"
                         result.author = authorText.replace('的貼文', '').replace("'s post", '').trim();
-                        console.log('[FB Debug] 找到作者:', result.author);
+                        tfd.sys('FB Debug', `找到作者: ${result.author}`);
                     }
 
                     // 2. 提取內文 - 使用 [data-ad-preview="message"] 的 index [1]
                     const contentElements = document.querySelectorAll('[data-ad-preview="message"]');
-                    console.log('[FB Debug] 找到', contentElements.length, '個內文元素');
+                    tfd.sys('FB Debug', '找到', contentElements.length, '個內文元素');
 
                     if (contentElements.length > 1) {
                         // 使用 index [1] 而不是 [0]
                         result.content = contentElements[1].innerText.trim();
-                        console.log('[FB Debug] 使用 index [1] 找到內文長度:', result.content.length);
+                        tfd.sys('FB Debug', `使用 index [1] 找到內文長度: ${result.content.length}`);
                     } else if (contentElements.length === 1) {
                         // 如果只有一個，使用 [0]
                         result.content = contentElements[0].innerText.trim();
-                        console.log('[FB Debug] 使用 index [0] 找到內文長度:', result.content.length);
+                        tfd.sys('FB Debug', `使用 index [0] 找到內文長度: ${result.content.length}`);
                     } else {
                         // 備用方案：嘗試其他選擇器
                         const altContentElement = document.querySelector('[data-ad-comet-preview="message"]');
                         if (altContentElement) {
                             result.content = altContentElement.innerText.trim();
-                            console.log('[FB Debug] 使用備用選擇器找到內文長度:', result.content.length);
+                            tfd.sys('FB Debug', `使用備用選擇器找到內文長度: ${result.content.length}`);
                         }
                     }
 
@@ -421,7 +421,7 @@ class FacebookExtractor {
                     const articleElement = document.querySelector('[role="article"]');
                     result.hasVideo = articleElement ? (articleElement.querySelector('video') !== null) : false;
 
-                    console.log('[FB Debug] 媒體: 影片 =', result.hasVideo);
+                    tfd.sys('FB Debug', `媒體: 影片 = ${result.hasVideo}`);
 
                     // 4. 提取統計資訊（社團文章）
                     const statsText = document.body.innerText;
@@ -436,7 +436,7 @@ class FacebookExtractor {
                         const match = statsText.match(pattern);
                         if (match) {
                             result.comments = match[1];
-                            console.log('[FB Debug] 找到留言數:', result.comments);
+                            tfd.sys('FB Debug', `找到留言數: ${result.comments}`);
                             break;
                         }
                     }
@@ -451,7 +451,7 @@ class FacebookExtractor {
                         const match = statsText.match(pattern);
                         if (match) {
                             result.shares = match[1];
-                            console.log('[FB Debug] 找到分享數:', result.shares);
+                            tfd.sys('FB Debug', `找到分享數: ${result.shares}`);
                             break;
                         }
                     }
@@ -468,18 +468,14 @@ class FacebookExtractor {
                                 // 檢查是否是純數字或 K/M/B 格式
                                 if (/^\d+(?:[,.]\d+)?[KMB]?$/.test(nextLine)) {
                                     result.likes = nextLine;
-                                    console.log('[FB Debug] 找到按讚數:', result.likes);
+                                    tfd.sys('FB Debug', `找到按讚數: ${result.likes}`);
                                     break;
                                 }
                             }
                         }
                     }
 
-                    console.log('[FB Debug] 統計資訊:', {
-                        likes: result.likes || 'none',
-                        comments: result.comments || 'none',
-                        shares: result.shares || 'none'
-                    });
+                    tfd.sys('FB Debug', `統計資訊: likes=${result.likes || 'none'}, comments=${result.comments || 'none'}, shares=${result.shares || 'none'}`);
 
                     return result;
                 }
@@ -542,34 +538,34 @@ class FacebookExtractor {
 
                 // share/p/ 格式的專門處理（使用與社團相同的邏輯）
                 if (isShare) {
-                    console.log('[FB Debug] 處理 share/p/ 格式...');
+                    tfd.sys('FB Debug', '處理 share/p/ 格式...');
 
                     // 1. 提取作者 - 使用 h2 span[0]
                     const h2Span = document.querySelector('h2 span');
                     if (h2Span && h2Span.innerText) {
                         const authorText = h2Span.innerText.trim();
                         result.author = authorText.replace('的貼文', '').replace("'s post", '').trim();
-                        console.log('[FB Debug] 找到作者:', result.author);
+                        tfd.sys('FB Debug', `找到作者: ${result.author}`);
                     }
 
                     // 2. 提取內文 - 使用 [data-ad-preview="message"] 的 index [1]（與社團相同）
                     const contentElements = document.querySelectorAll('[data-ad-preview="message"]');
-                    console.log('[FB Debug] 找到', contentElements.length, '個內文元素');
+                    tfd.sys('FB Debug', '找到', contentElements.length, '個內文元素');
 
                     if (contentElements.length > 1) {
                         // 使用 index [1] 而不是 [0]
                         result.content = contentElements[1].innerText.trim();
-                        console.log('[FB Debug] 使用 index [1] 找到內文長度:', result.content.length);
+                        tfd.sys('FB Debug', `使用 index [1] 找到內文長度: ${result.content.length}`);
                     } else if (contentElements.length === 1) {
                         // 如果只有一個，使用 [0]
                         result.content = contentElements[0].innerText.trim();
-                        console.log('[FB Debug] 使用 index [0] 找到內文長度:', result.content.length);
+                        tfd.sys('FB Debug', `使用 index [0] 找到內文長度: ${result.content.length}`);
                     } else {
                         // 備用方案：嘗試其他選擇器
                         const altContentElement = document.querySelector('[data-ad-comet-preview="message"]');
                         if (altContentElement) {
                             result.content = altContentElement.innerText.trim();
-                            console.log('[FB Debug] 使用備用選擇器找到內文長度:', result.content.length);
+                            tfd.sys('FB Debug', `使用備用選擇器找到內文長度: ${result.content.length}`);
                         }
                     }
 
@@ -587,13 +583,13 @@ class FacebookExtractor {
                 // 修復日期：2025-11-13
 
                 if (!result.content) {
-                    console.log('[FB Debug] 開始通用內容提取...');
+                    tfd.sys('FB Debug', '開始通用內容提取...');
 
                     // 優先方案：data-ad-preview="message" (適用於大多數格式)
                     const messageElements = document.querySelectorAll('[data-ad-preview="message"]');
                     if (messageElements.length > 0) {
                         result.content = messageElements[0].innerText.trim();
-                        console.log('[FB Debug] 通用提取成功 (data-ad-preview):', result.content.substring(0, 50));
+                        tfd.sys('FB Debug', `通用提取成功 (data-ad-preview): ${result.content.substring(0, 50)}`);
                     }
 
                     // 備用方案 1: meta description (適用於 photo 等)
@@ -604,7 +600,7 @@ class FacebookExtractor {
                         const desc = metaDesc?.content || metaOgDesc?.content;
                         if (desc && desc.length > 20) {
                             result.content = desc.trim();
-                            console.log('[FB Debug] 通用提取成功 (meta):', result.content.substring(0, 50));
+                            tfd.sys('FB Debug', `通用提取成功 (meta): ${result.content.substring(0, 50)}`);
                         }
                     }
 
@@ -613,12 +609,12 @@ class FacebookExtractor {
                         const cleanTitle = document.title.split('|')[0].trim();
                         if (cleanTitle.length > 10) {
                             result.content = cleanTitle;
-                            console.log('[FB Debug] 通用提取成功 (title):', result.content.substring(0, 50));
+                            tfd.sys('FB Debug', `通用提取成功 (title): ${result.content.substring(0, 50)}`);
                         }
                     }
 
                     if (!result.content) {
-                        console.log('[FB Debug] ⚠️ 通用提取失敗，content 仍為 null');
+                        tfd.sys('FB Debug', '⚠️ 通用提取失敗，content 仍為 null');
                     }
                 }
 
@@ -631,17 +627,17 @@ class FacebookExtractor {
             if (data.hasLoginWall) {
                 // 檢查是否已達最大重試次數
                 if (retryCount >= MAX_RETRIES) {
-                    console.error(`[TFD-Facebook] ❌ 已達最大重試次數 (${MAX_RETRIES})，停止重試`);
+                    tfd.sysError('TFD-Facebook', `❌ 已達最大重試次數 (${MAX_RETRIES})，停止重試`);
                     throw new Error('Facebook 登入牆阻擋，已達最大重試次數');
                 }
 
-                console.log('[TFD-Facebook] ⚠️ 檢測到登入牆，嘗試自動登入...');
+                tfd.sys('TFD-Facebook', '⚠️ 檢測到登入牆，嘗試自動登入...');
 
                 // 嘗試自動登入
                 const loginSuccess = await this.autoLogin();
 
                 if (loginSuccess) {
-                    console.log('[TFD-Facebook] ✅ 自動登入成功，重試提取...');
+                    tfd.sys('TFD-Facebook', '✅ 自動登入成功，重試提取...');
                     // 重新啟動瀏覽器並重試（傳遞重試次數）
                     return await this.scrapeFacebookPost(url, retryCount + 1);
                 } else {
@@ -652,7 +648,7 @@ class FacebookExtractor {
             return data;
 
         } catch (error) {
-            console.error(`[TFD-Facebook] Puppeteer 錯誤:`, error);
+            tfd.sysError('TFD-Facebook', `Puppeteer 錯誤: ${error.message || error}`);
             if (browser) {
                 await browser.close();
             }
@@ -670,8 +666,8 @@ class FacebookExtractor {
         let browser = null;
 
         try {
-            console.log('[TFD-Facebook-OG] 啟動完全隔離的 Playwright 提取 Open Graph 資料...');
-            console.log('[TFD-Facebook-OG] 目標 URL:', url);
+            tfd.sys('TFD-Facebook-OG', '啟動完全隔離的 Playwright 提取 Open Graph 資料...');
+            tfd.sys('TFD-Facebook-OG', `目標 URL: ${url}`);
 
             // 🔥 完全隔離的瀏覽器環境（無快取污染）
             browser = await chromium.launch({
@@ -701,13 +697,13 @@ class FacebookExtractor {
 
             const page = await context.newPage();
 
-            console.log('[TFD-Facebook-OG] 正在訪問頁面...');
+            tfd.sys('TFD-Facebook-OG', '正在訪問頁面...');
             await page.goto(url, {
                 waitUntil: 'domcontentloaded',
                 timeout: 30000
             });
 
-            console.log('[TFD-Facebook-OG] 等待並滾動載入圖片...');
+            tfd.sys('TFD-Facebook-OG', '等待並滾動載入圖片...');
             await page.waitForTimeout(8000);
 
             // 🔥 滾動頁面以載入延遲載入的圖片
@@ -718,7 +714,7 @@ class FacebookExtractor {
             await page.evaluate(() => window.scrollTo(0, 0));
             await page.waitForTimeout(2000);
 
-            console.log('[TFD-Facebook-OG] 提取資料...');
+            tfd.sys('TFD-Facebook-OG', '提取資料...');
             const result = await page.evaluate(() => {
                 const data = {
                     title: null,
@@ -759,13 +755,13 @@ class FacebookExtractor {
 
             await browser.close();
 
-            console.log('[TFD-Facebook-OG] ✅ 資料提取成功');
-            console.log(`[TFD-Facebook-OG] 標題: ${result.title}`);
+            tfd.sys('TFD-Facebook-OG', '✅ 資料提取成功');
+            tfd.sys('TFD-Facebook-OG', `標題: ${result.title}`);
 
             return result;
 
         } catch (error) {
-            console.error('[TFD-Facebook-OG] ❌ Open Graph 提取失敗:', error.message);
+            tfd.sysError('TFD-Facebook-OG', `❌ Open Graph 提取失敗: ${error.message}`);
             if (browser) {
                 await browser.close();
             }
@@ -941,14 +937,14 @@ class FacebookExtractor {
     async quickGroupCheck(url) {
         // 快速檢查：如果 URL 本身就包含 /groups/，肯定是社團
         if (url.includes('/groups/')) {
-            console.log('[TFD-Facebook] URL 包含 /groups/，確定為社團貼文');
+            tfd.sys('TFD-Facebook', 'URL 包含 /groups/，確定為社團貼文');
             return true;
         }
 
         // 如果 URL 是 story.php 但不包含 /groups/，99% 機率是公開貼文
         // 避免不必要的頁面載入和潛在的超時問題
         if (url.includes('story.php') && !url.includes('/groups/')) {
-            console.log('[TFD-Facebook] story.php 格式且不含 /groups/，判定為公開貼文');
+            tfd.sys('TFD-Facebook', 'story.php 格式且不含 /groups/，判定為公開貼文');
             return false;
         }
 
@@ -956,7 +952,7 @@ class FacebookExtractor {
         let browser = null;
 
         try {
-            console.log('[TFD-Facebook] 需要載入頁面進行深度檢查...');
+            tfd.sys('TFD-Facebook', '需要載入頁面進行深度檢查...');
 
             browser = await puppeteer.launch({
                 headless: true,
@@ -1035,16 +1031,16 @@ class FacebookExtractor {
 
             await browser.close();
 
-            console.log(`[TFD-Facebook] 社團檢查結果: ${checkResult.isGroup ? '是社團貼文' : '非社團貼文'}`);
-            console.log(`[TFD-Facebook] 判定理由: ${checkResult.reason}`);
+            tfd.sys('TFD-Facebook', `社團檢查結果: ${checkResult.isGroup ? '是社團貼文' : '非社團貼文'}`);
+            tfd.sys('TFD-Facebook', `判定理由: ${checkResult.reason}`);
             if (checkResult.canonicalURL) {
-                console.log(`[TFD-Facebook] Canonical URL: ${checkResult.canonicalURL}`);
+                tfd.sys('TFD-Facebook', `Canonical URL: ${checkResult.canonicalURL}`);
             }
 
             return checkResult.isGroup;
 
         } catch (error) {
-            console.error('[TFD-Facebook] 快速檢查失敗:', error.message);
+            tfd.sysError('TFD-Facebook', `快速檢查失敗: ${error.message}`);
             if (browser) {
                 await browser.close();
             }
@@ -1061,7 +1057,7 @@ class FacebookExtractor {
      */
     async searchKeywords(url, keywords) {
         try {
-            console.log(`[TFD-Facebook-Search] 開始搜尋關鍵字: ${keywords.join(', ')}`);
+            tfd.sys('TFD-Facebook-Search', `開始搜尋關鍵字: ${keywords.join(', ')}`);
 
             // 使用現有的 scrapeFacebookPost 方法取得貼文資料
             const postData = await this.scrapeFacebookPost(url);
@@ -1124,12 +1120,12 @@ class FacebookExtractor {
                 }
             }
 
-            console.log(`[TFD-Facebook-Search] 搜尋完成: 找到 ${searchResults.summary.foundCount}/${searchResults.summary.totalKeywords} 個關鍵字`);
+            tfd.sys('TFD-Facebook-Search', `搜尋完成: 找到 ${searchResults.summary.foundCount}/${searchResults.summary.totalKeywords} 個關鍵字`);
 
             return searchResults;
 
         } catch (error) {
-            console.error(`[TFD-Facebook-Search] 搜尋失敗: ${error.message}`);
+            tfd.sysError('TFD-Facebook-Search', `搜尋失敗: ${error.message}`);
             throw error;
         }
     }
@@ -1140,11 +1136,12 @@ class FacebookExtractor {
      */
     async autoLogin() {
         const puppeteer = require('puppeteer');
+const tfd = require('../../utils/tfd-logger');
         let browser = null;
 
         try {
-            console.log('[TFD-Facebook-Login] 🌐 啟動登入流程...');
-            console.log('[TFD-Facebook-Login] 📢 瀏覽器視窗即將開啟，請手動完成登入');
+            tfd.sys('TFD-Facebook-Login', '🌐 啟動登入流程...');
+            tfd.sys('TFD-Facebook-Login', '📢 瀏覽器視窗即將開啟，請手動完成登入');
 
             browser = await puppeteer.launch({
                 headless: false,
@@ -1165,24 +1162,24 @@ class FacebookExtractor {
 
             await new Promise(resolve => setTimeout(resolve, 3000));
 
-            console.log('\n════════════════════════════════════════════════════════════');
-            console.log('📋 請在瀏覽器中手動完成 Facebook 登入');
-            console.log('   1. 輸入您的 Facebook 帳號和密碼');
-            console.log('   2. 完成所有驗證步驟（如二步驟驗證）');
-            console.log('   3. 登入成功並看到 Facebook 首頁後');
-            console.log('   4. 等待 30 秒自動儲存登入狀態');
-            console.log('════════════════════════════════════════════════════════════\n');
+            tfd.sys('Facebook', '\n════════════════════════════════════════════════════════════');
+            tfd.sys('Facebook', '📋 請在瀏覽器中手動完成 Facebook 登入');
+            tfd.sys('Facebook', '   1. 輸入您的 Facebook 帳號和密碼');
+            tfd.sys('Facebook', '   2. 完成所有驗證步驟（如二步驟驗證）');
+            tfd.sys('Facebook', '   3. 登入成功並看到 Facebook 首頁後');
+            tfd.sys('Facebook', '   4. 等待 30 秒自動儲存登入狀態');
+            tfd.sys('Facebook', '════════════════════════════════════════════════════════════\n');
 
-            console.log('[TFD-Facebook-Login] ⏳ 等待 30 秒讓用戶完成登入...\n');
+            tfd.sys('TFD-Facebook-Login', '⏳ 等待 30 秒讓用戶完成登入...\n');
             await new Promise(resolve => setTimeout(resolve, 30000));
 
             // 🔍 改進的登入驗證邏輯
             const currentUrl = page.url();
-            console.log(`[TFD-Facebook-Login] 當前 URL: ${currentUrl}`);
+            tfd.sys('TFD-Facebook-Login', `當前 URL: ${currentUrl}`);
 
             // 1. 檢查 URL 是否離開登入頁面
             const urlCheck = !currentUrl.includes('/login') && !currentUrl.includes('/checkpoint');
-            console.log(`[TFD-Facebook-Login] URL 檢查: ${urlCheck ? '✅ 已離開登入頁' : '❌ 仍在登入頁'}`);
+            tfd.sys('TFD-Facebook-Login', `URL 檢查: ${urlCheck ? '✅ 已離開登入頁' : '❌ 仍在登入頁'}`);
 
             // 2. 檢查頁面是否有用戶資訊（表示已登入）
             const hasUserInfo = await page.evaluate(() => {
@@ -1195,30 +1192,30 @@ class FacebookExtractor {
                 const hasAvatar = document.querySelector('image[href*="scontent"]') !== null ||
                                 document.querySelector('img[data-visualcompletion="media-vc-image"]') !== null;
 
-                console.log('[FB-Login-Debug] 個人檔案元素:', hasProfile, '頭像:', hasAvatar);
+                tfd.sys('FB-Login-Debug', `個人檔案元素:', hasProfile, '頭像: ${hasAvatar}`);
                 return hasProfile || hasAvatar;
             });
-            console.log(`[TFD-Facebook-Login] 用戶資訊檢查: ${hasUserInfo ? '✅ 找到用戶資訊' : '❌ 未找到用戶資訊'}`);
+            tfd.sys('TFD-Facebook-Login', `用戶資訊檢查: ${hasUserInfo ? '✅ 找到用戶資訊' : '❌ 未找到用戶資訊'}`);
 
             // 綜合判斷
             const isLoggedIn = urlCheck && hasUserInfo;
 
             if (isLoggedIn) {
-                console.log('[TFD-Facebook-Login] ✅ 登入成功！登入狀態已自動儲存');
-                console.log(`[TFD-Facebook-Login] 📁 儲存位置: ${this.USER_DATA_DIR}`);
+                tfd.sys('TFD-Facebook-Login', '✅ 登入成功！登入狀態已自動儲存');
+                tfd.sys('TFD-Facebook-Login', `📁 儲存位置: ${this.USER_DATA_DIR}`);
             } else {
-                console.log('[TFD-Facebook-Login] ⚠️ 未檢測到登入成功');
-                console.log(`[TFD-Facebook-Login] 原因: URL=${urlCheck ? '正常' : '異常'}, 用戶資訊=${hasUserInfo ? '有' : '無'}`);
+                tfd.sys('TFD-Facebook-Login', '⚠️ 未檢測到登入成功');
+                tfd.sys('TFD-Facebook-Login', `原因: URL=${urlCheck ? '正常' : '異常'}, 用戶資訊=${hasUserInfo ? '有' : '無'}`);
             }
 
-            console.log('[TFD-Facebook-Login] ⏳ 5 秒後自動關閉瀏覽器...');
+            tfd.sys('TFD-Facebook-Login', '⏳ 5 秒後自動關閉瀏覽器...');
             await new Promise(resolve => setTimeout(resolve, 5000));
 
             await browser.close();
             return isLoggedIn;
 
         } catch (error) {
-            console.error('[TFD-Facebook-Login] ❌ 自動登入失敗:', error.message);
+            tfd.sysError('TFD-Facebook-Login', `❌ 自動登入失敗: ${error.message}`);
             if (browser) {
                 await browser.close();
             }

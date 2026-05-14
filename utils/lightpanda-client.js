@@ -12,6 +12,7 @@
  */
 
 const puppeteer = require('puppeteer');
+const tfd = require('./tfd-logger');
 
 const CDP_HOST = process.env.LIGHTPANDA_HOST || '127.0.0.1';
 const CDP_PORT = process.env.LIGHTPANDA_PORT || '9222';
@@ -34,10 +35,10 @@ async function _connect() {
 
     browser.on('disconnected', () => {
         _browser = null;
-        console.log('[Lightpanda] CDP 連線中斷');
+        tfd.sys('Lightpanda', 'CDP 連線中斷');
     });
 
-    console.log(`[Lightpanda] 已連接: ${CDP_ENDPOINT}`);
+    tfd.sys('Lightpanda', `已連接: ${CDP_ENDPOINT}`);
     return browser;
 }
 
@@ -161,7 +162,7 @@ async function fetchPageMeta(url, options = {}) {
         return { success: true, ...meta };
 
     } catch (error) {
-        console.error(`[Lightpanda] fetchPageMeta 失敗 (${url}): ${error.message}`);
+        tfd.sysError('Lightpanda', `fetchPageMeta 失敗 (${url}): ${error.message}`);
         return { success: false, error: error.message };
     } finally {
         await page.close().catch(() => {});
@@ -207,7 +208,7 @@ async function fetchPageWithExtractor(url, extractFn, options = {}) {
         return { success: true, data };
 
     } catch (error) {
-        console.error(`[Lightpanda] fetchPageWithExtractor 失敗 (${url}): ${error.message}`);
+        tfd.sysError('Lightpanda', `fetchPageWithExtractor 失敗 (${url}): ${error.message}`);
         return { success: false, error: error.message };
     } finally {
         await page.close().catch(() => {});

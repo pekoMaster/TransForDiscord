@@ -4,6 +4,7 @@
  */
 
 const HTMLVideoRenderer = require('./html-video-renderer');
+const tfd = require('../../utils/tfd-logger');
 
 class MixedMediaHTMLBuilder {
     constructor() {
@@ -25,7 +26,7 @@ class MixedMediaHTMLBuilder {
             siteName = 'Enhanced TFD'
         } = options;
 
-        console.log(`[MixedMediaHTMLBuilder] 建構 HTML: ${videos.length} 影片, ${images.length} 圖片`);
+        tfd.sys('MixedMediaHTMLBuilder', `建構 HTML: ${videos.length} 影片, ${images.length} 圖片`);
 
         // 生成 Open Graph 和 Twitter Card 標籤
         const metaTags = this.videoRenderer.renderMixedMediaTags({
@@ -53,7 +54,7 @@ class MixedMediaHTMLBuilder {
             .replace('{{REDIRECT_INFO}}', redirectInfo)
             .replace('{{SITE_NAME}}', siteName);
 
-        console.log(`[MixedMediaHTMLBuilder] HTML 已生成，包含 ${allTags.length} 個 meta 標籤`);
+        tfd.sys('MixedMediaHTMLBuilder', `HTML 已生成，包含 ${allTags.length} 個 meta 標籤`);
 
         return html;
     }

@@ -10,6 +10,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const tfd = require('./tfd-logger');
 
 class PixivCacheManager {
     constructor() {
@@ -25,7 +26,7 @@ class PixivCacheManager {
         try {
             await fs.mkdir(this.cacheDir, { recursive: true });
         } catch (error) {
-            console.error('[PixivCache] 建立快取目錄失敗:', error.message);
+            tfd.sysError('PixivCache', `建立快取目錄失敗: ${error.message}`);
         }
     }
 
@@ -74,7 +75,7 @@ class PixivCacheManager {
             const cacheFile = this.getArtworkCacheFile(artworkId);
             await fs.writeFile(cacheFile, JSON.stringify(cacheData, null, 2), 'utf8');
         } catch (error) {
-            console.error('[PixivCache] 儲存快取失敗:', error.message);
+            tfd.sysError('PixivCache', `儲存快取失敗: ${error.message}`);
         }
     }
 
@@ -105,21 +106,21 @@ class PixivCacheManager {
         try {
             const artworkId = this.extractArtworkId(url);
             if (!artworkId) {
-                console.log(`[PixivCache] 無法從URL提取作品ID: ${url}`);
+                tfd.sys('PixivCache', `無法從URL提取作品ID: ${url}`);
                 return null;
             }
 
             const cached = await this.loadArtworkCache(artworkId);
 
             if (cached) {
-                console.log(`[PixivCache] 快取命中: ${artworkId}.json`);
+                tfd.sys('PixivCache', `快取命中: ${artworkId}.json`);
                 return cached;
             }
 
-            console.log(`[PixivCache] 快取未命中: ${artworkId}.json`);
+            tfd.sys('PixivCache', `快取未命中: ${artworkId}.json`);
             return null;
         } catch (error) {
-            console.error('[PixivCache] 讀取快取失敗:', error.message);
+            tfd.sysError('PixivCache', `讀取快取失敗: ${error.message}`);
             return null;
         }
     }
@@ -134,7 +135,7 @@ class PixivCacheManager {
         try {
             const artworkId = this.extractArtworkId(url);
             if (!artworkId) {
-                console.log(`[PixivCache] 無法從URL提取作品ID: ${url}`);
+                tfd.sys('PixivCache', `無法從URL提取作品ID: ${url}`);
                 return;
             }
 
@@ -178,10 +179,10 @@ class PixivCacheManager {
             };
 
             await this.saveArtworkCache(artworkId, cacheData);
-            console.log(`[PixivCache] 已快取: ${artworkId}.json (${allImages.length}張圖片, ${pages.length}頁)`);
+            tfd.sys('PixivCache', `已快取: ${artworkId}.json (${allImages.length}張圖片, ${pages.length}頁)`);
 
         } catch (error) {
-            console.error('[PixivCache] 儲存快取失敗:', error.message);
+            tfd.sysError('PixivCache', `儲存快取失敗: ${error.message}`);
         }
     }
 
@@ -195,24 +196,24 @@ class PixivCacheManager {
         try {
             const artworkId = this.extractArtworkId(url);
             if (!artworkId) {
-                console.log(`[PixivCache] 無法從URL提取作品ID: ${url}`);
+                tfd.sys('PixivCache', `無法從URL提取作品ID: ${url}`);
                 return null;
             }
 
             const cachedData = await this.loadArtworkCache(artworkId);
 
             if (!cachedData) {
-                console.log(`[PixivCache] 頁面資料不存在: ${artworkId}.json 第${pageIndex + 1}頁`);
+                tfd.sys('PixivCache', `頁面資料不存在: ${artworkId}.json 第${pageIndex + 1}頁`);
                 return null;
             }
 
             const targetPage = cachedData.pages[pageIndex];
             if (!targetPage) {
-                console.log(`[PixivCache] 頁面索引超出範圍: ${artworkId}.json 第${pageIndex + 1}頁`);
+                tfd.sys('PixivCache', `頁面索引超出範圍: ${artworkId}.json 第${pageIndex + 1}頁`);
                 return null;
             }
 
-            console.log(`[PixivCache] 頁面資料獲取成功: ${artworkId}.json 第${pageIndex + 1}頁 (${targetPage.imageCount}張圖)`);
+            tfd.sys('PixivCache', `頁面資料獲取成功: ${artworkId}.json 第${pageIndex + 1}頁 (${targetPage.imageCount}張圖)`);
 
             return {
                 artworkData: cachedData.artworkData,
@@ -225,7 +226,7 @@ class PixivCacheManager {
             };
 
         } catch (error) {
-            console.error('[PixivCache] 獲取頁面資料失敗:', error.message);
+            tfd.sysError('PixivCache', `獲取頁面資料失敗: ${error.message}`);
             return null;
         }
     }
@@ -245,17 +246,17 @@ class PixivCacheManager {
                 const filePath = path.join(this.cacheDir, file);
                 await fs.unlink(filePath);
                 cleanedCount++;
-                console.log(`[PixivCache] 已清理快取: ${file}`);
+                tfd.sys('PixivCache', `已清理快取: ${file}`);
             }
 
             if (cleanedCount > 0) {
-                console.log(`[PixivCache] 每日清理完成，共清理 ${cleanedCount} 個快取檔案`);
+                tfd.sys('PixivCache', `每日清理完成，共清理 ${cleanedCount} 個快取檔案`);
             } else {
-                console.log(`[PixivCache] 每日清理完成，沒有快取檔案需要清理`);
+                tfd.sys('PixivCache', `每日清理完成，沒有快取檔案需要清理`);
             }
 
         } catch (error) {
-            console.error('[PixivCache] 清理快取失敗:', error.message);
+            tfd.sysError('PixivCache', `清理快取失敗: ${error.message}`);
         }
     }
 
@@ -286,7 +287,7 @@ class PixivCacheManager {
                         if (cachedData.isR18) r18Count++;
                     }
                 } catch (error) {
-                    console.warn(`[PixivCache] 讀取統計檔案失敗: ${file}`);
+                    tfd.sysWarn('PixivCache', `讀取統計檔案失敗: ${file}`);
                 }
             }
 
@@ -300,7 +301,7 @@ class PixivCacheManager {
             };
 
         } catch (error) {
-            console.error('[PixivCache] 獲取統計失敗:', error.message);
+            tfd.sysError('PixivCache', `獲取統計失敗: ${error.message}`);
             return null;
         }
     }

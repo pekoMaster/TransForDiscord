@@ -10,6 +10,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs').promises;
+const tfd = require('../../utils/tfd-logger');
 
 // Facebook URL 常數
 const FB_MBASIC_BASE_URL = 'https://mbasic.facebook.com';
@@ -46,10 +47,10 @@ class FacebookMBasicExtractor {
                 timeout: 30000
             });
             this.browser = null;
-            console.log('[FB MBasic] ? ?????????');
+            tfd.sys('FB MBasic', '? ?????????');
             return;
         } catch (error) {
-            console.warn('[FB MBasic] ?????????????? storageState: ' + error.message);
+            tfd.sysWarn('FB MBasic', '?????????????? storageState: ');
         }
 
         await fs.access(this.storageStatePath);
@@ -64,7 +65,7 @@ class FacebookMBasicExtractor {
             storageState: this.storageStatePath
         });
 
-        console.log('[FB MBasic] ? ?? storageState ????');
+        tfd.sys('FB MBasic', '? ?? storageState ????');
     }
 
     convertToMBasicUrl(url) {
@@ -93,7 +94,7 @@ class FacebookMBasicExtractor {
         let page = null;
 
         try {
-            console.log(`[FB MBasic] 開始提取: ${url}`);
+            tfd.sys('FB MBasic', `開始提取: ${url}`);
 
             if (!this.context) {
                 await this.initContext();
@@ -103,7 +104,7 @@ class FacebookMBasicExtractor {
 
             // 轉換為 mbasic URL
             const mbasicUrl = this.convertToMBasicUrl(url);
-            console.log(`[FB MBasic] 轉換 URL: ${mbasicUrl}`);
+            tfd.sys('FB MBasic', `轉換 URL: ${mbasicUrl}`);
 
             await page.goto(mbasicUrl, {
                 waitUntil: 'domcontentloaded',
@@ -115,7 +116,7 @@ class FacebookMBasicExtractor {
 
             // 取得最終 URL（可能經過重定向）
             const finalUrl = page.url();
-            console.log(`[FB MBasic] 最終 URL: ${finalUrl}`);
+            tfd.sys('FB MBasic', `最終 URL: ${finalUrl}`);
 
             // 提取內容
             const result = await page.evaluate(() => {
@@ -286,18 +287,18 @@ class FacebookMBasicExtractor {
 
             // 如果有 photo.php 連結，嘗試提取高解析度圖片
             if (result.photoLinks && result.photoLinks.length > 0 && result.images.length === 0) {
-                console.log(`[FB MBasic] 嘗試從 photo.php 提取高解析度圖片...`);
+                tfd.sys('FB MBasic', `嘗試從 photo.php 提取高解析度圖片...`);
                 const hdImages = await this._extractHDImages(page, result.photoLinks);
                 if (hdImages.length > 0) {
                     result.images = hdImages;
                 }
             }
 
-            console.log('[FB MBasic] ✅ 提取完成');
-            console.log(`  作者: ${result.author}`);
-            console.log(`  內容: ${result.content?.substring(0, 50)}...`);
-            console.log(`  圖片: ${result.images.length} 張`);
-            console.log(`  互動: ${result.reactions} 讚, ${result.comments} 留言`);
+            tfd.sys('FB MBasic', '✅ 提取完成');
+            tfd.sys('Facebook-MBasic', `  作者: ${result.author}`);
+            tfd.sys('Facebook-MBasic', `  內容: ${result.content?.substring(0, 50)}...`);
+            tfd.sys('Facebook-MBasic', `  圖片: ${result.images.length} 張`);
+            tfd.sys('Facebook-MBasic', `  互動: ${result.reactions} 讚, ${result.comments} 留言`);
 
             await page.close();
 
@@ -323,7 +324,7 @@ class FacebookMBasicExtractor {
             };
 
         } catch (error) {
-            console.error('[FB MBasic] 錯誤:', error.message);
+            tfd.sysError('FB MBasic', `錯誤: ${error.message}`);
 
             if (page) {
                 await page.close().catch(() => {});
@@ -380,7 +381,7 @@ class FacebookMBasicExtractor {
                 }
 
             } catch (err) {
-                console.warn(`[FB MBasic] 無法提取高解析度圖片: ${err.message}`);
+                tfd.sysWarn('FB MBasic', `無法提取高解析度圖片: ${err.message}`);
             }
         }
 
@@ -394,7 +395,7 @@ class FacebookMBasicExtractor {
         if (this.context) {
             await this.context.close();
             this.context = null;
-            console.log('[FB MBasic] 上下文已關閉');
+            tfd.sys('FB MBasic', '上下文已關閉');
         }
     }
 }

@@ -9,6 +9,7 @@ const TFDEmbedBuilder = require('../utils/embed-builder');
 const URLConverterLogger = require('../utils/url-converter-logger');
 const axios = require('axios');
 const { EmbedBuilder } = require('discord.js');
+const tfd = require('../../utils/tfd-logger');
 
 class InstagramExtractor {
     constructor() {
@@ -39,7 +40,7 @@ class InstagramExtractor {
                     throw new Error(`不支援的 Instagram 模式: ${patternName}`);
             }
         } catch (error) {
-            console.error(`[TFD-Instagram] 提取失敗: ${error.message}`);
+            tfd.sysError('TFD-Instagram', `提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -56,7 +57,7 @@ class InstagramExtractor {
         const convertedURL = this.convertInstagramURL(originalURL);
 
         // 記錄 URL 轉換日誌
-        URLConverterLogger.logConversion('instagram', message, null, null, convertedURL);
+        URLConverterLogger.logConversion('instagram', message, convertedURL);
 
         // 回傳 URL 轉換結果
         return {
@@ -87,14 +88,14 @@ class InstagramExtractor {
         let reelsData = null;
         try {
             reelsData = await this.scrapeReelsWithPuppeteer(originalURL);
-            console.log(`[TFD-Instagram] Reels 資料提取成功:`, reelsData);
+            tfd.sys('TFD-Instagram', `Reels 資料提取成功: ${JSON.stringify(reelsData)}`);
         } catch (error) {
-            console.error(`[TFD-Instagram] Reels 爬取失敗: ${error.message}`);
+            tfd.sysError('TFD-Instagram', `Reels 爬取失敗: ${error.message}`);
             // 爬取失敗時仍繼續處理，使用基本 URL 轉換
         }
 
         // 記錄 URL 轉換日誌
-        URLConverterLogger.logConversion('instagram', message, null, null, convertedURL);
+        URLConverterLogger.logConversion('instagram', message, convertedURL);
 
         // Instagram Reels 特殊處理：刪除原訊息並發送 embed 訊息
         const reelsMessage = this.createReelsFormattedMessageWithMetadata(message, convertedURL, reelsData);
@@ -130,7 +131,7 @@ class InstagramExtractor {
         const convertedURL = this.convertInstagramURL(originalURL);
 
         // 記錄 URL 轉換日誌
-        URLConverterLogger.logConversion('instagram', message, null, null, convertedURL);
+        URLConverterLogger.logConversion('instagram', message, convertedURL);
 
         // Instagram Stories 特殊處理：刪除原訊息並發送 embed 訊息
         const storyMessage = this.createStoriesFormattedMessage(message, convertedURL);
@@ -233,7 +234,7 @@ class InstagramExtractor {
 
             return url;
         } catch (error) {
-            console.error(`[TFD-Instagram] URL 轉換失敗: ${error.message}`);
+            tfd.sysError('TFD-Instagram', `URL 轉換失敗: ${error.message}`);
             return url;
         }
     }
@@ -391,7 +392,7 @@ class InstagramExtractor {
                 url: originalURL,
                 type: contentType
             }];
-            console.log(`[TFD-Instagram] 檢測到影片內容 (${contentType})，將在嵌入式訊息外顯示連結`);
+            tfd.sys('TFD-Instagram', `檢測到影片內容 (${contentType})，將在嵌入式訊息外顯示連結`);
         }
 
         return result;
@@ -492,7 +493,7 @@ class InstagramExtractor {
         };
 
         try {
-            console.log(`[TFD-Instagram] 輕量 HTTP 提取 Reels 資料: ${url}`);
+            tfd.sys('TFD-Instagram', `輕量 HTTP 提取 Reels 資料: ${url}`);
 
             const response = await axios.get(url, {
                 timeout: 5000,
@@ -534,13 +535,13 @@ class InstagramExtractor {
                 }
 
                 if (result.metaDescription || result.metaTitle) {
-                    console.log(`[TFD-Instagram] HTTP 提取成功: 作者=${result.authorName || 'N/A'}`);
+                    tfd.sys('TFD-Instagram', `HTTP 提取成功: 作者=${result.authorName || 'N/A'}`);
                 } else {
-                    console.log(`[TFD-Instagram] HTTP 回應無 OG 標籤（可能被登入牆阻擋）`);
+                    tfd.sys('TFD-Instagram', `HTTP 回應無 OG 標籤（可能被登入牆阻擋）`);
                 }
             }
         } catch (error) {
-            console.log(`[TFD-Instagram] HTTP 提取失敗（${error.code || error.message}），跳過 metadata`);
+            tfd.sys('TFD-Instagram', `HTTP 提取失敗（${error.code || error.message}），跳過 metadata`);
         }
 
         return result;

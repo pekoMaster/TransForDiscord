@@ -58,8 +58,12 @@ function sys(fn, detail = '') {
     console.log(`${ts()} [${fn}] ${detail}`);
 }
 
+function sysWarn(fn, detail = '') {
+    console.warn(`${ts()} [${fn}] ${detail}`);
+}
+
 function sysError(fn, detail = '') {
     console.error(`${ts()} [${fn}] ${detail}`);
 }
 
-module.exports = { log, warn, error, sys, sysError, ts };
+module.exports = { log, warn, error, sys, sysWarn, sysError, ts };

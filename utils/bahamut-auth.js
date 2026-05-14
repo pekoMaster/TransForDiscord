@@ -6,14 +6,7 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-
-// 時間戳記函數
-function getTimeStamp() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    return `[${hours}:${minutes}]`;
-}
+const tfd = require('./tfd-logger');
 
 class BahamutAuth {
     constructor() {
@@ -52,14 +45,14 @@ class BahamutAuth {
 
                 if (hoursSinceUpdate < 24 && storedData.BAHAENUR && storedData.BAHARUNE) {
                     this.cookies = storedData;
-                    console.log(`${getTimeStamp()} [BahamutAuth] 載入已儲存的有效 Cookie`);
+                    tfd.sys('BahamutAuth', `載入已儲存的有效 Cookie`);
                     return true;
                 } else {
-                    console.log(`${getTimeStamp()} [BahamutAuth] 儲存的 Cookie 已過期，需要重新登入`);
+                    tfd.sys('BahamutAuth', `儲存的 Cookie 已過期，需要重新登入`);
                 }
             }
         } catch (error) {
-            console.log(`[BahamutAuth] 載入 Cookie 失敗: ${error.message}`);
+            tfd.sys('BahamutAuth', `載入 Cookie 失敗: ${error.message}`);
         }
         return false;
     }
@@ -75,9 +68,9 @@ class BahamutAuth {
             }
 
             fs.writeFileSync(this.cookiePath, JSON.stringify(this.cookies, null, 2));
-            console.log(`${getTimeStamp()} [BahamutAuth] Cookie 已儲存到檔案`);
+            tfd.sys('BahamutAuth', `Cookie 已儲存到檔案`);
         } catch (error) {
-            console.error(`[BahamutAuth] 儲存 Cookie 失敗: ${error.message}`);
+            tfd.sysError('BahamutAuth', `儲存 Cookie 失敗: ${error.message}`);
         }
     }
 
@@ -85,7 +78,7 @@ class BahamutAuth {
      * 執行巴哈姆特登入，獲取認證 Cookie
      */
     async login() {
-        console.log(`${getTimeStamp()} [BahamutAuth] 開始執行巴哈姆特登入...`);
+        tfd.sys('BahamutAuth', `開始執行巴哈姆特登入...`);
 
         try {
             const headers = {
@@ -120,7 +113,7 @@ class BahamutAuth {
                 this.cookies.lastUpdate = Date.now();
                 this.saveCookies();
 
-                console.log(`${getTimeStamp()} [BahamutAuth] 登入成功，已獲取認證 Cookie`);
+                tfd.sys('BahamutAuth', `登入成功，已獲取認證 Cookie`);
                 return {
                     success: true,
                     BAHAENUR: this.cookies.BAHAENUR,
@@ -131,7 +124,7 @@ class BahamutAuth {
             }
 
         } catch (error) {
-            console.error(`[BahamutAuth] 登入失敗: ${error.message}`);
+            tfd.sysError('BahamutAuth', `登入失敗: ${error.message}`);
             return {
                 success: false,
                 error: error.message
@@ -151,7 +144,7 @@ class BahamutAuth {
 
             // Cookie 在 12 小時內都視為有效
             if (hoursSinceUpdate < 12) {
-                console.log(`${getTimeStamp()} [BahamutAuth] 使用現有的有效 Cookie`);
+                tfd.sys('BahamutAuth', `使用現有的有效 Cookie`);
                 return {
                     success: true,
                     BAHAENUR: this.cookies.BAHAENUR,
@@ -161,7 +154,7 @@ class BahamutAuth {
         }
 
         // Cookie 無效或過期，重新登入
-        console.log(`${getTimeStamp()} [BahamutAuth] Cookie 無效或過期，執行重新登入...`);
+        tfd.sys('BahamutAuth', `Cookie 無效或過期，執行重新登入...`);
         return await this.login();
     }
 

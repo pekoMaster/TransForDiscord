@@ -7,6 +7,7 @@ const { AttachmentBuilder } = require('discord.js');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const tfd = require('../../utils/tfd-logger');
 
 class TwitterImageAttachmentOptimizer {
     constructor() {
@@ -53,7 +54,7 @@ class TwitterImageAttachmentOptimizer {
 
             return { suitable: false, sizeMB: 0, sizeBytes: 0 };
         } catch (error) {
-            console.error(`[ImageOptimizer] 檢查圖片失敗: ${error.message}`);
+            tfd.sysError('ImageOptimizer', `檢查圖片失敗: ${error.message}`);
             return { suitable: false, sizeMB: 0, sizeBytes: 0 };
         }
     }
@@ -81,7 +82,7 @@ class TwitterImageAttachmentOptimizer {
      * 下載圖片作為附件
      */
     async downloadImageAsAttachment(imageUrl, tweetId, index) {
-        console.log(`[ImageOptimizer] 開始下載圖片 ${index + 1}: ${imageUrl}`);
+        tfd.sys('ImageOptimizer', `開始下載圖片 ${index + 1}: ${imageUrl}`);
 
         const extension = this.getImageExtension(imageUrl);
         const fileName = `twitter_image_${tweetId}_${index + 1}.${extension}`;
@@ -95,7 +96,7 @@ class TwitterImageAttachmentOptimizer {
                 description: `推文圖片 ${index + 1}`
             });
 
-            console.log(`[ImageOptimizer] ✅ 圖片 ${index + 1} 下載完成: ${fileName}`);
+            tfd.sys('ImageOptimizer', `✅ 圖片 ${index + 1} 下載完成: ${fileName}`);
 
             return {
                 attachment,
@@ -104,7 +105,7 @@ class TwitterImageAttachmentOptimizer {
             };
 
         } catch (error) {
-            console.error(`[ImageOptimizer] 下載圖片 ${index + 1} 失敗: ${error.message}`);
+            tfd.sysError('ImageOptimizer', `下載圖片 ${index + 1} 失敗: ${error.message}`);
             this.cleanupFile(filePath);
             throw error;
         }
@@ -167,10 +168,10 @@ class TwitterImageAttachmentOptimizer {
         try {
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
-                console.log(`[ImageOptimizer] 🗑️ 臨時檔案已清理: ${path.basename(filePath)}`);
+                tfd.sys('ImageOptimizer', `🗑️ 臨時檔案已清理: ${path.basename(filePath)}`);
             }
         } catch (error) {
-            console.error(`[ImageOptimizer] 清理檔案失敗: ${error.message}`);
+            tfd.sysError('ImageOptimizer', `清理檔案失敗: ${error.message}`);
         }
     }
 
@@ -194,7 +195,7 @@ class TwitterImageAttachmentOptimizer {
             return null; // 不需要優化，使用原本邏輯
         }
 
-        console.log(`[ImageOptimizer] 🎯 針對多圖片推文進行附件優化: ${tweetId}`);
+        tfd.sys('ImageOptimizer', `🎯 針對多圖片推文進行附件優化: ${tweetId}`);
 
         // 提取圖片
         const images = [];
@@ -210,7 +211,7 @@ class TwitterImageAttachmentOptimizer {
             return null; // 沒有圖片
         }
 
-        console.log(`[ImageOptimizer] 找到 ${images.length} 張圖片`);
+        tfd.sys('ImageOptimizer', `找到 ${images.length} 張圖片`);
 
         try {
             const attachments = [];
@@ -223,7 +224,7 @@ class TwitterImageAttachmentOptimizer {
                 const suitability = await this.checkImageSuitability(image.url);
 
                 if (!suitability.suitable) {
-                    console.log(`[ImageOptimizer] 圖片 ${i + 1} 太大或檢查失敗，跳過附件優化`);
+                    tfd.sys('ImageOptimizer', `圖片 ${i + 1} 太大或檢查失敗，跳過附件優化`);
                     return null; // 如果有任何圖片不適合，回到原本邏輯
                 }
 
@@ -232,11 +233,11 @@ class TwitterImageAttachmentOptimizer {
 
             // Discord 總附件大小限制約 25MB
             if (totalSize > 20) {
-                console.log(`[ImageOptimizer] 總大小太大 (${totalSize.toFixed(2)}MB)，跳過附件優化`);
+                tfd.sys('ImageOptimizer', `總大小太大 (${totalSize.toFixed(2)}MB)，跳過附件優化`);
                 return null;
             }
 
-            console.log(`[ImageOptimizer] 總大小: ${totalSize.toFixed(2)}MB，開始下載所有圖片...`);
+            tfd.sys('ImageOptimizer', `總大小: ${totalSize.toFixed(2)}MB，開始下載所有圖片...`);
 
             // 下載所有圖片作為附件
             for (let i = 0; i < images.length; i++) {
@@ -246,7 +247,7 @@ class TwitterImageAttachmentOptimizer {
                 filePaths.push(result.filePath);
             }
 
-            console.log(`[ImageOptimizer] ✅ 成功下載 ${attachments.length} 張圖片作為附件`);
+            tfd.sys('ImageOptimizer', `✅ 成功下載 ${attachments.length} 張圖片作為附件`);
 
             return {
                 hasImageAttachments: true,
@@ -257,7 +258,7 @@ class TwitterImageAttachmentOptimizer {
             };
 
         } catch (error) {
-            console.error(`[ImageOptimizer] 處理圖片附件失敗: ${error.message}`);
+            tfd.sysError('ImageOptimizer', `處理圖片附件失敗: ${error.message}`);
             return null; // 處理失敗，回到原本邏輯
         }
     }

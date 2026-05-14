@@ -9,6 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const tfd = require('./tfd-logger');
 
 const GLOSSARY_PATH = path.join(__dirname, '../data/translation-glossary.json');
 
@@ -28,7 +29,7 @@ function loadGlossary() {
         const raw = fs.readFileSync(GLOSSARY_PATH, 'utf8');
         glossary = JSON.parse(raw);
     } catch (e) {
-        console.error('[Glossary] 載入詞庫失敗:', e.message);
+        tfd.sysError('Glossary', `載入詞庫失敗: ${e.message}`);
         glossary = { replace: {}, protect: {} };
     }
 
@@ -59,7 +60,7 @@ function loadGlossary() {
     }
     protectRules.sort((a, b) => b.original.length - a.original.length);
 
-    console.log(`[Glossary] 載入完成: ${replaceRules.length} 個替換規則, ${protectRules.length} 個保護規則`);
+    tfd.sys('Glossary', `載入完成: ${replaceRules.length} 個替換規則, ${protectRules.length} 個保護規則`);
 }
 
 // 啟動時載入
@@ -68,7 +69,7 @@ loadGlossary();
 // 監聽檔案變更，熱更新（改詞庫不用重啟）
 try {
     fs.watchFile(GLOSSARY_PATH, { interval: 10000 }, () => {
-        console.log('[Glossary] 偵測到詞庫變更，重新載入...');
+        tfd.sys('Glossary', '偵測到詞庫變更，重新載入...');
         loadGlossary();
     });
 } catch (_) {}

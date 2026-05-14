@@ -5,6 +5,7 @@
 
 const HTTPClient = require('../utils/http-client');
 const TFDEmbedBuilder = require('../utils/embed-builder');
+const tfd = require('../../utils/tfd-logger');
 
 class FacebookEZExtractor {
     constructor() {
@@ -31,7 +32,7 @@ class FacebookEZExtractor {
                 throw new Error(`不支援的網站: ${siteName}`);
             }
         } catch (error) {
-            console.error(`[TFD-FacebookEZ] 提取失敗: ${error.message}`);
+            tfd.sysError('TFD-FacebookEZ', `提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -47,7 +48,7 @@ class FacebookEZExtractor {
         // 使用 facebed.com 服務：facebook.com -> facebed.com (最佳預覽效果)
         const convertedURL = this.convertToFacebed(originalURL);
 
-        console.log(`[TFD-Facebook] Facebook URL 轉換 (${patternName}): ${originalURL} -> ${convertedURL}`);
+        tfd.sys('TFD-Facebook', `Facebook URL 轉換 (${patternName}): ${originalURL} -> ${convertedURL}`);
 
         return {
             success: true,
@@ -74,7 +75,7 @@ class FacebookEZExtractor {
         // 使用 EmbedEZ 風格的轉換：instagram.com -> instagramez.com
         const convertedURL = this.convertToInstagramEZ(originalURL);
 
-        console.log(`[TFD-FacebookEZ] Instagram URL 轉換: ${originalURL} -> ${convertedURL}`);
+        tfd.sys('TFD-FacebookEZ', `Instagram URL 轉換: ${originalURL} -> ${convertedURL}`);
 
         return {
             success: true,
@@ -112,7 +113,7 @@ class FacebookEZExtractor {
             }
             return url;
         } catch (error) {
-            console.error(`[TFD-Facebook] Facebook URL 轉換失敗: ${error.message}`);
+            tfd.sysError('TFD-Facebook', `Facebook URL 轉換失敗: ${error.message}`);
             return url;
         }
     }
@@ -133,7 +134,7 @@ class FacebookEZExtractor {
             const match = url.match(pattern);
             if (match) {
                 const id = match[1];
-                console.log(`[TFD-Facebook] 保持 ${name} 格式，ID: ${id}`);
+                tfd.sys('TFD-Facebook', `保持 ${name} 格式，ID: ${id}`);
 
                 // 只替換域名，保持 share 格式不變
                 return url.replace(/(?:www\.)?facebook\.com/, 'facebed.com');
@@ -159,7 +160,7 @@ class FacebookEZExtractor {
             }
             return url;
         } catch (error) {
-            console.error(`[TFD-FacebookEZ] Instagram URL 轉換失敗: ${error.message}`);
+            tfd.sysError('TFD-FacebookEZ', `Instagram URL 轉換失敗: ${error.message}`);
             return url;
         }
     }

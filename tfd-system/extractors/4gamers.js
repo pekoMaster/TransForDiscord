@@ -7,6 +7,7 @@
 const { EmbedBuilder } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
+const tfd = require('../../utils/tfd-logger');
 
 class TFD4GamersExtractor {
     constructor() {
@@ -31,7 +32,7 @@ class TFD4GamersExtractor {
 
             // 如果是短網址，先轉換成新聞 ID
             if (shortCode) {
-                console.log(`[4Gamers] 解析短網址: ${shortCode}`);
+                tfd.sys('4Gamers', `解析短網址: ${shortCode}`);
                 newsIdToUse = await this.resolveShortUrl(shortCode);
             }
 
@@ -39,7 +40,7 @@ class TFD4GamersExtractor {
                 throw new Error('無法解析文章 ID');
             }
 
-            console.log(`[4Gamers] 獲取文章: ${newsIdToUse}`);
+            tfd.sys('4Gamers', `獲取文章: ${newsIdToUse}`);
 
             // 使用 Puppeteer 獲取頁面內容 (因為 4Gamers 是 SPA)
             const articleData = await this.fetchArticleWithPuppeteer(originalURL, newsIdToUse);
@@ -48,13 +49,13 @@ class TFD4GamersExtractor {
                 throw new Error('無法解析文章資料');
             }
 
-            console.log(`[4Gamers] 成功獲取文章: ${articleData.title}`);
+            tfd.sys('4Gamers', `成功獲取文章: ${articleData.title}`);
 
             // 建立 Embed
             const embed = this.buildArticleEmbed(articleData, originalURL);
 
             // 記錄網址轉換
-            URLConverterLogger.logConversion('4gamers', message, null, null, `文章: ${articleData.title}`);
+            URLConverterLogger.logConversion('4gamers', message, `文章: ${articleData.title}`);
 
             return {
                 success: true,
@@ -68,7 +69,7 @@ class TFD4GamersExtractor {
             };
 
         } catch (error) {
-            console.error(`[4Gamers] 處理失敗: ${error.message}`);
+            tfd.sysError('4Gamers', `處理失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -99,7 +100,7 @@ class TFD4GamersExtractor {
 
             return null;
         } catch (error) {
-            console.error(`[4Gamers] 短網址解析失敗: ${error.message}`);
+            tfd.sysError('4Gamers', `短網址解析失敗: ${error.message}`);
             return null;
         }
     }
@@ -123,7 +124,7 @@ class TFD4GamersExtractor {
             return this.parseArticleFromHtml(html, url, newsId);
 
         } catch (error) {
-            console.error(`[4Gamers] HTTP 請求失敗: ${error.message}`);
+            tfd.sysError('4Gamers', `HTTP 請求失敗: ${error.message}`);
             // 如果 HTTP 失敗，返回空資料讓调用者處理
             return this.parseArticleFromHtml('', url, newsId);
         }
@@ -201,7 +202,7 @@ class TFD4GamersExtractor {
                     }
                 }
             } catch (e) {
-                console.error(`[4Gamers] JSON-LD 解析錯誤: ${e.message}`);
+                tfd.sysError('4Gamers', `JSON-LD 解析錯誤: ${e.message}`);
             }
         }
 

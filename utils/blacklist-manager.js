@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const tfd = require('./tfd-logger');
 
 class BlacklistManager {
     constructor() {
@@ -34,9 +35,9 @@ class BlacklistManager {
     log(message, level = 'info') {
         const prefix = `${this.getTimePrefix()} [BlacklistManager]`;
         if (level === 'error') {
-            console.error(`${prefix} ${message}`);
+            tfd.sysError('Blacklist', `${prefix} ${message}`);
         } else {
-            console.log(`${prefix} ${message}`);
+            tfd.sys('Blacklist', `${prefix} ${message}`);
         }
     }
 
@@ -274,7 +275,7 @@ class BlacklistManager {
 
             return null;
         } catch (error) {
-            console.error(`[BlacklistManager] resolveTwitterUid 失敗 (${username}): ${error.message}`);
+            tfd.sysError('BlacklistManager', `resolveTwitterUid 失敗 (${username}): ${error.message}`);
             return null;
         }
     }

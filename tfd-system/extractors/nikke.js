@@ -13,6 +13,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
+const tfd = require('../../utils/tfd-logger');
 
 const NIKKE_ICON      = 'https://static.hotcool.tw/static/act/slnstw/gw_new/pc/ossweb-img/footer_spec_icon.png';
 const NIKKE_COLOR     = 0xC8A86B; // 妮姬主題金色
@@ -30,7 +31,7 @@ class NikkeExtractor {
         const newsId = extractedData[0];
 
         try {
-            console.log(`[Nikke] 獲取公告: ${originalURL}`);
+            tfd.sys('Nikke', `獲取公告: ${originalURL}`);
 
             const html = await this.httpClient.fetchHTML(originalURL, {
                 timeout: 15000,
@@ -50,13 +51,13 @@ class NikkeExtractor {
                 throw new Error('無法解析文章標題');
             }
 
-            console.log(`[Nikke] 成功取得: ${data.title}`);
+            tfd.sys('Nikke', `成功取得: ${data.title}`);
 
             const userId = message?.author?.id || '0';
             const embed = this.buildEmbed(data, originalURL, false);
             const components = this.buildButtons(newsId, userId, false);
 
-            URLConverterLogger.logConversion('nikke', message, null, null, `公告: ${data.title}`);
+            URLConverterLogger.logConversion('nikke', message, `公告: ${data.title}`);
 
             return {
                 success: true,
@@ -67,7 +68,7 @@ class NikkeExtractor {
             };
 
         } catch (error) {
-            console.error(`[Nikke] 處理失敗: ${error.message}`);
+            tfd.sysError('Nikke', `處理失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }

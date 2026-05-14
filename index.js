@@ -18,9 +18,9 @@ const tfdHandler = new TFDMessageHandler(client);
 
 // Ready
 client.once(Events.ClientReady, () => {
-    console.log(`✅ Bot 已上線：${client.user.tag}`);
-    console.log(`📡 監控 ${client.guilds.cache.size} 個伺服器`);
-    console.log('✅ Peko Embed URL 轉換系統已就緒');
+    tfd.sys('TFD-Bot', `✅ Bot 已上線：${client.user.tag}`);
+    tfd.sys('TFD-Bot', `📡 監控 ${client.guilds.cache.size} 個伺服器`);
+    tfd.sys('TFD-Bot', '✅ Peko Embed URL 轉換系統已就緒');
 
     // 初始化共享翻譯快取（從磁碟載入 + 清理過期）
     const sharedCache = require('./utils/shared-translation-cache');
@@ -40,9 +40,9 @@ client.once(Events.ClientReady, () => {
     setInterval(() => {
         try {
             const removed = db.urlStats.cleanupOlderThan(URL_STATS_RETAIN_DAYS * 86400);
-            if (removed > 0) console.log(`[url-stats] 清理了 ${removed} 筆 ${URL_STATS_RETAIN_DAYS} 天前的紀錄`);
+            if (removed > 0) tfd.sys('url-stats', `清理了 ${removed} 筆 ${URL_STATS_RETAIN_DAYS} 天前的紀錄`);
         } catch (e) {
-            console.error('[url-stats] 清理失敗:', e.message);
+            tfd.sysError('url-stats', `清理失敗: ${e.message}`);
         }
     }, 24 * 60 * 60 * 1000);
 });
@@ -53,7 +53,7 @@ client.on(Events.MessageCreate, async (message) => {
     try {
         await tfdHandler.handleMessage(message);
     } catch (err) {
-        console.error('TFD 訊息處理錯誤:', err.message);
+        tfd.sysError('TFD-Bot', `TFD 訊息處理錯誤: ${err.message}`);
     }
 });
 
@@ -72,7 +72,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     try {
         await interactionCreate.execute(interaction, client);
     } catch (err) {
-        console.error('互動處理錯誤:', err.message);
+        tfd.sysError('TFD-Bot', `互動處理錯誤: ${err.message}`);
     }
 });
 
@@ -87,16 +87,17 @@ app.get('/api/tfd-stats', (req, res) => {
             return res.status(403).json({ error: '未授權' });
         }
         const db = require('./db');
+const tfd = require('./utils/tfd-logger');
         const stats = db.tfdStats.getAllStats();
         res.json(stats);
     } catch (e) {
-        console.error('[TFD API] 錯誤:', e.message);
+        tfd.sysError('TFD API', `錯誤: ${e.message}`);
         res.status(500).json({ error: e.message });
     }
 });
 
 app.listen(TFD_API_PORT, '0.0.0.0', () => {
-    console.log(`[TFD API] Express 已啟動於 port ${TFD_API_PORT}`);
+    tfd.sys('TFD API', `Express 已啟動於 port ${TFD_API_PORT}`);
 });
 
 client.login(process.env.BOT_TOKEN);

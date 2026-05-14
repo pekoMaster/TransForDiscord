@@ -6,6 +6,7 @@
 const { EmbedBuilder } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
+const tfd = require('../../utils/tfd-logger');
 
 class TFDUDNExtractor {
     constructor() {
@@ -25,7 +26,7 @@ class TFDUDNExtractor {
         const { storyId, articleId } = extractedData;
 
         try {
-            console.log(`[UDN] 獲取文章: story/${storyId}/${articleId}`);
+            tfd.sys('UDN', `獲取文章: story/${storyId}/${articleId}`);
 
             // 獲取頁面 HTML
             const html = await this.httpClient.fetchHTML(originalURL, {
@@ -59,13 +60,13 @@ class TFDUDNExtractor {
                 throw new Error('無法解析文章資料');
             }
 
-            console.log(`[UDN] 成功獲取文章: ${articleData.title}`);
+            tfd.sys('UDN', `成功獲取文章: ${articleData.title}`);
 
             // 建立 Embed
             const embed = this.buildArticleEmbed(articleData, originalURL);
 
             // 記錄網址轉換
-            URLConverterLogger.logConversion('udn', message, null, null, `文章: ${articleData.title}`);
+            URLConverterLogger.logConversion('udn', message, `文章: ${articleData.title}`);
 
             return {
                 success: true,
@@ -76,7 +77,7 @@ class TFDUDNExtractor {
             };
 
         } catch (error) {
-            console.error(`[UDN] 處理失敗: ${error.message}`);
+            tfd.sysError('UDN', `處理失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -164,7 +165,7 @@ class TFDUDNExtractor {
                 }
             }
         } catch (e) {
-            console.error(`[UDN] JSON-LD 解析錯誤: ${e.message}`);
+            tfd.sysError('UDN', `JSON-LD 解析錯誤: ${e.message}`);
         }
 
         return data;
@@ -281,7 +282,7 @@ class TFDUDNExtractor {
                 return this.decodeHtmlEntities(metaDescMatch[1]);
             }
         } catch (e) {
-            console.error(`[UDN] 內文摘要解析錯誤: ${e.message}`);
+            tfd.sysError('UDN', `內文摘要解析錯誤: ${e.message}`);
         }
 
         return null;

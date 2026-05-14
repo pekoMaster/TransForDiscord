@@ -8,6 +8,7 @@ const DOMParser = require('../utils/dom-parser');
 const TFDEmbedBuilder = require('../utils/embed-builder');
 const URLConverterLogger = require('../utils/url-converter-logger');
 const axios = require('axios');
+const tfd = require('../../utils/tfd-logger');
 
 // 可用的 Pixiv 圖片代理服務（按優先順序排列）
 // 參考來源: https://pixivfe-docs.pages.dev/public-image-proxies/
@@ -107,7 +108,7 @@ class PixivExtractor {
                 return artworkData;
             }
         } catch (error) {
-            console.log(`[TFD-Pixiv] API 失敗: ${error.message}`);
+            tfd.sys('TFD-Pixiv', `API 失敗: ${error.message}`);
         }
 
         // 方法2: 解析 HTML 頁面
@@ -118,7 +119,7 @@ class PixivExtractor {
                     return artworkData;
                 }
             } catch (error) {
-                console.log(`[TFD-Pixiv] HTML 解析失敗: ${error.message}`);
+                tfd.sys('TFD-Pixiv', `HTML 解析失敗: ${error.message}`);
             }
         }
 
@@ -177,7 +178,7 @@ class PixivExtractor {
 
         for (const url of apiEndpoints) {
             try {
-                console.log(`嘗試 API 端點: ${url}`);
+                tfd.sys('Pixiv', `嘗試 API 端點: ${url}`);
                 const response = await this.httpClient.client.get(url, {
                     timeout: 15000,
                     headers: {
@@ -188,17 +189,17 @@ class PixivExtractor {
                 });
 
                 if (response.data && response.data.illust) {
-                    console.log(`✅ API 端點成功: ${url}`);
+                    tfd.sys('Pixiv', `✅ API 端點成功: ${url}`);
                     return response.data;
                 }
             } catch (error) {
-                console.log(`❌ API 端點失敗: ${url} - ${error.message}`);
+                tfd.sys('Pixiv', `❌ API 端點失敗: ${url} - ${error.message}`);
                 continue;
             }
         }
 
         // 如果 HibiAPI 都失敗，嘗試直接從 Pixiv 抓取
-        console.log('🔄 嘗試直接從 Pixiv 獲取資料...');
+        tfd.sys('Pixiv', '🔄 嘗試直接從 Pixiv 獲取資料...');
         return await this.RequestPixivDirect(id);
     }
 
@@ -258,13 +259,13 @@ class PixivExtractor {
                     }
                 }
 
-                console.log('✅ 直接從 Pixiv 獲取資料成功');
+                tfd.sys('Pixiv', '✅ 直接從 Pixiv 獲取資料成功');
                 return hibiFormat;
             } else {
                 throw new Error('無效的 Pixiv 回應格式');
             }
         } catch (error) {
-            console.error('❌ 直接從 Pixiv 獲取失敗:', error.message);
+            tfd.sysError('Pixiv', `❌ 直接從 Pixiv 獲取失敗: ${error.message}`);
             throw error;
         }
     }
@@ -284,9 +285,9 @@ class PixivExtractor {
         const nsfw = illust.sanity_level >= 5;
         const urls = [];
 
-        console.log(`作品類型: ${illust.type}`);
-        console.log(`Sanity Level: ${illust.sanity_level} (NSFW: ${nsfw})`);
-        console.log(`頁數: ${illust.page_count}`);
+        tfd.sys('Pixiv', `作品類型: ${illust.type}`);
+        tfd.sys('Pixiv', `Sanity Level: ${illust.sanity_level} (NSFW: ${nsfw})`);
+        tfd.sys('Pixiv', `頁數: ${illust.page_count}`);
 
         // 按照 picsiv-master 的邏輯處理圖片 URL
         // 可用的 Pixiv 圖片代理服務（按優先順序排列）
@@ -305,26 +306,26 @@ class PixivExtractor {
         if (illust.meta_single_page && illust.meta_single_page.original_image_url && illust.meta_single_page.original_image_url !== "") {
             // 單圖處理
             const rawImageUrl = illust.meta_single_page.original_image_url;
-            console.log('單圖原始 URL:', rawImageUrl);
+            tfd.sys('Pixiv', `單圖原始 URL: ${rawImageUrl}`);
 
             const path = rawImageUrl.split("https://i.pximg.net/")[1];
             const mirrorUrl = `https://${selectedProxy}/${path}`;
             urls.push(mirrorUrl);
 
-            console.log('轉換後 URL:', mirrorUrl);
+            tfd.sys('Pixiv', `轉換後 URL: ${mirrorUrl}`);
         } else if (illust.meta_pages && illust.meta_pages.length > 0) {
             // 多圖處理
-            console.log(`多圖作品，共 ${illust.meta_pages.length} 張圖片`);
+            tfd.sys('Pixiv', `多圖作品，共 ${illust.meta_pages.length} 張圖片`);
 
             illust.meta_pages.forEach((page, index) => {
                 const rawImageUrl = page.image_urls.original;
-                console.log(`圖片 ${index + 1} 原始 URL:`, rawImageUrl);
+                tfd.sys('Pixiv', `圖片 ${index + 1} 原始 URL: ${rawImageUrl}`);
 
                 const path = rawImageUrl.split("https://i.pximg.net/")[1];
                 const mirrorUrl = `https://${selectedProxy}/${path}`;
                 urls.push(mirrorUrl);
 
-                console.log(`圖片 ${index + 1} 轉換後 URL:`, mirrorUrl);
+                tfd.sys('Pixiv', `圖片 ${index + 1} 轉換後 URL: ${mirrorUrl}`);
             });
         } else {
             return { success: false, error: '找不到圖片資料' };
@@ -371,7 +372,7 @@ class PixivExtractor {
                     break;
                 }
             } catch (error) {
-                console.log(`[TFD-Pixiv] API 端點失敗: ${apiURL}`);
+                tfd.sys('TFD-Pixiv', `API 端點失敗: ${apiURL}`);
                 continue;
             }
         }
@@ -388,48 +389,48 @@ class PixivExtractor {
             // 啟用方式：設定環境變數 PIXIV_R18_ENABLED=1
             const r18Enabled = process.env.PIXIV_R18_ENABLED === '1' || process.env.PIXIV_R18_ENABLED === 'true';
             if (!r18Enabled) {
-                console.log(`[Pixiv] 偵測到 R18 內容（artwork ${artworkId}），公開版預設略過`);
+                tfd.sys('Pixiv', `偵測到 R18 內容（artwork ${artworkId}），公開版預設略過`);
                 return null;
             }
 
-            console.log(`🚀 開始測試 picsiv-master 方法...`);
-            console.log(`📎 目標作品: https://www.pixiv.net/artworks/${artworkId}`);
-            console.log('📡 調用 HibiAPI...');
+            tfd.sys('Pixiv', `🚀 開始測試 picsiv-master 方法...`);
+            tfd.sys('Pixiv', `📎 目標作品: https://www.pixiv.net/artworks/${artworkId}`);
+            tfd.sys('Pixiv', '📡 調用 HibiAPI...');
 
             // 步驟 1: 調用 HibiAPI
             const illustResp = await this.RequestHibiApiIllust(artworkId);
 
-            console.log('✅ API 回應成功');
-            console.log('📋 原始資料預覽:');
-            console.log(`  - 作品標題: ${illustResp.illust?.title || 'N/A'}`);
-            console.log(`  - 作者: ${illustResp.illust?.user?.name || 'N/A'}`);
-            console.log(`  - 頁數: ${illustResp.illust?.page_count || 'N/A'}`);
+            tfd.sys('Pixiv', '✅ API 回應成功');
+            tfd.sys('Pixiv', '📋 原始資料預覽:');
+            tfd.sys('Pixiv', `  - 作品標題: ${illustResp.illust?.title || 'N/A'}`);
+            tfd.sys('Pixiv', `  - 作者: ${illustResp.illust?.user?.name || 'N/A'}`);
+            tfd.sys('Pixiv', `  - 頁數: ${illustResp.illust?.page_count || 'N/A'}`);
 
             // 步驟 2: 解析資料
-            console.log('\n🔍 解析作品資料...');
+            tfd.sys('Pixiv', '\n🔍 解析作品資料...');
             const parsedResult = this.ParseHibiApiIllust(illustResp);
 
             if (!parsedResult.success) {
                 throw new Error(parsedResult.error);
             }
 
-            console.log('✅ 解析成功');
-            console.log(`📊 作品資訊:`);
-            console.log(`  - 標題: ${parsedResult.title}`);
-            console.log(`  - 作者: ${parsedResult.author.name} (@${parsedResult.author.account})`);
-            console.log(`  - R18: ${parsedResult.nsfw ? 'Yes' : 'No'}`);
-            console.log(`  - 動圖: ${parsedResult.ugoira ? 'Yes' : 'No'}`);
-            console.log(`  - 圖片數量: ${parsedResult.urls.length}`);
-            console.log(`  - 觀看數: ${parsedResult.totalView}`);
-            console.log(`  - 收藏數: ${parsedResult.totalBookmarks}`);
+            tfd.sys('Pixiv', '✅ 解析成功');
+            tfd.sys('Pixiv', `📊 作品資訊:`);
+            tfd.sys('Pixiv', `  - 標題: ${parsedResult.title}`);
+            tfd.sys('Pixiv', `  - 作者: ${parsedResult.author.name} (@${parsedResult.author.account})`);
+            tfd.sys('Pixiv', `  - R18: ${parsedResult.nsfw ? 'Yes' : 'No'}`);
+            tfd.sys('Pixiv', `  - 動圖: ${parsedResult.ugoira ? 'Yes' : 'No'}`);
+            tfd.sys('Pixiv', `  - 圖片數量: ${parsedResult.urls.length}`);
+            tfd.sys('Pixiv', `  - 觀看數: ${parsedResult.totalView}`);
+            tfd.sys('Pixiv', `  - 收藏數: ${parsedResult.totalBookmarks}`);
 
             // R18 日誌已移除，統一使用 embed 顯示
 
-            console.log('\n🎉 測試完成！');
-            console.log(`📋 總結:`);
-            console.log(`  - 成功提取 ${parsedResult.urls.length} 張圖片`);
-            console.log(`  - R18 狀態: ${parsedResult.nsfw ? '是' : '否'}`);
-            console.log(`  - 所有 URL 已轉換為 Pixiv 代理`);
+            tfd.sys('Pixiv', '\n🎉 測試完成！');
+            tfd.sys('Pixiv', `📋 總結:`);
+            tfd.sys('Pixiv', `  - 成功提取 ${parsedResult.urls.length} 張圖片`);
+            tfd.sys('Pixiv', `  - R18 狀態: ${parsedResult.nsfw ? '是' : '否'}`);
+            tfd.sys('Pixiv', `  - 所有 URL 已轉換為 Pixiv 代理`);
 
             // 構建標準作品資料格式
             const r18ArtworkData = {
@@ -539,7 +540,7 @@ class PixivExtractor {
         // 方法2.5: 如果基本 API 沒有 URLs，強制使用 Pages API（Pixiv API 規格變更）
         if (!imageURL) {
             try {
-                console.log(`[Pixiv] 基本 API 無 URLs，嘗試 Pages API (單張圖片)`);
+                tfd.sys('Pixiv', `基本 API 無 URLs，嘗試 Pages API (單張圖片)`);
                 const pagesData = await this.fetchPagesFromAPI(artworkId);
 
                 if (pagesData && pagesData.length > 0) {
@@ -553,22 +554,22 @@ class PixivExtractor {
                     });
 
                     imageURL = allImages[0]; // 第一張作為主圖
-                    console.log(`[Pixiv] ✅ Pages API 成功獲取 ${allImages.length} 張圖片`);
+                    tfd.sys('Pixiv', `✅ Pages API 成功獲取 ${allImages.length} 張圖片`);
                 }
             } catch (error) {
-                console.log(`[Pixiv] Pages API 也失敗: ${error.message}`);
+                tfd.sys('Pixiv', `Pages API 也失敗: ${error.message}`);
             }
         }
 
         // 方法3: 直接使用 phixiv.net 備援 - 如果所有方法都失敗
         if (!imageURL && illust.id) {
-            console.log(`[Pixiv] 所有 API 都無法獲取圖片 URLs，使用 phixiv.net 代理服務`);
+            tfd.sys('Pixiv', `所有 API 都無法獲取圖片 URLs，使用 phixiv.net 代理服務`);
 
             // phixiv.net 會自動處理圖片載入和預覽，最可靠的方案
             imageURL = `https://phixiv.net/artworks/${illust.id}`;
             allImages.push(imageURL);
 
-            console.log(`[Pixiv] phixiv URL: ${imageURL}`);
+            tfd.sys('Pixiv', `phixiv URL: ${imageURL}`);
         }
 
         // LOG removed for simplicity
@@ -651,7 +652,7 @@ class PixivExtractor {
             const phixivUrl = `https://www.phixiv.net/artworks/${artworkId}`;
 
             // 記錄網址轉換 (需要從上級函式傳遞 message)
-            URLConverterLogger.logConversion('pixiv', null, null, null, phixivUrl);
+            URLConverterLogger.logConversion('pixiv', message, phixivUrl);
 
             return {
                 success: true,
@@ -1209,7 +1210,7 @@ class PixivExtractor {
      */
     async verifyImageURL(url) {
         try {
-            console.log(`[Pixiv] 驗證圖片 URL: ${url}`);
+            tfd.sys('Pixiv', `驗證圖片 URL: ${url}`);
 
             const response = await axios.head(url, {
                 timeout: 10000,
@@ -1220,12 +1221,12 @@ class PixivExtractor {
             });
 
             const isValid = response.status === 200;
-            console.log(`[Pixiv] 驗證結果: ${isValid ? '✅ 可訪問' : '❌ 無法訪問'}`);
+            tfd.sys('Pixiv', `驗證結果: ${isValid ? '✅ 可訪問' : '❌ 無法訪問'}`);
 
             return isValid;
 
         } catch (error) {
-            console.log(`[Pixiv] 驗證失敗 (${error.response?.status || error.message})`);
+            tfd.sys('Pixiv', `驗證失敗 (${error.response?.status || error.message})`);
             return false;
         }
     }

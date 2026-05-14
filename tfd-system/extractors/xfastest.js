@@ -6,6 +6,7 @@
 const { EmbedBuilder } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
+const tfd = require('../../utils/tfd-logger');
 
 class TFDXFastestExtractor {
     constructor() {
@@ -24,7 +25,7 @@ class TFDXFastestExtractor {
         const { originalURL } = matchResult;
 
         try {
-            console.log(`[XFastest] 獲取文章: ${originalURL}`);
+            tfd.sys('XFastest', `獲取文章: ${originalURL}`);
 
             const html = await this.httpClient.fetchHTML(originalURL, {
                 timeout: 15000,
@@ -78,11 +79,11 @@ class TFDXFastestExtractor {
                 throw new Error('無法解析文章資料');
             }
 
-            console.log(`[XFastest] 成功獲取文章: ${articleData.title}`);
+            tfd.sys('XFastest', `成功獲取文章: ${articleData.title}`);
 
             const embed = this.buildArticleEmbed(articleData, originalURL);
 
-            URLConverterLogger.logConversion('xfastest', message, null, null, `文章: ${articleData.title}`);
+            URLConverterLogger.logConversion('xfastest', message, `文章: ${articleData.title}`);
 
             return {
                 success: true,
@@ -93,7 +94,7 @@ class TFDXFastestExtractor {
             };
 
         } catch (error) {
-            console.error(`[XFastest] 處理失敗: ${error.message}`);
+            tfd.sysError('XFastest', `處理失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -190,7 +191,7 @@ class TFDXFastestExtractor {
                 return { name, avatar, url };
             }
         } catch (e) {
-            console.error(`[XFastest] 作者解析錯誤: ${e.message}`);
+            tfd.sysError('XFastest', `作者解析錯誤: ${e.message}`);
         }
 
         return null;
@@ -239,7 +240,7 @@ class TFDXFastestExtractor {
                 return summary;
             }
         } catch (e) {
-            console.error(`[XFastest] 內文摘要解析錯誤: ${e.message}`);
+            tfd.sysError('XFastest', `內文摘要解析錯誤: ${e.message}`);
         }
 
         return null;

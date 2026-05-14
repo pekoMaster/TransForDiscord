@@ -4,6 +4,7 @@
  */
 
 const URLConverterLogger = require('../utils/url-converter-logger');
+const tfd = require('../../utils/tfd-logger');
 
 class PornhubExtractor {
     constructor() {
@@ -30,7 +31,7 @@ class PornhubExtractor {
                     throw new Error(`不支援的 Pornhub 模式: ${patternName}`);
             }
         } catch (error) {
-            console.error(`[Pornhub] 提取失敗: ${error.message}`);
+            tfd.sysError('Pornhub', `提取失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -43,21 +44,21 @@ class PornhubExtractor {
      * @returns {Object}
      */
     extractVideo(originalURL, extractedData, message = null) {
-        console.log(`[Pornhub] 處理影片: ${originalURL}`);
+        tfd.sys('Pornhub', `處理影片: ${originalURL}`);
 
         // 轉換為官方嵌入 URL 格式
         // https://www.pornhub.com/embed/[viewkey]
         const viewkey = extractedData.viewkey || extractedData.videoId;
 
         if (!viewkey) {
-            console.error('[Pornhub] 無法提取 viewkey 或 videoId');
+            tfd.sysError('Pornhub', '無法提取 viewkey 或 videoId');
             return this.createErrorResponse('無法提取影片 ID', originalURL);
         }
 
         const convertedURL = `https://www.pornhub.com/embed/${viewkey}`;
 
         // 記錄轉換
-        URLConverterLogger.logConversion('pornhub', message, null, null, convertedURL);
+        URLConverterLogger.logConversion('pornhub', message, convertedURL);
 
         return {
             success: true,

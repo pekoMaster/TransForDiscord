@@ -20,6 +20,7 @@ const config = require('../config/tfd-config.json');
 const FacebookExtractor = require('./facebook');
 const FacebookMBasicExtractor = require('./facebook-mbasic');
 const FacebookWithLoginExtractor = require('./facebook-with-login');
+const tfd = require('../../utils/tfd-logger');
 
 class FacebookSmartExtractor {
     constructor() {
@@ -528,7 +529,7 @@ class FacebookSmartExtractor {
 
     logMode(mode, url, detail = '') {
         const suffix = detail ? ` (${detail})` : '';
-        console.log(`[FB] ${mode}: ${url}${suffix}`);
+        tfd.sys('FB', `${mode}: ${url}${suffix}`);
     }
 
     extractAuthorFromTitle(rawTitle) {

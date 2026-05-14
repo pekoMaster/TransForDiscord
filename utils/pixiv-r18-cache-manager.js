@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { AttachmentBuilder } = require('discord.js');
+const tfd = require('./tfd-logger');
 
 // 隱密頻道設定（從環境變數讀取，未設定則停用上傳功能）
 const R18_CACHE_GUILD_ID = process.env.PIXIV_R18_GUILD_ID || '';
@@ -61,7 +62,7 @@ class PixivR18CacheManager {
      */
     async downloadImage(imageUrl, index = 0) {
         try {
-            console.log(`[Pixiv R18 Cache] 下載圖片 ${index + 1}: ${imageUrl.substring(0, 80)}...`);
+            tfd.sys('Pixiv R18 Cache', `下載圖片 ${index + 1}: ${imageUrl.substring(0, 80)}...`);
 
             const response = await axios.get(imageUrl, {
                 responseType: 'arraybuffer',
@@ -72,7 +73,7 @@ class PixivR18CacheManager {
                 }
             });
 
-            console.log(`[Pixiv R18 Cache] 下載完成，大小: ${response.data.byteLength} bytes`);
+            tfd.sys('Pixiv R18 Cache', `下載完成，大小: ${response.data.byteLength} bytes`);
 
             // 判斷檔案類型
             let extension = 'jpg';
@@ -90,7 +91,7 @@ class PixivR18CacheManager {
             };
 
         } catch (error) {
-            console.error(`[Pixiv R18 Cache] 下載圖片失敗:`, error.message);
+            tfd.sysError('Pixiv-R18-Cache', `下載圖片失敗: ${error.message}`);
             return null;
         }
     }
@@ -104,16 +105,16 @@ class PixivR18CacheManager {
      */
     async uploadImagesToDiscord(artworkId, imageUrls, metadata = {}) {
         if (!this.client) {
-            console.error(`[Pixiv R18 Cache] Discord client 未設定`);
+            tfd.sysError('Pixiv R18 Cache', `Discord client 未設定`);
             return null;
         }
 
         if (!R18_CACHE_CHANNEL_ID) {
-            console.warn(`[Pixiv R18 Cache] PIXIV_R18_CHANNEL_ID 未設定，跳過上傳，使用 SPOILER 模式`);
+            tfd.sysWarn('Pixiv R18 Cache', `PIXIV_R18_CHANNEL_ID 未設定，跳過上傳，使用 SPOILER 模式`);
             return null;
         }
 
-        console.log(`[Pixiv R18 Cache] 準備上傳，client 已設定，嘗試獲取頻道 ${R18_CACHE_CHANNEL_ID}...`);
+        tfd.sys('Pixiv R18 Cache', `準備上傳，client 已設定，嘗試獲取頻道 ${R18_CACHE_CHANNEL_ID}...`);
 
         try {
             // 獲取隱密頻道
@@ -121,18 +122,18 @@ class PixivR18CacheManager {
             try {
                 channel = await this.client.channels.fetch(R18_CACHE_CHANNEL_ID);
             } catch (fetchError) {
-                console.error(`[Pixiv R18 Cache] 獲取頻道失敗: ${fetchError.message}`);
-                console.error(`[Pixiv R18 Cache] 錯誤代碼: ${fetchError.code}`);
+                tfd.sysError('Pixiv R18 Cache', `獲取頻道失敗: ${fetchError.message}`);
+                tfd.sysError('Pixiv R18 Cache', `錯誤代碼: ${fetchError.code}`);
                 return null;
             }
 
             if (!channel) {
-                console.error(`[Pixiv R18 Cache] 無法找到隱密頻道: ${R18_CACHE_CHANNEL_ID}`);
+                tfd.sysError('Pixiv R18 Cache', `無法找到隱密頻道: ${R18_CACHE_CHANNEL_ID}`);
                 return null;
             }
 
-            console.log(`[Pixiv R18 Cache] 成功獲取頻道: ${channel.name || channel.id}`);
-            console.log(`[Pixiv R18 Cache] 開始上傳 ${imageUrls.length} 張圖片到隱密頻道...`);
+            tfd.sys('Pixiv R18 Cache', `成功獲取頻道: ${channel.name || channel.id}`);
+            tfd.sys('Pixiv R18 Cache', `開始上傳 ${imageUrls.length} 張圖片到隱密頻道...`);
 
             const discordUrls = [];
 
@@ -140,7 +141,7 @@ class PixivR18CacheManager {
             for (let i = 0; i < imageUrls.length; i++) {
                 const imageData = await this.downloadImage(imageUrls[i], i);
                 if (!imageData) {
-                    console.warn(`[Pixiv R18 Cache] 跳過第 ${i + 1} 張圖片（下載失敗）`);
+                    tfd.sysWarn('Pixiv R18 Cache', `跳過第 ${i + 1} 張圖片（下載失敗）`);
                     continue;
                 }
 
@@ -159,20 +160,20 @@ class PixivR18CacheManager {
                 const discordUrl = msg.attachments.first()?.url;
                 if (discordUrl) {
                     discordUrls.push(discordUrl);
-                    console.log(`[Pixiv R18 Cache] 已上傳第 ${i + 1}/${imageUrls.length} 張`);
+                    tfd.sys('Pixiv R18 Cache', `已上傳第 ${i + 1}/${imageUrls.length} 張`);
                 }
             }
 
             if (discordUrls.length === 0) {
-                console.error(`[Pixiv R18 Cache] 所有圖片上傳失敗`);
+                tfd.sysError('Pixiv R18 Cache', `所有圖片上傳失敗`);
                 return null;
             }
 
-            console.log(`[Pixiv R18 Cache] 成功上傳 ${discordUrls.length}/${imageUrls.length} 張圖片`);
+            tfd.sys('Pixiv R18 Cache', `成功上傳 ${discordUrls.length}/${imageUrls.length} 張圖片`);
             return discordUrls;
 
         } catch (error) {
-            console.error(`[Pixiv R18 Cache] 上傳圖片到 Discord 失敗:`, error.message);
+            tfd.sysError('Pixiv-R18-Cache', `上傳圖片到 Discord 失敗: ${error.message}`);
             return null;
         }
     }
@@ -217,11 +218,11 @@ class PixivR18CacheManager {
             const filePath = this.getCacheFilePath(artworkId);
             fs.writeFileSync(filePath, JSON.stringify(cacheData, null, 2), 'utf-8');
 
-            console.log(`[Pixiv R18 Cache] 已儲存作品 ${artworkId} 的快取 (${originalUrls.length} 張圖片, Discord URL: ${discordUrls ? discordUrls.length : 0}, 訊息ID: ${messageIds.imageMessageId || 'none'})`);
+            tfd.sys('Pixiv R18 Cache', `已儲存作品 ${artworkId} 的快取 (${originalUrls.length} 張圖片, Discord URL: ${discordUrls ? discordUrls.length : 0}, 訊息ID: ${messageIds.imageMessageId || 'none'})`);
             return true;
 
         } catch (error) {
-            console.error(`[Pixiv R18 Cache] 儲存快取失敗:`, error.message);
+            tfd.sysError('Pixiv-R18-Cache', `儲存快取失敗: ${error.message}`);
             return false;
         }
     }
@@ -236,7 +237,7 @@ class PixivR18CacheManager {
             const filePath = this.getCacheFilePath(artworkId);
 
             if (!fs.existsSync(filePath)) {
-                console.log(`[Pixiv R18 Cache] 快取不存在: ${artworkId}`);
+                tfd.sys('Pixiv R18 Cache', `快取不存在: ${artworkId}`);
                 return null;
             }
 
@@ -244,16 +245,16 @@ class PixivR18CacheManager {
 
             // 檢查是否過期
             if (Date.now() > cacheData.expiresAt) {
-                console.log(`[Pixiv R18 Cache] 快取已過期: ${artworkId}`);
+                tfd.sys('Pixiv R18 Cache', `快取已過期: ${artworkId}`);
                 this.deleteCache(artworkId);
                 return null;
             }
 
-            console.log(`[Pixiv R18 Cache] 成功讀取快取: ${artworkId}`);
+            tfd.sys('Pixiv R18 Cache', `成功讀取快取: ${artworkId}`);
             return cacheData;
 
         } catch (error) {
-            console.error(`[Pixiv R18 Cache] 讀取快取失敗:`, error.message);
+            tfd.sysError('Pixiv-R18-Cache', `讀取快取失敗: ${error.message}`);
             return null;
         }
     }
@@ -272,7 +273,7 @@ class PixivR18CacheManager {
         }
 
         if (pageIndex < 0 || pageIndex >= cacheData.totalImages) {
-            console.log(`[Pixiv R18 Cache] 頁面索引超出範圍: ${pageIndex}/${cacheData.totalImages}`);
+            tfd.sys('Pixiv R18 Cache', `頁面索引超出範圍: ${pageIndex}/${cacheData.totalImages}`);
             return null;
         }
 
@@ -305,10 +306,10 @@ class PixivR18CacheManager {
             const filePath = this.getCacheFilePath(artworkId);
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
-                console.log(`[Pixiv R18 Cache] 已刪除快取: ${artworkId}`);
+                tfd.sys('Pixiv R18 Cache', `已刪除快取: ${artworkId}`);
             }
         } catch (error) {
-            console.error(`[Pixiv R18 Cache] 刪除快取失敗:`, error.message);
+            tfd.sysError('Pixiv-R18-Cache', `刪除快取失敗: ${error.message}`);
         }
     }
 
@@ -346,11 +347,11 @@ class PixivR18CacheManager {
             }
 
             if (cleanedCount > 0) {
-                console.log(`[Pixiv R18 Cache] 已清理 ${cleanedCount} 個過期快取`);
+                tfd.sys('Pixiv R18 Cache', `已清理 ${cleanedCount} 個過期快取`);
             }
 
         } catch (error) {
-            console.error(`[Pixiv R18 Cache] 清理過期快取失敗:`, error.message);
+            tfd.sysError('Pixiv-R18-Cache', `清理過期快取失敗: ${error.message}`);
         }
     }
 }

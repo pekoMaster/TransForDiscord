@@ -7,6 +7,7 @@
 const { EmbedBuilder } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
+const tfd = require('../../utils/tfd-logger');
 
 const MSN_ICON = 'https://img-s-msn-com.akamaized.net/tenant/amp/entityid/BBfTWDV.img';
 const MSN_COLOR = 0x0067B8; // MSN 深藍
@@ -36,7 +37,7 @@ class ErmianaMSNExtractor {
             const articleData = this.parseArticleData(data);
             const embed = this.buildArticleEmbed(articleData, originalURL);
 
-            URLConverterLogger.logConversion('msn', message, null, null, `文章: ${articleData.title}`);
+            URLConverterLogger.logConversion('msn', message, `文章: ${articleData.title}`);
 
             return {
                 success: true,
@@ -47,7 +48,7 @@ class ErmianaMSNExtractor {
             };
 
         } catch (error) {
-            console.error(`[MSN] 處理失敗: ${error.message}`);
+            tfd.sysError('MSN', `處理失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }

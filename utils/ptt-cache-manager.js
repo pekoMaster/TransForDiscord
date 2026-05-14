@@ -12,6 +12,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+const tfd = require('./tfd-logger');
 
 class PTTCacheManager {
     constructor() {
@@ -27,9 +28,9 @@ class PTTCacheManager {
     async ensureCacheDir() {
         try {
             await fs.mkdir(this.cacheDir, { recursive: true });
-            console.log(`[PTTCache] 快取目錄已準備: ${this.cacheDir}`);
+            tfd.sys('PTTCache', `快取目錄已準備: ${this.cacheDir}`);
         } catch (error) {
-            console.error('[PTTCache] 建立快取目錄失敗:', error.message);
+            tfd.sysError('PTTCache', `建立快取目錄失敗: ${error.message}`);
         }
     }
 
@@ -80,12 +81,12 @@ class PTTCacheManager {
 
             // 檢查快取是否過期
             if (this.isCacheExpired(cacheData.timestamp)) {
-                console.log(`[PTTCache] 快取已過期: ${articleHash}`);
+                tfd.sys('PTTCache', `快取已過期: ${articleHash}`);
                 await fs.unlink(cacheFile); // 刪除過期快取
                 return null;
             }
 
-            console.log(`[PTTCache] 快取命中: ${articleHash}.json`);
+            tfd.sys('PTTCache', `快取命中: ${articleHash}.json`);
             return cacheData;
         } catch (error) {
             // 檔案不存在或格式錯誤，返回null
@@ -102,9 +103,9 @@ class PTTCacheManager {
         try {
             const cacheFile = this.getArticleCacheFile(articleHash);
             await fs.writeFile(cacheFile, JSON.stringify(cacheData, null, 2), 'utf8');
-            console.log(`[PTTCache] 快取已儲存: ${articleHash}.json`);
+            tfd.sys('PTTCache', `快取已儲存: ${articleHash}.json`);
         } catch (error) {
-            console.error('[PTTCache] 儲存快取失敗:', error.message);
+            tfd.sysError('PTTCache', `儲存快取失敗: ${error.message}`);
         }
     }
 
@@ -135,21 +136,21 @@ class PTTCacheManager {
         try {
             const articleHash = this.extractArticleHash(url);
             if (!articleHash) {
-                console.log(`[PTTCache] 無法從URL提取文章Hash: ${url}`);
+                tfd.sys('PTTCache', `無法從URL提取文章Hash: ${url}`);
                 return null;
             }
 
             const cached = await this.loadArticleCache(articleHash);
 
             if (cached) {
-                console.log(`[PTTCache] 快取命中: ${articleHash}.json`);
+                tfd.sys('PTTCache', `快取命中: ${articleHash}.json`);
                 return cached;
             }
 
-            console.log(`[PTTCache] 快取未命中: ${articleHash}.json`);
+            tfd.sys('PTTCache', `快取未命中: ${articleHash}.json`);
             return null;
         } catch (error) {
-            console.error('[PTTCache] 讀取快取失敗:', error.message);
+            tfd.sysError('PTTCache', `讀取快取失敗: ${error.message}`);
             return null;
         }
     }
@@ -164,7 +165,7 @@ class PTTCacheManager {
         try {
             const articleHash = this.extractArticleHash(url);
             if (!articleHash) {
-                console.log(`[PTTCache] 無法從URL提取文章Hash: ${url}`);
+                tfd.sys('PTTCache', `無法從URL提取文章Hash: ${url}`);
                 return;
             }
 
@@ -191,9 +192,9 @@ class PTTCacheManager {
             };
 
             await this.saveArticleCache(articleHash, cacheData);
-            console.log(`[PTTCache] 快取建立成功: ${articleHash}.json (${allImages.length} 張圖片, ${pages.length} 頁)`);
+            tfd.sys('PTTCache', `快取建立成功: ${articleHash}.json (${allImages.length} 張圖片, ${pages.length} 頁)`);
         } catch (error) {
-            console.error('[PTTCache] 儲存快取失敗:', error.message);
+            tfd.sysError('PTTCache', `儲存快取失敗: ${error.message}`);
         }
     }
 
@@ -211,7 +212,7 @@ class PTTCacheManager {
             }
 
             if (pageIndex < 0 || pageIndex >= cachedData.pages.length) {
-                console.log(`[PTTCache] 頁面索引超出範圍: ${pageIndex}`);
+                tfd.sys('PTTCache', `頁面索引超出範圍: ${pageIndex}`);
                 return null;
             }
 
@@ -220,7 +221,7 @@ class PTTCacheManager {
                 currentPage: cachedData.pages[pageIndex]
             };
         } catch (error) {
-            console.error('[PTTCache] 獲取頁面資料失敗:', error.message);
+            tfd.sysError('PTTCache', `獲取頁面資料失敗: ${error.message}`);
             return null;
         }
     }
@@ -253,10 +254,10 @@ class PTTCacheManager {
             }
 
             if (cleanedCount > 0) {
-                console.log(`[PTTCache] 清理完成: 刪除 ${cleanedCount} 個過期快取檔案`);
+                tfd.sys('PTTCache', `清理完成: 刪除 ${cleanedCount} 個過期快取檔案`);
             }
         } catch (error) {
-            console.error('[PTTCache] 清理快取失敗:', error.message);
+            tfd.sysError('PTTCache', `清理快取失敗: ${error.message}`);
         }
     }
 }

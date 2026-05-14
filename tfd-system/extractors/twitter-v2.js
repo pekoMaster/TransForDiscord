@@ -18,7 +18,7 @@ function getV2ContainerBuilder() {
         try {
             _v2ContainerBuilder = require('../../handlers/twitter-v2-container-builder');
         } catch (e) {
-            console.warn('[Twitter-V2] twitter-v2-container-builder 模組不存在，影片 V2 功能停用');
+            tfd.sysWarn('Twitter-V2', 'twitter-v2-container-builder 模組不存在，影片 V2 功能停用');
             _v2ContainerBuilder = { buildV2Container: null, cacheTweetData: () => {} };
         }
     }
@@ -37,6 +37,7 @@ class TFDTwitterExtractor {
         // 2026-04-11: 自家 Vercel embed 影片 URL，取代 vxtwitter
         try {
             const config = require('../config/tfd-config.json');
+const tfd = require('../../utils/tfd-logger');
             this.vercelEmbedBaseUrl = config.features?.twitterEmbedProxy?.vercelEmbedBaseUrl || '';
         } catch {
             this.vercelEmbedBaseUrl = '';
@@ -90,12 +91,12 @@ class TFDTwitterExtractor {
             const tweetResult = await this.fetchTweetData(tid);
 
             if (!tweetResult) {
-                console.warn(`[Twitter-Extractor] 推文不可用（fxtwitter + vxtwitter 均失敗）| TweetID: ${tid}`);
+                tfd.sysWarn('Twitter-Extractor', `推文不可用（fxtwitter + vxtwitter 均失敗）| TweetID: ${tid}`);
                 return this.createPassthroughResponse(originalURL);
             }
 
             if (tweetResult.source === 'vxtwitter') {
-                console.log(`[Twitter-Extractor] 使用 vxtwitter fallback 成功 | TweetID: ${tid}`);
+                tfd.sys('Twitter-Extractor', `使用 vxtwitter fallback 成功 | TweetID: ${tid}`);
             }
 
             const tweet = tweetResult.tweet;
@@ -231,7 +232,7 @@ class TFDTwitterExtractor {
             return result;
 
         } catch (error) {
-            console.error(`[Enhanced-Twitter] 處理失敗: ${error.message}`);
+            tfd.sysError('Enhanced-Twitter', `處理失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -489,7 +490,7 @@ class TFDTwitterExtractor {
             return result;
 
         } catch (error) {
-            console.error(`[Enhanced-Twitter] 混合媒體處理失敗: ${error.message}`);
+            tfd.sysError('Enhanced-Twitter', `混合媒體處理失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }
@@ -503,7 +504,7 @@ class TFDTwitterExtractor {
         const vxtwitterURL = originalURL.replace(/x\.com|twitter\.com/, 'vxtwitter.com');
 
         // 記錄網址轉換
-        URLConverterLogger.logConversion('twitter', message, null, null, vxtwitterURL);
+        URLConverterLogger.logConversion('twitter', message, vxtwitterURL);
 
         return {
             success: true,
@@ -557,7 +558,7 @@ class TFDTwitterExtractor {
             cacheTweetData(tweet.id, { tweet, originalURL, quoteData, replyData });
 
             // 記錄轉換
-            URLConverterLogger.logConversion('twitter', message, null, null, `[V2] ${originalURL}`);
+            URLConverterLogger.logConversion('twitter', message, `[V2] ${originalURL}`);
 
             return {
                 success: true,
@@ -571,7 +572,7 @@ class TFDTwitterExtractor {
                 tweet: tweet,  // 供降級時重建舊版 embed 使用
             };
         } catch (error) {
-            console.error(`[Enhanced-Twitter] V2 Container 建構失敗: ${error.message}`);
+            tfd.sysError('Enhanced-Twitter', `V2 Container 建構失敗: ${error.message}`);
             // 降級回 vxtwitter redirect
             return this.handleVideoTweet(tweet, originalURL, message);
         }
@@ -683,14 +684,14 @@ class TFDTwitterExtractor {
             // 從 .env 讀取 GAS URL
             const gasURL = process.env.GOOGLE_APP_SCRIPT_URL;
             if (!gasURL) {
-                console.error('[Enhanced-Twitter] 未配置 GOOGLE_APP_SCRIPT_URL 環境變數');
+                tfd.sysError('Enhanced-Twitter', '未配置 GOOGLE_APP_SCRIPT_URL 環境變數');
                 return null;
             }
 
             // 提取推文 ID
             const tweetId = this.extractTweetId(originalURL);
             if (!tweetId) {
-                console.error('[Enhanced-Twitter] 無法提取推文 ID');
+                tfd.sysError('Enhanced-Twitter', '無法提取推文 ID');
                 return null;
             }
 
@@ -706,7 +707,7 @@ class TFDTwitterExtractor {
             };
 
         } catch (error) {
-            console.error('[Enhanced-Twitter] GAS 模式處理錯誤:', error);
+            tfd.sysError('Enhanced-Twitter', `GAS 模式處理錯誤: ${error}`);
             return null;
         }
     }
@@ -768,8 +769,8 @@ class TFDTwitterExtractor {
             };
 
         } catch (error) {
-            console.error(`[Enhanced-Twitter] HTML 影片播放模式處理失敗: ${error.message}`);
-            console.error(error.stack);
+            tfd.sysError('Enhanced-Twitter', `HTML 影片播放模式處理失敗: ${error.message}`);
+            tfd.sysError('Twitter-V2', error.stack);
 
             // 回退到一般混合媒體處理
             // LOG removed for simplicity
@@ -876,7 +877,7 @@ class TFDTwitterExtractor {
                 }
             }
         } catch (error) {
-            console.error(`[Enhanced-Twitter] 提取多圖片失敗: ${error.message}`);
+            tfd.sysError('Enhanced-Twitter', `提取多圖片失敗: ${error.message}`);
         }
         return images;
     }
@@ -894,7 +895,7 @@ class TFDTwitterExtractor {
         }
 
         // fxtwitter 失敗，嘗試 vxtwitter 作為 fallback
-        console.log(`[Twitter-Extractor] fxtwitter 失敗，嘗試 vxtwitter fallback | TweetID: ${tid}`);
+        tfd.sys('Twitter-Extractor', `fxtwitter 失敗，嘗試 vxtwitter fallback | TweetID: ${tid}`);
         const vxResp = await this.httpClient.fetchJSON(`https://api.vxtwitter.com/i/status/${tid}`);
         if (vxResp) {
             const normalized = this.normalizeVxTwitterResponse(vxResp, tid);
@@ -1554,7 +1555,7 @@ class TFDTwitterExtractor {
             });
 
             if (!response || !response.user) {
-                console.error(`[Twitter-Extractor] 🔍 用戶資料 API 請求失敗診斷 | Username: ${username} | URL: ${apiURL} | 回應內容: ${JSON.stringify(response).substring(0, 500)}`);
+                tfd.sysError('Twitter-Extractor', `🔍 用戶資料 API 請求失敗診斷 | Username: ${username} | URL: ${apiURL} | 回應內容: ${JSON.stringify(response).substring(0, 500)}`);
                 throw new Error('無法獲取用戶資料');
             }
 
@@ -1564,7 +1565,7 @@ class TFDTwitterExtractor {
             const embed = this.buildProfileEmbed(user, originalURL);
 
             // 記錄網址轉換
-            URLConverterLogger.logConversion('twitter', message, null, null, `個人資料: @${username}`);
+            URLConverterLogger.logConversion('twitter', message, `個人資料: @${username}`);
 
             return {
                 success: true,
@@ -1575,7 +1576,7 @@ class TFDTwitterExtractor {
             };
 
         } catch (error) {
-            console.error(`[Twitter-Profile] 處理失敗: ${error.message}`);
+            tfd.sysError('Twitter-Profile', `處理失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }

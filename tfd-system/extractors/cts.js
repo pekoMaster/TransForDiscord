@@ -6,6 +6,7 @@
 const { EmbedBuilder } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
+const tfd = require('../../utils/tfd-logger');
 
 const CTS_ICON = 'https://news.cts.com.tw/favicon.ico';
 const CTS_COLOR = 0x005BAC; // 華視藍
@@ -35,7 +36,7 @@ class ErmianaCTSExtractor {
 
             const embed = this.buildArticleEmbed(articleData, originalURL);
 
-            URLConverterLogger.logConversion('cts', message, null, null, `文章: ${articleData.title}`);
+            URLConverterLogger.logConversion('cts', message, `文章: ${articleData.title}`);
 
             return {
                 success: true,
@@ -46,7 +47,7 @@ class ErmianaCTSExtractor {
             };
 
         } catch (error) {
-            console.error(`[CTS] 處理失敗: ${error.message}`);
+            tfd.sysError('CTS', `處理失敗: ${error.message}`);
             return this.createErrorResponse(error.message, originalURL);
         }
     }

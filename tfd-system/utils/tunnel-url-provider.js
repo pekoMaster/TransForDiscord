@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const tfd = require('../../utils/tfd-logger');
 
 // 設定檔路徑
 const CONFIG_PATH = path.join(__dirname, '..', '..', 'data', 'cloudflare_tunnel.json');
@@ -36,7 +37,7 @@ function readTunnelConfig() {
             return cachedConfig;
         }
     } catch (error) {
-        console.error('[Tunnel URL Provider] 讀取設定失敗:', error.message);
+        tfd.sysError('Tunnel URL Provider', `讀取設定失敗: ${error.message}`);
     }
 
     return null;

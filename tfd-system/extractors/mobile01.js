@@ -6,6 +6,7 @@
 const { EmbedBuilder } = require('discord.js');
 const cheerio = require('cheerio');
 const HTTPClient = require('../utils/http-client');
+const tfd = require('../../utils/tfd-logger');
 
 class Mobile01Extractor {
     constructor() {
@@ -18,7 +19,7 @@ class Mobile01Extractor {
         const { originalURL, extractedData } = matchResult;
         const { topicId, forumId, page } = extractedData;
 
-        console.log(`[Mobile01] 開始提取: topicId=${topicId}, forumId=${forumId}, page=${page || 1}`);
+        tfd.sys('Mobile01', `開始提取: topicId=${topicId}, forumId=${forumId}, page=${page || 1}`);
 
         try {
             const result = await this.httpClient.get(originalURL, {
@@ -75,11 +76,11 @@ class Mobile01Extractor {
             const publishTime = $('meta[property="article:published_time"]').attr('content') || null;
             const section = $('meta[property="article:section"]').attr('content') || null;
 
-            console.log(`[Mobile01] 提取成功: ${title}`);
+            tfd.sys('Mobile01', `提取成功: ${title}`);
             return this.createResponse({ title, author, images, content, publishTime, section }, originalURL, page);
 
         } catch (error) {
-            console.error(`[Mobile01] 提取失敗: ${error.message}`);
+            tfd.sysError('Mobile01', `提取失敗: ${error.message}`);
             return {
                 success: false,
                 error: error.message,

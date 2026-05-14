@@ -9,6 +9,7 @@ const https = require('https');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const tfd = require('../../utils/tfd-logger');
 
 class PixivImageAttachmentOptimizer {
     constructor() {
@@ -62,7 +63,7 @@ class PixivImageAttachmentOptimizer {
         } catch (error) {
             // HEAD 請求失敗時，假設適合（之後下載時會驗證）
             // 這避免了因為代理服務不支援 HEAD 而導致的問題
-            console.warn(`[PixivImageOptimizer] HEAD 請求失敗，將嘗試直接下載: ${error.message}`);
+            tfd.sysWarn('PixivImageOptimizer', `HEAD 請求失敗，將嘗試直接下載: ${error.message}`);
             return { suitable: true, sizeMB: 0, sizeBytes: 0, unknown: true };
         }
     }
@@ -111,7 +112,7 @@ class PixivImageAttachmentOptimizer {
      * 下載圖片作為附件
      */
     async downloadImageAsAttachment(imageUrl, artworkId, index) {
-        console.log(`[PixivImageOptimizer] 開始下載圖片 ${index + 1}: ${imageUrl.substring(0, 80)}...`);
+        tfd.sys('PixivImageOptimizer', `開始下載圖片 ${index + 1}: ${imageUrl.substring(0, 80)}...`);
 
         const extension = this.getImageExtension(imageUrl);
         const fileName = `pixiv_${artworkId}_${index + 1}.${extension}`;
@@ -125,7 +126,7 @@ class PixivImageAttachmentOptimizer {
                 description: `Pixiv 作品圖片 ${index + 1}`
             });
 
-            console.log(`[PixivImageOptimizer] ✅ 圖片 ${index + 1} 下載完成: ${fileName}`);
+            tfd.sys('PixivImageOptimizer', `✅ 圖片 ${index + 1} 下載完成: ${fileName}`);
 
             return {
                 attachment,
@@ -134,7 +135,7 @@ class PixivImageAttachmentOptimizer {
             };
 
         } catch (error) {
-            console.error(`[PixivImageOptimizer] 下載圖片 ${index + 1} 失敗: ${error.message}`);
+            tfd.sysError('PixivImageOptimizer', `下載圖片 ${index + 1} 失敗: ${error.message}`);
             this.cleanupFile(filePath);
             throw error;
         }
@@ -220,10 +221,10 @@ class PixivImageAttachmentOptimizer {
         try {
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
-                console.log(`[PixivImageOptimizer] 🗑️ 臨時檔案已清理: ${path.basename(filePath)}`);
+                tfd.sys('PixivImageOptimizer', `🗑️ 臨時檔案已清理: ${path.basename(filePath)}`);
             }
         } catch (error) {
-            console.error(`[PixivImageOptimizer] 清理檔案失敗: ${error.message}`);
+            tfd.sysError('PixivImageOptimizer', `清理檔案失敗: ${error.message}`);
         }
     }
 
@@ -248,7 +249,7 @@ class PixivImageAttachmentOptimizer {
             return null;
         }
 
-        console.log(`[PixivImageOptimizer] 🎯 開始處理 ${imageUrls.length} 張圖片作為附件`);
+        tfd.sys('PixivImageOptimizer', `🎯 開始處理 ${imageUrls.length} 張圖片作為附件`);
 
         try {
             const attachments = [];
@@ -260,7 +261,7 @@ class PixivImageAttachmentOptimizer {
                 const suitability = await this.checkImageSuitability(imageUrls[i]);
 
                 if (!suitability.suitable) {
-                    console.log(`[PixivImageOptimizer] 圖片 ${i + 1} 太大或檢查失敗，跳過附件優化`);
+                    tfd.sys('PixivImageOptimizer', `圖片 ${i + 1} 太大或檢查失敗，跳過附件優化`);
                     return null;
                 }
 
@@ -269,11 +270,11 @@ class PixivImageAttachmentOptimizer {
 
             // 檢查總大小
             if (totalSize > this.maxTotalMB) {
-                console.log(`[PixivImageOptimizer] 總大小太大 (${totalSize.toFixed(2)}MB)，跳過附件優化`);
+                tfd.sys('PixivImageOptimizer', `總大小太大 (${totalSize.toFixed(2)}MB)，跳過附件優化`);
                 return null;
             }
 
-            console.log(`[PixivImageOptimizer] 預估總大小: ${totalSize.toFixed(2)}MB，開始下載...`);
+            tfd.sys('PixivImageOptimizer', `預估總大小: ${totalSize.toFixed(2)}MB，開始下載...`);
 
             // 下載所有圖片作為附件
             for (let i = 0; i < imageUrls.length; i++) {
@@ -282,7 +283,7 @@ class PixivImageAttachmentOptimizer {
                 filePaths.push(result.filePath);
             }
 
-            console.log(`[PixivImageOptimizer] ✅ 成功下載 ${attachments.length} 張圖片作為附件`);
+            tfd.sys('PixivImageOptimizer', `✅ 成功下載 ${attachments.length} 張圖片作為附件`);
 
             return {
                 success: true,
@@ -293,7 +294,7 @@ class PixivImageAttachmentOptimizer {
             };
 
         } catch (error) {
-            console.error(`[PixivImageOptimizer] 處理圖片附件失敗: ${error.message}`);
+            tfd.sysError('PixivImageOptimizer', `處理圖片附件失敗: ${error.message}`);
             return null; // 處理失敗，回到原本邏輯
         }
     }

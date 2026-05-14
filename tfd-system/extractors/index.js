@@ -134,7 +134,7 @@ class ExtractorManager {
 
             return result;
         } catch (error) {
-            console.error(`[TFD-ExtractorManager] ${siteName} 提取失敗: ${error.message}`);
+            tfd.sysError('TFD-ExtractorManager', `${siteName} 提取失敗: ${error.message}`);
             throw error;
         }
     }
@@ -153,7 +153,7 @@ class ExtractorManager {
                 results.push(result);
             } catch (error) {
                 // 記錄錯誤但繼續處理其他 URL
-                console.error(`[TFD-ExtractorManager] 批次提取失敗: ${error.message}`);
+                tfd.sysError('TFD-ExtractorManager', `批次提取失敗: ${error.message}`);
                 results.push({
                     success: false,
                     error: error.message,
@@ -220,15 +220,16 @@ class ExtractorManager {
 
                 // 重新載入提取器
                 const ExtractorClass = require(extractorPaths[siteName]);
+const tfd = require('../../utils/tfd-logger');
                 this.extractors.set(siteName, new ExtractorClass());
 
-                console.log(`[TFD-ExtractorManager] ${siteName} 提取器重新載入成功`);
+                tfd.sys('TFD-ExtractorManager', `${siteName} 提取器重新載入成功`);
                 return true;
             }
 
             return false;
         } catch (error) {
-            console.error(`[TFD-ExtractorManager] 重新載入 ${siteName} 失敗: ${error.message}`);
+            tfd.sysError('TFD-ExtractorManager', `重新載入 ${siteName} 失敗: ${error.message}`);
             return false;
         }
     }
@@ -240,7 +241,7 @@ class ExtractorManager {
      */
     addExtractor(siteName, extractor) {
         this.extractors.set(siteName, extractor);
-        console.log(`[TFD-ExtractorManager] 已添加 ${siteName} 提取器`);
+        tfd.sys('TFD-ExtractorManager', `已添加 ${siteName} 提取器`);
     }
 
     /**
@@ -251,7 +252,7 @@ class ExtractorManager {
     removeExtractor(siteName) {
         if (this.extractors.has(siteName)) {
             this.extractors.delete(siteName);
-            console.log(`[TFD-ExtractorManager] 已移除 ${siteName} 提取器`);
+            tfd.sys('TFD-ExtractorManager', `已移除 ${siteName} 提取器`);
             return true;
         }
         return false;

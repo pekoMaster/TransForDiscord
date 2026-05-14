@@ -16,6 +16,7 @@
 
 const db = require('../db');
 const crypto = require('crypto');
+const tfd = require('./tfd-logger');
 
 // 短期記憶體快取（單一進程內）：URL → [timestamps]，用於 burst 偵測
 const userUrlHistory = new Map(); // userId → Map<urlHash, [timestamps]>
@@ -140,10 +141,10 @@ function startGC() {
             // 每小時清一次 DB（保留 30 天）
             if (Math.floor(now / 1000) % 3600 < 600) {
                 const removed = db.abuse.cleanupOlderThan(30);
-                if (removed > 0) console.log(`[abuse-detector] GC cleaned ${removed} old abuse records`);
+                if (removed > 0) tfd.sys('abuse-detector', `GC cleaned ${removed} old abuse records`);
             }
         } catch (e) {
-            console.error('[abuse-detector] GC error:', e.message);
+            tfd.sysError('abuse-detector', `GC error: ${e.message}`);
         }
     }, 10 * 60 * 1000);
     gcInterval.unref?.();

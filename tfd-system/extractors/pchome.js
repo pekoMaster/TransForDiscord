@@ -6,6 +6,7 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { EmbedBuilder } = require('discord.js');
+const tfd = require('../../utils/tfd-logger');
 
 class PChomeExtractor {
     constructor() {
@@ -21,7 +22,7 @@ class PChomeExtractor {
      * @returns {Promise<Object>} 產品資訊
      */
     async extract(matchResult, message = null) {
-        console.log(`${this.icon} 開始提取 PCHome 產品資訊...`);
+        tfd.sys('PChome', `${this.icon} 開始提取 PCHome 產品資訊...`);
 
         try {
             // 從 matchResult 提取產品 ID
@@ -32,7 +33,7 @@ class PChomeExtractor {
                 throw new Error('無效的 PCHome URL 格式：無法提取產品 ID');
             }
 
-            console.log(`📦 產品 ID: ${productId}`);
+            tfd.sys('PChome', `📦 產品 ID: ${productId}`);
 
             // 獲取產品基本資訊
             const basicInfo = await this.fetchBasicInfo(productId);
@@ -54,7 +55,7 @@ class PChomeExtractor {
             // 創建 Discord Embed
             const embed = this.createProductEmbed(productData);
 
-            console.log(`✅ ${this.icon} PCHome 產品資訊提取成功`);
+            tfd.sys('PChome', `✅ ${this.icon} PCHome 產品資訊提取成功`);
 
             return {
                 success: true,
@@ -65,7 +66,7 @@ class PChomeExtractor {
             };
 
         } catch (error) {
-            console.error(`❌ ${this.icon} PCHome 提取失敗:`, error.message);
+            tfd.sysError('PChome', `❌ ${this.icon} PCHome 提取失敗: ${error.message}`);
             return {
                 success: false,
                 error: error.message
@@ -81,7 +82,7 @@ class PChomeExtractor {
     async fetchBasicInfo(productId) {
         const apiUrl = `https://ecapi-cdn.pchome.com.tw/ecshop/prodapi/v2/prod/${productId}&fields=Name,Nick,Price,Pic&_callback=jsonp_prod&2837602?_callback=jsonp_prod`;
 
-        console.log(`📡 獲取基本資訊: ${apiUrl.substring(0, 80)}...`);
+        tfd.sys('PChome', `📡 獲取基本資訊: ${apiUrl.substring(0, 80)}...`);
 
         const response = await axios.get(apiUrl, {
             timeout: 5000,
@@ -121,10 +122,10 @@ class PChomeExtractor {
         const picPath = unescape(picMatch[1].replace(/\\u/g, '%u').replace(/\\/g, ''));
         const image = `https://img.pchome.com.tw/cs${picPath}`;
 
-        console.log(`✅ 基本資訊提取成功`);
-        console.log(`   標題: ${title.substring(0, 50)}...`);
-        console.log(`   價格: ${price}`);
-        console.log(`   圖片: ${image.substring(0, 60)}...`);
+        tfd.sys('PChome', `✅ 基本資訊提取成功`);
+        tfd.sys('PChome', `   標題: ${title.substring(0, 50)}...`);
+        tfd.sys('PChome', `   價格: ${price}`);
+        tfd.sys('PChome', `   圖片: ${image.substring(0, 60)}...`);
 
         return {
             title,
@@ -141,7 +142,7 @@ class PChomeExtractor {
     async fetchDetailInfo(productId) {
         const apiUrl = `https://ecapi-cdn.pchome.com.tw/cdn/ecshop/prodapi/v2/prod/${productId}/desc&fields=Meta,SloganInfo&_callback=jsonp_desc?_callback=jsonp_desc`;
 
-        console.log(`📡 獲取詳細資訊...`);
+        tfd.sys('PChome', `📡 獲取詳細資訊...`);
 
         try {
             const response = await axios.get(apiUrl, {
@@ -152,7 +153,7 @@ class PChomeExtractor {
             });
 
             if (response.status !== 200) {
-                console.warn('⚠️ 詳細資訊 API 請求失敗，使用預設值');
+                tfd.sysWarn('PChome', '⚠️ 詳細資訊 API 請求失敗，使用預設值');
                 return {
                     brand: '未提供',
                     slogan: ''
@@ -179,9 +180,9 @@ class PChomeExtractor {
                     .replace(/^"|"$/g, '');
             }
 
-            console.log(`✅ 詳細資訊提取成功`);
-            console.log(`   品牌: ${brand}`);
-            console.log(`   標語: ${slogan ? slogan.substring(0, 50) + '...' : '無'}`);
+            tfd.sys('PChome', `✅ 詳細資訊提取成功`);
+            tfd.sys('PChome', `   品牌: ${brand}`);
+            tfd.sys('PChome', `   標語: ${slogan ? slogan.substring(0, 50) + '...' : '無'}`);
 
             return {
                 brand,
@@ -189,7 +190,7 @@ class PChomeExtractor {
             };
 
         } catch (error) {
-            console.warn(`⚠️ 詳細資訊提取失敗: ${error.message}，使用預設值`);
+            tfd.sysWarn('PChome', `⚠️ 詳細資訊提取失敗: ${error.message}，使用預設值`);
             return {
                 brand: '未提供',
                 slogan: ''
