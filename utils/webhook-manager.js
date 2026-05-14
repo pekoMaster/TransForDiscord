@@ -45,7 +45,7 @@ async function getOrCreateWebhook(channel) {
                 throw new Error('無法取得討論串的父頻道');
             }
 
-            tlog.sys('Webhook', `討論串模式: ${channel.name} → 父頻道 ${targetChannel.name}`);
+            tlog.sys('Webhook', `[${channel.guild?.name || '—'}] 討論串模式: #${channel.name} → 父頻道 #${targetChannel.name}`);
         }
 
         // 使用父頻道 ID 作為快取 key（討論串共用父頻道的 Webhook）

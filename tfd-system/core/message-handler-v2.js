@@ -701,7 +701,7 @@ class TFDMessageHandler {
      */
     async sendTwitterV2(message, result) {
         try {
-            tlog.log('Twitter-V2', message, result.originalURL || '(URL 未知)');
+            tlog.log('Twitter-V2', message, message._currentOriginalUrl || result.originalURL || '(URL 未知)');
 
             // 快取原始文字供翻譯按鈕使用
             if (result.originalText && result.tweetId) {
@@ -1067,7 +1067,7 @@ class TFDMessageHandler {
                             );
                         components.push(row);
                     }
-                    this.log(`🎨 已加入合併圖片按鈕`);
+                    tlog.log('Twitter', message, `🎨 已加入合併圖片按鈕 tweetId=${result.tweetId} url=${result.originalURL || message._currentOriginalUrl || ''}`);
                 }
             }
 
@@ -1770,7 +1770,7 @@ class TFDMessageHandler {
                         content: combinedContent
                     });
 
-                    this.log(`✅ 已統一發送 ${urlConversions.length} 個轉換 URL`);
+                    tlog.log('TFD', message, `✅ 統一發送 ${urlConversions.length} 個轉換 URL: ${urlConversions.join(' | ')}`);
 
                     // 立即抑制原始預覽
                     try {
@@ -2210,7 +2210,7 @@ class TFDMessageHandler {
      */
     async sendPTTWithPagination(message, result) {
         try {
-            tlog.log('PTT', message, result.url || result.originalUrl || '(URL 未知)');
+            tlog.log('PTT', message, message._currentOriginalUrl || result.embeds?.[0]?.data?.url || '(URL 未知)');
 
             const embeds = result.embeds || [result.embed];
             const components = result.components || [];
@@ -2232,7 +2232,7 @@ class TFDMessageHandler {
      */
     async sendPTTWithMultipleEmbeds(message, result) {
         try {
-            tlog.log('PTT', message, result.url || result.originalUrl || '(URL 未知)');
+            tlog.log('PTT', message, message._currentOriginalUrl || result.embeds?.[0]?.data?.url || '(URL 未知)');
 
             const embeds = result.embeds || [result.embed];
 
@@ -2253,7 +2253,7 @@ class TFDMessageHandler {
      */
     async sendPTTWithSpoiler(message, result) {
         try {
-            tlog.log('PTT-防爆雷', message, result.url || result.originalUrl || '(URL 未知)');
+            tlog.log('PTT-防爆雷', message, message._currentOriginalUrl || result.embeds?.[0]?.data?.url || '(URL 未知)');
 
             // 取得主要 embed
             const mainEmbed = result.embeds ? result.embeds[0] : result.embed;
