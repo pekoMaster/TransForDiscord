@@ -88,7 +88,6 @@ app.get('/api/tfd-stats', (req, res) => {
             return res.status(403).json({ error: '未授權' });
         }
         const db = require('./db');
-const tfd = require('./utils/tfd-logger');
         const stats = db.tfdStats.getAllStats();
         res.json(stats);
     } catch (e) {
