@@ -25,6 +25,12 @@ module.exports = {
         // 檢查是否為 PTT 翻頁按鈕
         if (!interaction.customId.startsWith('ptt_')) return;
 
+        // 重整按鈕單獨處理
+        if (interaction.customId.startsWith('ptt_reload_')) {
+            await handlePttReload(interaction);
+            return;
+        }
+
         try {
             // 解析按鈕 ID：ptt_action_articleHash_targetPage
             const parts = interaction.customId.split('_');
@@ -124,6 +130,59 @@ module.exports = {
         }
     }
 };
+
+async function handlePttReload(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferUpdate();
+    }
+
+    const originalURL = interaction.message.embeds?.[0]?.url;
+    if (!originalURL) {
+        return interaction.followUp({
+            content: '❌ 無法取得文章網址',
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    try {
+        const articleHash = interaction.customId.replace('ptt_reload_', '');
+
+        // 清除記憶體快取和磁碟快取，強制重新抓取
+        memoryCache.delete(articleHash);
+        const cacheManager = new PTTCacheManager();
+        const cacheFile = cacheManager.getArticleCacheFile(articleHash);
+        const fsPromises = require('fs').promises;
+        try { await fsPromises.unlink(cacheFile); } catch {}
+
+        // 重新提取文章
+        const pttExtractor = new PTTExtractor();
+        const result = await pttExtractor.extractArticle(
+            { board: '' },
+            pttExtractor.convertToPttweb(originalURL),
+            originalURL
+        );
+
+        if (!result.success) {
+            return interaction.followUp({
+                content: `❌ 重整失敗: ${result.error || '無法取得文章'}`,
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+        const embeds = result.embeds || [result.embed];
+        const components = result.components || [];
+        await interaction.editReply({ embeds, components });
+        tlog.sys('PTT重整', `重整成功: ${originalURL}`);
+    } catch (error) {
+        tlog.sysError('PTT重整', `重整失敗: ${error.message}`);
+        try {
+            await interaction.followUp({
+                content: '❌ 重整失敗，請稍後再試',
+                flags: MessageFlags.Ephemeral
+            });
+        } catch {}
+    }
+}
 
 function cleanExpiredMemoryCache() {
     const now = Date.now();

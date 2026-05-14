@@ -7,12 +7,14 @@ const HTTPClient = require('../utils/http-client');
 const DOMParser = require('../utils/dom-parser');
 const TFDEmbedBuilder = require('../utils/embed-builder');
 const tfd = require('../../utils/tfd-logger');
+const PTTCacheManager = require('../../utils/ptt-cache-manager');
 
 class PTTExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.domParser = new DOMParser();
         this.embedBuilder = new TFDEmbedBuilder();
+        this.cacheManager = new PTTCacheManager();
         this.name = 'PTT';
     }
 
@@ -104,6 +106,11 @@ class PTTExtractor {
 
         // 🖼️ 提取文章中的所有圖片（排除簽名檔）
         const validImages = this.extractImagesFromArticle($);
+
+        // 🏠 儲存到快取（供翻頁和重整使用）
+        if (validImages.length > 0) {
+            await this.cacheManager.saveToCache(displayURL, articleData, validImages);
+        }
 
         return this.createArticleResponse(articleData, displayURL, validImages, 0);
     }
@@ -548,7 +555,7 @@ class PTTExtractor {
      * @returns {Object}
      */
     createArticleResponse(articleData, originalURL, validImages = [], pageIndex = 0) {
-        const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
+        const { EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
         try {
             if (!articleData || !articleData.title || !articleData.author || !articleData.content) {
@@ -641,7 +648,6 @@ class PTTExtractor {
 
             // 🔘 如果總圖片數 > 4，添加翻頁按鈕
             if (validImages.length > 4) {
-                const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
                 const totalPages = Math.ceil(validImages.length / imagesPerPage);
                 const articleHash = this.extractArticleHash(originalURL);
 
@@ -690,6 +696,18 @@ class PTTExtractor {
                     iconURL: 'https://www.ptt.cc/favicon.ico'
                 });
             }
+        }
+
+        // 🔄 重整按鈕（所有文章都加入）
+        const articleHash = this.extractArticleHash(originalURL);
+        const reloadBtn = new ButtonBuilder()
+            .setCustomId(`ptt_reload_${articleHash}`)
+            .setLabel('重整')
+            .setStyle(ButtonStyle.Secondary);
+        if (components.length > 0) {
+            components[0].addComponents(reloadBtn);
+        } else {
+            components = [new ActionRowBuilder().addComponents(reloadBtn)];
         }
 
             return {
