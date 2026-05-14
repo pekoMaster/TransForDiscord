@@ -93,7 +93,7 @@ const tfd = require('./utils/tfd-logger');
         res.json(stats);
     } catch (e) {
         tfd.sysError('TFD API', `錯誤: ${e.message}`);
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: '內部錯誤' });
     }
 });
 
