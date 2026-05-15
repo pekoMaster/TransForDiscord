@@ -5,6 +5,13 @@ const { normalizeProviderError } = require('../utils/translation/errors');
 const { buildPrompt } = require('../utils/translation/prompt-builder');
 const { getEnvFallbackKey } = require('../utils/translation/key-resolver');
 const { translateTweet } = require('../utils/translation/translation-service');
+const newTranslation = require('../src/features/translation');
+
+function testNewTranslationBarrel() {
+    assert.strictEqual(typeof newTranslation.translateTweet, 'function');
+    assert.strictEqual(typeof newTranslation.buildTextBundle, 'function');
+    assert.strictEqual(typeof newTranslation.resolveTranslationKey, 'function');
+}
 
 function testBundleRoundTrip() {
     const bundle = buildTextBundle({
@@ -26,6 +33,7 @@ function testBundleRoundTrip() {
     assert(combined.includes('---REPLY---'));
 }
 
+testNewTranslationBarrel();
 testBundleRoundTrip();
 
 function testErrorNormalization() {
