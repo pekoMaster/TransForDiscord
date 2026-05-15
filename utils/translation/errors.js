@@ -6,7 +6,7 @@ const ERROR_MESSAGES = {
     TIMEOUT: '⏰ 翻譯超時，請稍後再試。',
     TEXT_TOO_LONG: '❌ 文字過長，暫時無法翻譯。',
     ALL_PROVIDERS_FAILED: '❌ 所有翻譯引擎都失敗，請稍後再試。',
-    FREE_NOT_READY: '❌ 免費翻譯尚未啟用，請先選擇 Gemini 或 OpenRouter。',
+    FREE_NOT_READY: '❌ 免費翻譯尚未啟用，請先選擇 Gemini、OpenRouter、OpenAI 或 Claude。',
     UNKNOWN_ERROR: '❌ 翻譯失敗，請稍後再試。'
 };
 
