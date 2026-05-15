@@ -190,12 +190,16 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `ai-translator.js` | AI 翻譯主入口（OpenAI/Claude/Gemini 多後端） |
+| `translation/translation-service.js` | 統一翻譯服務入口（Classic Twitter / Twitter V2 共用 provider、key、prompt、錯誤格式） |
+| `translation/text-bundle.js` | 主推文 / 引用 / 回覆文字 bundle 組合與拆分 |
+| `translation/key-resolver.js` | 翻譯 provider 選擇與 API Key 解析 |
+| `translation/providers/` | Gemini / OpenRouter / OpenAI / Claude provider adapters |
+| `ai-translator.js` | Legacy adapter，保留舊 exports 並轉接 translation-service |
 | `deepl-translator.js` | DeepL 翻譯器 |
-| `gemini-translator.js` | Google Gemini AI 翻譯器 |
-| `openrouter-translator.js` | OpenRouter 聚合翻譯（DeepL 失敗 + 用戶自有 Key） |
+| `gemini-translator.js` | Legacy Gemini helper，保留相容用途 |
+| `openrouter-translator.js` | Legacy OpenRouter helper，保留相容用途 |
 | `translator.js` | Google Translate API 翻譯器 |
-| `shared-translation-cache.js` | 跨頻道翻譯快取（tweetId 為 key，磁碟持久化） |
+| `shared-translation-cache.js` | Provider-aware 跨頻道翻譯快取（sourceId + provider，磁碟持久化） |
 | `translation-glossary.js` | 翻譯術語表（DeepL 詞彙修正） |
 
 ### 快取系統
@@ -226,7 +230,7 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `user-api-key-service.js` | 用戶 API Key 服務層（驗證+路由） |
+| `user-api-key-service.js` | Legacy API Key service adapter，轉接 translation/key-resolver |
 | `user-api-key-storage.js` | 用戶 API Key 儲存層（SQLite + 加密） |
 
 ---

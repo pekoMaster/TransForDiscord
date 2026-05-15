@@ -89,7 +89,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | 改互動（按鈕/Modal） | `events/interactionCreate.js` | prefix 路由表，確認不衝突 |
 | 改黑名單邏輯 | `utils/guild-blacklist-manager.js` → `db/index.js` → `db/schema.sql` | Manager → DB API → Schema 三層 |
 | 改回報流程 | `handlers/report-button-interactions.js` | 完整的 button→modal→admin 鏈 |
-| 改翻譯功能 | `utils/ai-translator.js` + `gemini-translator.js` | 多 provider 翻譯器 |
+| 改翻譯功能 | `utils/translation/translation-service.js` | Classic Twitter / Twitter V2 共用翻譯入口；legacy adapter 再接回舊檔 |
 | 改 webhook 行為 | `utils/webhook-manager.js` | Webhook 建立/快取/討論串邏輯 |
 | 改 Embed 元件 | `utils/spoiler-button-helper.js` + `utils/embed-helpers.js` | 按鈕附加 + 作者解析 |
 
