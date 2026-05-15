@@ -6,6 +6,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { translate: aiTranslate, buildApiKeyTutorialEmbed, getAvailableProviders } = require('../utils/ai-translator.js');
 const { getPreferredProvider, PROVIDERS } = require('../utils/user-api-key-storage.js');
+const { buildTextBundle } = require('../utils/translation/text-bundle');
 
 // 引入快取系統以取得完整文字
 const { getCachedContent } = require('./content-translation-interactions.js');
@@ -191,16 +192,12 @@ async function handleTranslateButton(interaction) {
         }
 
         // 組合翻譯文本：主推文 + 引用推文 + 回覆推文（一起翻譯）
-        let textToTranslate = fullOriginalText;
-        const QUOTE_SEPARATOR = '\n\n---QUOTE---\n\n';
-        const REPLY_SEPARATOR = '\n\n---REPLY---\n\n';
-        
-        if (quoteOriginalText) {
-            textToTranslate += QUOTE_SEPARATOR + quoteOriginalText;
-        }
-        if (replyOriginalText) {
-            textToTranslate += REPLY_SEPARATOR + replyOriginalText;
-        }
+        const textBundle = buildTextBundle({
+            main: fullOriginalText,
+            quote: quoteOriginalText,
+            reply: replyOriginalText
+        });
+        const textToTranslate = textBundle.combined;
 
         // 檢查快取
         const cacheKey = `${tweetId}_${userId}_${preferredProvider}`;
