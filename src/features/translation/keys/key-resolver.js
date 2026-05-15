@@ -1,5 +1,5 @@
 const { getKey, getPreferredProvider } = require('../../../../utils/user-api-key-storage');
-const { PROVIDERS, isSupportedProvider } = require('../../../../utils/translation/providers');
+const { PROVIDERS, isSupportedProvider } = require('../providers/provider-registry');
 const { failure } = require('../errors');
 
 const ENV_KEY_BY_PROVIDER = {

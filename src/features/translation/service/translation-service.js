@@ -4,10 +4,10 @@ const { resolveTranslationKey } = require('../keys/key-resolver');
 const { failure } = require('../errors');
 
 const providers = {
-    gemini: require('../../../../utils/translation/providers/gemini'),
-    openrouter: require('../../../../utils/translation/providers/openrouter'),
-    openai: require('../../../../utils/translation/providers/openai'),
-    claude: require('../../../../utils/translation/providers/claude')
+    gemini: require('../providers/gemini-provider'),
+    openrouter: require('../providers/openrouter-provider'),
+    openai: require('../providers/openai-provider'),
+    claude: require('../providers/claude-provider')
 };
 
 async function translateTweet({
