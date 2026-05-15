@@ -1,4 +1,4 @@
-const { getKey, getPreferredProvider } = require('../../../../utils/user-api-key-storage');
+const { getKey, getPreferredProvider } = require('./user-api-key-storage');
 const { PROVIDERS, isSupportedProvider } = require('../providers/provider-registry');
 const { failure } = require('../errors');
 
