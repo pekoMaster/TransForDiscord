@@ -25,6 +25,11 @@ const { translateTweet } = require('../../translation/service/translation-servic
 const sharedTranslationCache = require('../../translation/cache/shared-translation-cache');
 const db = require('../../../../db');
 const tlog = require('../../../../utils/tfd-logger');
+const {
+    safeInteractionNotice,
+    extractTweetId,
+    extractMarkerTextFromMessage
+} = require('./v2/shared');
 
 const V2_TRANSLATION_TTL_MS = 30 * 60 * 1000;
 const v2TranslationCache = new Map();
@@ -47,33 +52,6 @@ async function handleV2Interaction(interaction) {
         tlog.sysError('V2-Interactions', `互動處理失敗: ${error.message}`);
         await safeInteractionNotice(interaction, '互動處理失敗，請稍後再試。');
     }
-}
-
-async function safeInteractionNotice(interaction, content) {
-    try {
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content, flags: MessageFlags.Ephemeral });
-        } else {
-            await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
-        }
-    } catch (_) {}
-}
-
-function extractTweetId(customId) {
-    const parts = customId.split('_');
-    return parts[parts.length - 1];
-}
-
-function extractMarkerTextFromMessage(message) {
-    const origComponents = message?.components;
-    if (!origComponents?.[0]?.components?.[0]) return null;
-
-    const first = origComponents[0].components[0];
-    if (first.data?.type === 10 || first.type === 10) {
-        return first.data?.content || first.content || null;
-    }
-
-    return null;
 }
 
 async function hydrateTweetBundle(tweetId, originalURL = null) {
