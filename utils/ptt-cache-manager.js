@@ -184,6 +184,8 @@ class PTTCacheManager {
                     board: articleData.board,
                     publishTime: articleData.publishTime,
                     content: articleData.content,
+                    fullContent: articleData.fullContent,
+                    isTruncated: articleData.isTruncated,
                     pushStats: articleData.pushStats
                 },
                 pages: pages,

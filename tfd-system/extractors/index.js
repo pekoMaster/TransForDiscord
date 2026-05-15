@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TFD 系統 - 提取器索引
  * 管理所有網站提取器
  */
@@ -14,6 +14,7 @@ const BilibiliExtractor = require('./bilibili');
 const PChomeExtractor = require('./pchome');
 const LineTodayExtractor = require('./line-today');
 const UDNExtractor = require('./udn');
+const StormExtractor = require('./storm');
 const MSNExtractor = require('./msn');
 const CTSExtractor = require('./cts');
 const XFastestExtractor = require('./xfastest');
@@ -60,6 +61,7 @@ class ExtractorManager {
         this.extractors.set('linetoday', new LineTodayExtractor());
         this.extractors.set('msn', new MSNExtractor());
         this.extractors.set('udn', new UDNExtractor());
+        this.extractors.set('storm', new StormExtractor());
         this.extractors.set('cts', new CTSExtractor());
         this.extractors.set('xfastest', new XFastestExtractor());
 
@@ -209,6 +211,7 @@ class ExtractorManager {
                 linetoday: './line-today',
                 msn: './msn',
                 udn: './udn',
+                storm: './storm',
                 cts: './cts',
                 xfastest: './xfastest',
                 mobile01: './mobile01',

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TFD 系統 - URL 匹配模式
  * 各網站的正則表達式模式定義
  */
@@ -109,6 +109,12 @@ const patterns = {
     },
 
     // 新聞平台
+    storm: {
+        // 風傳媒
+        // 格式: storm.mg/{分類}/{文章ID}
+        article: /https?:\/\/(?:www\.)?storm\.mg\/([\w-]+)\/(\d+)/i
+    },
+
     linetoday: {
         article: /https?:\/\/today\.line\.me\/([a-z]{2})\/v3\/article\/([A-Za-z0-9]+)/i
     },

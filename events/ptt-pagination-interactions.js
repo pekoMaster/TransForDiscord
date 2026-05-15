@@ -31,6 +31,12 @@ module.exports = {
             return;
         }
 
+        // 展開/收回按鈕
+        if (interaction.customId.startsWith('ptt_expand_') || interaction.customId.startsWith('ptt_collapse_')) {
+            await handlePttExpandCollapse(interaction);
+            return;
+        }
+
         try {
             // 解析按鈕 ID：ptt_action_articleHash_targetPage
             const parts = interaction.customId.split('_');
@@ -178,6 +184,111 @@ async function handlePttReload(interaction) {
         try {
             await interaction.followUp({
                 content: '❌ 重整失敗，請稍後再試',
+                flags: MessageFlags.Ephemeral
+            });
+        } catch {}
+    }
+}
+
+async function handlePttExpandCollapse(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferUpdate();
+    }
+
+    const isExpand = interaction.customId.startsWith('ptt_expand_');
+    const articleHash = interaction.customId.replace(/^ptt_(expand|collapse)_/, '');
+
+    try {
+        // 從快取取得完整內容
+        let cachedData = null;
+        const memoryCacheEntry = memoryCache.get(articleHash);
+
+        if (memoryCacheEntry && (Date.now() - memoryCacheEntry.timestamp < MEMORY_CACHE_TTL)) {
+            cachedData = memoryCacheEntry.data;
+        } else {
+            const cacheManager = new PTTCacheManager();
+            cachedData = await cacheManager.loadArticleCache(articleHash);
+            if (cachedData) {
+                memoryCache.set(articleHash, { data: cachedData, timestamp: Date.now() });
+            }
+        }
+
+        if (!cachedData || !cachedData.articleData) {
+            return interaction.followUp({
+                content: '⏰ **資料已過期**，請重新貼上 PTT 網址。',
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+        const { articleData } = cachedData;
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+        // 取得目前的 embed 和 components
+        const currentEmbed = interaction.message.embeds[0];
+        if (!currentEmbed) return;
+
+        const newEmbed = EmbedBuilder.from(currentEmbed);
+
+        if (isExpand) {
+            // 展開：用完整內容替換
+            const fullContent = articleData.fullContent || articleData.content;
+            // Discord embed description 上限 4096 字
+            const displayContent = fullContent.length > 3800
+                ? fullContent.substring(0, 3800) + '...'
+                : fullContent;
+            const header = `作者 ${articleData.author}\n\n`;
+            newEmbed.setDescription(header + displayContent);
+        } else {
+            // 收回：用截斷內容替換
+            const header = `作者 ${articleData.author}\n\n`;
+            newEmbed.setDescription(header + articleData.content);
+        }
+
+        // 重建按鈕：切換展開/收回
+        const existingRows = interaction.message.components || [];
+        const newComponents = [];
+
+        for (const row of existingRows) {
+            const newRow = new ActionRowBuilder();
+            for (const component of row.components) {
+                const id = component.customId;
+                if (id && id.startsWith('ptt_expand_')) {
+                    newRow.addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`ptt_collapse_${articleHash}`)
+                            .setLabel('收回')
+                            .setStyle(ButtonStyle.Secondary)
+                    );
+                } else if (id && id.startsWith('ptt_collapse_')) {
+                    newRow.addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`ptt_expand_${articleHash}`)
+                            .setLabel('展開')
+                            .setStyle(ButtonStyle.Secondary)
+                    );
+                } else {
+                    newRow.addComponents(ButtonBuilder.from(component));
+                }
+            }
+            newComponents.push(newRow);
+        }
+
+        // 保留所有現有 embeds（多圖）
+        const allEmbeds = interaction.message.embeds.map((e, i) =>
+            i === 0 ? newEmbed : EmbedBuilder.from(e)
+        );
+
+        await interaction.editReply({
+            embeds: allEmbeds,
+            components: newComponents
+        });
+
+        tlog.sys('PTT展開', `用戶 ${interaction.user.tag} ${isExpand ? '展開' : '收回'}全文`);
+    } catch (error) {
+        tlog.sysError('PTT展開', `處理失敗: ${error.message}`);
+        try {
+            await interaction.followUp({
+                content: '❌ 操作失敗，請稍後再試。',
                 flags: MessageFlags.Ephemeral
             });
         } catch {}

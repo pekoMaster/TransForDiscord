@@ -8,13 +8,14 @@ const DOMParser = require('../utils/dom-parser');
 const TFDEmbedBuilder = require('../utils/embed-builder');
 const tfd = require('../../utils/tfd-logger');
 const PTTCacheManager = require('../../utils/ptt-cache-manager');
+const _pttCacheManager = new PTTCacheManager();
 
 class PTTExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.domParser = new DOMParser();
         this.embedBuilder = new TFDEmbedBuilder();
-        this.cacheManager = new PTTCacheManager();
+        this.cacheManager = _pttCacheManager;
         this.name = 'PTT';
     }
 
@@ -107,8 +108,8 @@ class PTTExtractor {
         // 🖼️ 提取文章中的所有圖片（排除簽名檔）
         const validImages = this.extractImagesFromArticle($);
 
-        // 🏠 儲存到快取（供翻頁和重整使用）
-        if (validImages.length > 0) {
+        // 🏠 儲存到快取（供翻頁、展開全文和重整使用）
+        if (validImages.length > 0 || articleData.isTruncated) {
             await this.cacheManager.saveToCache(displayURL, articleData, validImages);
         }
 
@@ -243,12 +244,18 @@ class PTTExtractor {
             boardName = boardElement.text().trim() || board;
         }
 
+        const fullContent = content;
+        const truncatedContent = this.truncateContent(content);
+        const isTruncated = truncatedContent !== content;
+
         return {
             title: title,
             author: author,
             board: boardName,
             publishTime: publishTime,
-            content: content,
+            content: isTruncated ? truncatedContent : content,
+            fullContent: fullContent,
+            isTruncated: isTruncated,
             pushStats: pushStats,
             url: null
         };
@@ -318,7 +325,7 @@ class PTTExtractor {
         text = text.replace(/--[\s\S]*?--/g, '');
         text = text.replace(/\n{3,}/g, '\n\n').trim();
 
-        return this.truncateContent(text);
+        return text;
     }
 
     /**
@@ -375,7 +382,7 @@ class PTTExtractor {
             truncated += content[i];
             i++;
         }
-        return truncated + '...(詳全文)';
+        return truncated + '\n\n-# ⬇️ 點擊「展開」查看完整內文';
     }
 
     /**
@@ -423,51 +430,6 @@ class PTTExtractor {
         content = content
             .replace(/\n{3,}/g, '\n\n') // 移除過多換行
             .trim();
-
-        // 限制中文字字元數為 100（排除網址）
-        const urlPattern = /https?:\/\/[^\s]+/g;
-        const urls = content.match(urlPattern) || [];
-
-        // 移除網址後計算中文字字元數
-        let contentWithoutUrls = content;
-        urls.forEach(url => {
-            contentWithoutUrls = contentWithoutUrls.replace(url, '');
-        });
-
-        // 計算中文字字元數
-        const chineseCharCount = (contentWithoutUrls.match(/[\u4e00-\u9fff]/g) || []).length;
-
-        if (chineseCharCount > 100) {
-            // 需要截斷
-            let charCount = 0;
-            let truncatedContent = '';
-            let i = 0;
-
-            while (i < content.length && charCount < 100) {
-                const char = content[i];
-
-                // 檢查是否為網址開始
-                if (content.substr(i).match(/^https?:\/\//)) {
-                    const urlMatch = content.substr(i).match(/^https?:\/\/[^\s]+/);
-                    if (urlMatch) {
-                        // 完整保留網址
-                        truncatedContent += urlMatch[0];
-                        i += urlMatch[0].length;
-                        continue;
-                    }
-                }
-
-                // 如果是中文字，計入字元數
-                if (char.match(/[\u4e00-\u9fff]/)) {
-                    charCount++;
-                }
-
-                truncatedContent += char;
-                i++;
-            }
-
-            content = truncatedContent + '...(詳全文)';
-        }
 
         return content;
     }
@@ -829,16 +791,34 @@ class PTTExtractor {
             }
         }
 
-        // 🔄 重整按鈕（所有文章都加入）
+        // 🔘 功能按鈕列
         const articleHash = this.cacheManager.extractArticleHash(originalURL);
-        const reloadBtn = new ButtonBuilder()
-            .setCustomId(`ptt_reload_${articleHash}`)
-            .setLabel('重整')
-            .setStyle(ButtonStyle.Secondary);
+        const actionButtons = [];
+
+        // 📖 展開按鈕（文章被截斷時才顯示）
+        if (articleData.isTruncated) {
+            actionButtons.push(
+                new ButtonBuilder()
+                    .setCustomId(`ptt_expand_${articleHash}`)
+                    .setLabel('展開')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+        }
+
+        // 🔄 重整按鈕（所有文章都加入）
+        actionButtons.push(
+            new ButtonBuilder()
+                .setCustomId(`ptt_reload_${articleHash}`)
+                .setLabel('重整')
+                .setStyle(ButtonStyle.Secondary)
+        );
+
         if (components.length > 0) {
-            components[0].addComponents(reloadBtn);
+            for (const btn of actionButtons) {
+                components[0].addComponents(btn);
+            }
         } else {
-            components = [new ActionRowBuilder().addComponents(reloadBtn)];
+            components = [new ActionRowBuilder().addComponents(...actionButtons)];
         }
 
             return {

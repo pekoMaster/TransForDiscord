@@ -1,4 +1,4 @@
-{
+﻿{
   "socialMedia": {
     "twitter": {
       "enabled": true,
@@ -74,6 +74,12 @@
     }
   },
   "news": {
+    "storm": {
+      "enabled": true,
+      "domains": ["storm.mg", "www.storm.mg"],
+      "name": "風傳媒",
+      "description": "風傳媒新聞平台"
+    },
     "linetoday": {
       "enabled": true,
       "domains": ["today.line.me"],

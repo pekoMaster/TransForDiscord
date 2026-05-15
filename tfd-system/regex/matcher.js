@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TFD 系統 - URL 匹配器
  * URL 解析和網站類型識別
  */
@@ -231,6 +231,9 @@ class URLMatcher {
             // ehentai, nhentai: 已移除 (2026-04-12)
             linetoday: {
                 article: (m) => ({ language: m[1], articleId: m[2] })
+            },
+            storm: {
+                article: (m) => ({ category: m[1], articleId: m[2] })
             },
             msn: {
                 article: (m) => ({ locale: m[1], articleId: m[2] })
