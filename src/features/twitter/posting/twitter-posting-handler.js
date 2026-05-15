@@ -27,7 +27,7 @@ class TwitterInteractionHandler {
 
     initTwitterClient() {
         try {
-            const { 
+            const {
                 X_CONSUMER_API_KEY,
                 X_CONSUMER_API_KEY_SECRET,
                 X_ACCESS_TOKEN,
@@ -64,7 +64,7 @@ class TwitterInteractionHandler {
             }
 
             const messageId = interaction.customId.split(':')[1];
-            
+
             // 從原始訊息獲取熱門訊息資料
             const originalEmbed = interaction.message.embeds[0];
             if (!originalEmbed) {
@@ -310,11 +310,11 @@ class TwitterInteractionHandler {
             }
 
             const [action, messageId] = interaction.customId.split(':');
-            
+
             if (action === 'twitter_cancel') {
                 // 處理取消
                 this.pendingTweets?.delete(messageId);
-                
+
                 const embed = new EmbedBuilder()
                     .setTitle('❌ 已取消發推')
                     .setDescription('推特發文已取消。')
@@ -355,7 +355,7 @@ class TwitterInteractionHandler {
                 await interaction.deferUpdate();
 
                 const result = await this.postTweet(pendingTweet.content, pendingTweet.imageUrls || []);
-                
+
                 let embed;
                 if (result.success) {
                     embed = new EmbedBuilder()
@@ -388,7 +388,7 @@ class TwitterInteractionHandler {
 
         } catch (error) {
             tlog.sysError('Twitter-發推', `處理確認按鈕錯誤: ${error}`);
-            
+
             const embed = new EmbedBuilder()
                 .setTitle('❌ 處理錯誤')
                 .setDescription('處理推文時發生錯誤，請稍後再試。')
@@ -517,7 +517,7 @@ class TwitterInteractionHandler {
             }
 
             const tweet = await this.twitterClient.v2.tweet(tweetOptions);
-            
+
             return {
                 success: true,
                 url: `https://twitter.com/user/status/${tweet.data.id}`,
@@ -526,10 +526,10 @@ class TwitterInteractionHandler {
 
         } catch (error) {
             tlog.sysError('Twitter-發推', `發推錯誤: ${error}`);
-            
+
             let errorMessage = '未知錯誤';
             let diagnosticInfo = '';
-            
+
             // 詳細錯誤分析
             if (error.code === 403 || (error.data && error.data.status === 403)) {
                 tlog.sysError('Twitter-發推', `403 認證錯誤 - 詳細資訊: ${{
@@ -538,10 +538,10 @@ class TwitterInteractionHandler {
                     data: error.data,
                     errors: error.errors
                 }}`);
-                
+
                 errorMessage = '403 認證錯誤';
                 diagnosticInfo = '\n可能原因:\n• Twitter應用程式權限不足(需要Read and Write)\n• Access Token過期或無效\n• 帳戶被限制\n• API金鑰配置錯誤';
-                
+
                 if (error.data && error.data.detail) {
                     diagnosticInfo += `\nAPI詳情: ${error.data.detail}`;
                 }
@@ -553,7 +553,7 @@ class TwitterInteractionHandler {
             } else if (error.message) {
                 errorMessage = error.message;
             }
-            
+
             tlog.sysError('Twitter-發推', `錯誤診斷: ${errorMessage}${diagnosticInfo}`);
 
             return {

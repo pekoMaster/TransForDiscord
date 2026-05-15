@@ -296,7 +296,7 @@ async function handleMergeImages(interaction, tweetId) {
                     if (!customId.startsWith('twitter_merge_') && !customId.startsWith('twitter_split_')) {
                         // 如果按鈕有 emoji，就不需要 label；否則確保 label 不為空
                         const labelText = component.label || '按鈕';
-                        
+
                         const btn = new ButtonBuilder()
                             .setCustomId(customId)
                             .setLabel(labelText)
@@ -434,7 +434,7 @@ async function handleSplitImages(interaction, tweetId) {
                     if (!customId.startsWith('twitter_merge_') && !customId.startsWith('twitter_split_')) {
                         // 如果按鈕有 emoji，就不需要 label；否則確保 label 不為空
                         const labelText = component.label || '按鈕';
-                        
+
                         const btn = new ButtonBuilder()
                             .setCustomId(customId)
                             .setLabel(labelText)

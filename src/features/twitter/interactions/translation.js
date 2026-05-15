@@ -1,4 +1,4 @@
-﻿﻿/**
+﻿/**
  * Twitter AI 翻譯互動處理器
  * 處理推文翻譯按鈕的點擊事件
  */
@@ -147,7 +147,7 @@ async function handleTranslateButton(interaction) {
         let quoteContext = '';
         let quoteOriginalText = ''; // 引用推文的原文（用於翻譯）
         let replyOriginalText = ''; // 回覆推文的原文（用於翻譯）
-        
+
         if (tweetData) {
             // 引用推文
             if (tweetData.quote) {
@@ -278,21 +278,21 @@ async function handleTranslateButton(interaction) {
             // 拆分翻譯結果（主推文 + 引用推文 + 回覆推文）
             const fullTranslation = translateResult.text;
             let remaining = fullTranslation;
-            
+
             // 先拆 REPLY（從後面拆，避免順序依賴）
             if (replyOriginalText && remaining.includes('---REPLY---')) {
                 const replyParts = remaining.split(/---REPLY---/);
                 remaining = replyParts[0];
                 translatedReplyText = replyParts.slice(1).join('').trim();
             }
-            
+
             // 再拆 QUOTE
             if (quoteOriginalText && remaining.includes('---QUOTE---')) {
                 const quoteParts = remaining.split(/---QUOTE---/);
                 remaining = quoteParts[0];
                 translatedQuoteText = quoteParts.slice(1).join('').trim();
             }
-            
+
             translatedFullText = remaining.replace(/---QUOTE---/g, '').replace(/---REPLY---/g, '').trim();
 
             // 儲存完整翻譯到快取（包含引用和回覆翻譯）

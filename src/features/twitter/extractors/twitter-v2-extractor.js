@@ -864,7 +864,7 @@ class TFDTwitterExtractor {
                     }
                 });
             }
-            
+
             // 2026-04-12: 若沒有媒體但有卡片圖片（外部連結卡片），使用卡片圖片
             if (images.length === 0 && tweet.card && tweet.card.image && tweet.card.image.url) {
                 const cardImageUrl = tweet.card.image.url;
@@ -1330,7 +1330,7 @@ class TFDTwitterExtractor {
                     });
                 }
             }
-            
+
             // 2026-04-12: 若沒有媒體但有卡片圖片（外部連結卡片），使用卡片圖片
             if (images.length === 0 && tweet.card && tweet.card.image && tweet.card.image.url) {
                 const cardImageUrl = tweet.card.image.url;
