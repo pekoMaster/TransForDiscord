@@ -1,19 +1,33 @@
 /**
- * Twitter V2 Container 互動處理器
- * 處理 V2 影片推文的按鈕互動（翻譯/原文、展開/收起引用回覆、展開/收起全文）
+ * Twitter V2 Container interaction handlers.
+ * Handles translation, original view, expand/collapse, reload, and spoiler report.
  */
 
-const { MessageFlags, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const {
+    ActionRowBuilder,
+    MessageFlags,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
+} = require('discord.js');
 const TFDTwitterExtractor = require('../tfd-system/extractors/twitter-v2.js');
-const { buildV2Container, getCachedTweetData, cacheTweetData, deriveStateFromComponents } = require('./twitter-v2-container-builder');
+const {
+    buildV2Container,
+    getCachedTweetData,
+    cacheTweetData,
+    deriveStateFromComponents
+} = require('./twitter-v2-container-builder');
 const { lookupUrl } = require('../tfd-system/utils/url-stats');
 const { getMessageState, setMessageState } = require('../utils/twitter-v2-state-store');
+const { getPreferredProvider, PROVIDERS } = require('../utils/user-api-key-storage');
+const { buildTextBundle } = require('../utils/translation/text-bundle');
+const { translateTweet } = require('../utils/translation/translation-service');
 const db = require('../db');
 const tlog = require('../utils/tfd-logger');
 
-/**
- * 主路由
- */
+const V2_TRANSLATION_TTL_MS = 30 * 60 * 1000;
+const v2TranslationCache = new Map();
+
 async function handleV2Interaction(interaction) {
     if (!interaction.isButton()) return;
     const id = interaction.customId;
@@ -29,29 +43,26 @@ async function handleV2Interaction(interaction) {
             await handleV2Spoiler(interaction);
         }
     } catch (error) {
-        tlog.sysError('V2-Interactions', `錯誤: ${error.message}`);
-        try {
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: '❌ 處理時發生錯誤', flags: MessageFlags.Ephemeral });
-            } else {
-                await interaction.followUp({ content: '❌ 處理時發生錯誤', flags: MessageFlags.Ephemeral });
-            }
-        } catch (_) {}
+        tlog.sysError('V2-Interactions', `互動處理失敗: ${error.message}`);
+        await safeInteractionNotice(interaction, '互動處理失敗，請稍後再試。');
     }
 }
 
-/**
- * 從 customId 提取 tweetId
- */
+async function safeInteractionNotice(interaction, content) {
+    try {
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content, flags: MessageFlags.Ephemeral });
+        } else {
+            await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
+        }
+    } catch (_) {}
+}
+
 function extractTweetId(customId) {
-    // 格式: v2_action_tweetId 或 v2_action_subaction_tweetId
     const parts = customId.split('_');
     return parts[parts.length - 1];
 }
 
-/**
- * 從目前訊息擷取 marker text，不再讓 reload 重新猜測整個版型。
- */
 function extractMarkerTextFromMessage(message) {
     const origComponents = message?.components;
     if (!origComponents?.[0]?.components?.[0]) return null;
@@ -102,12 +113,32 @@ async function hydrateTweetBundle(tweetId, originalURL = null) {
     return hydrated;
 }
 
-// 翻譯快取 Map<tweetId, { translatedText, translatedQuoteText, translatedReplyText }>
-const v2TranslationCache = new Map();
+function getV2TranslationCacheKey(tweetId, provider = 'unknown') {
+    return `${tweetId}_${provider || 'unknown'}`;
+}
+
+function getCachedV2Translation(tweetId, provider = null) {
+    if (provider) {
+        const providerCached = v2TranslationCache.get(getV2TranslationCacheKey(tweetId, provider));
+        if (providerCached) return providerCached;
+    }
+    return v2TranslationCache.get(tweetId);
+}
+
+function setCachedV2Translation(tweetId, provider, translationData) {
+    const providerKey = getV2TranslationCacheKey(tweetId, provider);
+    v2TranslationCache.set(providerKey, translationData);
+    v2TranslationCache.set(tweetId, translationData);
+
+    setTimeout(() => {
+        v2TranslationCache.delete(providerKey);
+        v2TranslationCache.delete(tweetId);
+    }, V2_TRANSLATION_TTL_MS);
+}
 
 function buildFallbackState(interaction, tweetId, cached = null) {
     const derived = deriveStateFromComponents(interaction.message.components, tweetId);
-    const cachedTranslation = v2TranslationCache.get(tweetId);
+    const cachedTranslation = getCachedV2Translation(tweetId);
 
     return {
         tweetId,
@@ -119,13 +150,10 @@ function buildFallbackState(interaction, tweetId, cached = null) {
         translatedReplyText: cachedTranslation?.translatedReplyText || null,
         isExpanded: Boolean(derived.isExpanded),
         isQuoteShown: Boolean(derived.isQuoteShown),
-        isReplyShown: Boolean(derived.isReplyShown),
+        isReplyShown: Boolean(derived.isReplyShown)
     };
 }
 
-/**
- * 重建並更新 V2 Container
- */
 async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, options = {}) {
     const { refreshData = false } = options;
 
@@ -139,7 +167,10 @@ async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, optio
     }
 
     if (!cached) {
-        await interaction.followUp({ content: '❌ 推文資料已過期，請重新貼文', flags: MessageFlags.Ephemeral });
+        await interaction.followUp({
+            content: '找不到推文資料，請重新貼一次推文或稍後再試。',
+            flags: MessageFlags.Ephemeral
+        });
         return false;
     }
 
@@ -171,7 +202,7 @@ async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, optio
         isExpanded: newState.isExpanded,
         quoteData,
         replyData,
-        urlStats,
+        urlStats
     });
 
     const { TextDisplayBuilder, SeparatorBuilder } = require('discord.js');
@@ -187,16 +218,13 @@ async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, optio
         content: null,
         embeds: [],
         components: [container],
-        flags: MessageFlags.IsComponentsV2,
+        flags: MessageFlags.IsComponentsV2
     });
 
     setMessageState(interaction.message.id, newState);
     return true;
 }
 
-/**
- * V2 翻譯 / 原文切換
- */
 async function handleV2Translate(interaction) {
     const tweetId = extractTweetId(interaction.customId);
     const isTranslateAction = interaction.customId.startsWith('v2_translate_');
@@ -204,120 +232,84 @@ async function handleV2Translate(interaction) {
     await interaction.deferUpdate();
 
     if (!isTranslateAction) {
-        // 切回原文
         await rebuildAndUpdate(interaction, tweetId, { isTranslated: false });
         tlog.log('V2-翻譯', interaction, `切回原文: ${tweetId}`);
         return;
     }
 
-    // 翻譯
     const userId = interaction.user.id;
+    const preferredProvider = getPreferredProvider(userId);
+    const providerName = PROVIDERS[preferredProvider]?.name || preferredProvider;
 
-    // 檢查 API Key
-    const { getInstance: getApiKeyService } = require('../utils/user-api-key-service.js');
-    const apiKeyService = getApiKeyService();
-    const userApiKey = await apiKeyService.getApiKey(userId, 'gemini');
-
-    if (!userApiKey) {
+    if (!preferredProvider) {
         await interaction.followUp({
-            content: `## 🌐 翻譯功能需要設定 API Key\n\n此功能使用 **Google Gemini AI** 進行翻譯，需要你提供自己的 API Key。\n\n### 📝 設定步驟：\n1. 前往 [Google AI Studio](https://aistudio.google.com/app/apikey) 取得免費 API Key\n2. 使用 \`/pe api add\` 指令登記你的 API Key`,
+            content: '請先使用 `/pe api model` 選擇翻譯引擎，再使用翻譯功能。',
             flags: MessageFlags.Ephemeral
         });
         return;
     }
 
-    // 檢查翻譯快取
-    const cached = v2TranslationCache.get(tweetId);
+    const cached = getCachedV2Translation(tweetId, preferredProvider);
     if (cached) {
         await rebuildAndUpdate(interaction, tweetId, {
             isTranslated: true,
-            ...cached,
+            ...cached
         });
-        tlog.log('V2-翻譯', interaction, `快取翻譯: ${tweetId}`);
+        tlog.log('V2-翻譯', interaction, `使用快取翻譯: ${tweetId}`);
         return;
     }
 
-    // 取得推文資料
     const tweetData = getCachedTweetData(tweetId);
     if (!tweetData?.tweet) {
-        await interaction.followUp({ content: '❌ 推文資料已過期', flags: MessageFlags.Ephemeral });
-        return;
-    }
-
-    const tweet = tweetData.tweet;
-    const quoteData = tweetData.quoteData;
-    const replyData = tweetData.replyData;
-
-    // 組合翻譯文本
-    let textToTranslate = tweet.text || '';
-    const QUOTE_SEP = '\n\n---QUOTE---\n\n';
-    const REPLY_SEP = '\n\n---REPLY---\n\n';
-
-    if (quoteData?.tweet?.text) textToTranslate += QUOTE_SEP + quoteData.tweet.text;
-    if (replyData?.tweet?.text) textToTranslate += REPLY_SEP + replyData.tweet.text;
-
-    // 執行翻譯
-    const { getInstance: getGeminiTranslator } = require('../utils/gemini-translator.js');
-    const geminiTranslator = getGeminiTranslator();
-
-    const translateOptions = { targetLanguage: '繁體中文' };
-    if (tweet.author?.name) translateOptions.authorName = tweet.author.name;
-
-    tlog.log('V2-翻譯', interaction, `開始翻譯: ${tweetId} (${textToTranslate.length} 字)`);
-
-    const result = await geminiTranslator.translateWithUserKey(textToTranslate, userApiKey, translateOptions);
-
-    if (!result.success) {
-        const errorMap = {
-            'QUOTA_EXHAUSTED': '⚠️ 翻譯服務目前無法使用，請和開發者聯絡。',
-            'INVALID_API_KEY': '❌ API Key 無效，請使用 `/pe api add` 重新設定。',
-            'TIMEOUT': '⏰ 翻譯超時，請稍後再試',
-        };
         await interaction.followUp({
-            content: errorMap[result.errorType] || `❌ 翻譯失敗：${result.error || '未知錯誤'}`,
+            content: '找不到推文資料，請重新貼一次推文或按重整後再試。',
             flags: MessageFlags.Ephemeral
         });
         return;
     }
 
-    // 拆分翻譯結果
-    let fullTranslation = result.text;
-    let translatedQuoteText = '';
-    let translatedReplyText = '';
+    const { tweet, quoteData, replyData } = tweetData;
+    const textBundle = buildTextBundle({
+        main: tweet.text || '',
+        quote: quoteData?.tweet?.text || '',
+        reply: replyData?.tweet?.text || ''
+    });
 
-    if (replyData?.tweet?.text && fullTranslation.includes('---REPLY---')) {
-        const parts = fullTranslation.split(/---REPLY---/);
-        fullTranslation = parts[0];
-        translatedReplyText = parts.slice(1).join('').trim();
+    tlog.log('V2-翻譯', interaction, `開始翻譯: ${tweetId} (${providerName}, ${textBundle.combined.length} 字)`);
+
+    const result = await translateTweet({
+        textBundle,
+        userId,
+        provider: preferredProvider,
+        authorName: tweet.author?.name || null,
+        context: '',
+        allowEnvFallback: false
+    });
+
+    if (!result.success) {
+        await interaction.followUp({
+            content: result.error || '翻譯失敗，請稍後再試或更換翻譯引擎。',
+            flags: MessageFlags.Ephemeral
+        });
+        return;
     }
-    if (quoteData?.tweet?.text && fullTranslation.includes('---QUOTE---')) {
-        const parts = fullTranslation.split(/---QUOTE---/);
-        fullTranslation = parts[0];
-        translatedQuoteText = parts.slice(1).join('').trim();
-    }
-    const translatedText = fullTranslation.replace(/---QUOTE---/g, '').replace(/---REPLY---/g, '').trim();
 
-    // 快取翻譯結果
-    const translationData = { translatedText, translatedQuoteText, translatedReplyText };
-    v2TranslationCache.set(tweetId, translationData);
-
-    // 30 分鐘後清除快取
-    setTimeout(() => v2TranslationCache.delete(tweetId), 30 * 60 * 1000);
-
-    await apiKeyService.incrementUsageCount(userId, 'gemini');
+    const translationData = {
+        translatedText: result.translated.main,
+        translatedQuoteText: result.translated.quote,
+        translatedReplyText: result.translated.reply
+    };
+    setCachedV2Translation(tweetId, preferredProvider, translationData);
 
     await rebuildAndUpdate(interaction, tweetId, {
         isTranslated: true,
-        ...translationData,
+        ...translationData
     });
 
-    tlog.log('V2-翻譯', interaction, `翻譯完成: ${tweetId}`);
-    try { require('../db').tfdStats.record('translation', interaction.guildId, interaction.user.id); } catch (_) {}
+    tlog.log('V2-翻譯', interaction, `翻譯完成: ${tweetId} (${providerName})`);
+    try { db.tfdStats.record('translation', interaction.guildId, interaction.user.id); } catch (_) {}
 }
 
-/**
- * V2 展開/收起（引用、回覆、全文）
- */
 async function handleV2Toggle(interaction, type) {
     const tweetId = extractTweetId(interaction.customId);
     await interaction.deferUpdate();
@@ -330,8 +322,7 @@ async function handleV2Toggle(interaction, type) {
         overrides.isExpanded = isExpanding;
     }
 
-    // 保留翻譯狀態
-    const cachedTranslation = v2TranslationCache.get(tweetId);
+    const cachedTranslation = getCachedV2Translation(tweetId);
     if (cachedTranslation) {
         const currentState = getMessageState(interaction.message.id) || buildFallbackState(interaction, tweetId, getCachedTweetData(tweetId));
         if (currentState.isTranslated) {
@@ -343,14 +334,9 @@ async function handleV2Toggle(interaction, type) {
     }
 
     await rebuildAndUpdate(interaction, tweetId, overrides);
-    tlog.log('V2-切換', interaction, `${type} 切換: ${tweetId}`);
+    tlog.log('V2-展開', interaction, `${type} 切換: ${tweetId}`);
 }
 
-module.exports = { handleV2Interaction, handleV2SpoilerModalSubmit };
-
-/**
- * V2 重整
- */
 async function handleV2Reload(interaction) {
     const tweetId = extractTweetId(interaction.customId);
     await interaction.deferUpdate();
@@ -361,26 +347,26 @@ async function handleV2Reload(interaction) {
         }
     } catch (error) {
         tlog.sysError('V2-Interactions', `重整失敗: ${error.message}`);
-        await interaction.followUp({ content: '❌ 重整失敗，請稍後再試', flags: MessageFlags.Ephemeral });
+        await interaction.followUp({
+            content: '重整失敗，請稍後再試。',
+            flags: MessageFlags.Ephemeral
+        });
     }
 }
 
-/**
- * V2 防爆雷按鈕 → 顯示 Modal
- */
 async function handleV2Spoiler(interaction) {
     const tweetId = extractTweetId(interaction.customId);
     const messageId = interaction.message.id;
     const modal = new ModalBuilder()
         .setCustomId(`v2_spoiler_modal_${tweetId}_${messageId}`)
-        .setTitle('防爆雷理由')
+        .setTitle('回報防爆雷')
         .addComponents(
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
                     .setCustomId('spoiler_reason')
-                    .setLabel('請輸入防爆雷的理由')
+                    .setLabel('請輸入回報原因')
                     .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('例如：劇透、敏感圖片')
+                    .setPlaceholder('例如：內容含有劇情雷')
                     .setRequired(true)
                     .setMaxLength(100)
             )
@@ -388,117 +374,34 @@ async function handleV2Spoiler(interaction) {
     await interaction.showModal(modal);
 }
 
-/**
- * V2 防爆雷 Modal 提交
- */
 async function handleV2SpoilerModalSubmit(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    // customId: v2_spoiler_modal_{tweetId}_{messageId}
     const withoutPrefix = interaction.customId.replace('v2_spoiler_modal_', '');
     const underscoreIdx = withoutPrefix.indexOf('_');
     const tweetId = withoutPrefix.substring(0, underscoreIdx);
     const messageId = withoutPrefix.substring(underscoreIdx + 1);
-
     const reason = interaction.fields.getTextInputValue('spoiler_reason');
     const operatorId = interaction.user.id;
 
-    // 取得原始訊息
     let message;
     try {
         message = await interaction.channel.messages.fetch(messageId);
-    } catch (e) {
-        await interaction.editReply({ content: '❌ 找不到目標訊息，可能已被刪除' });
+    } catch (_) {
+        await interaction.editReply({ content: '找不到原始訊息，可能已被刪除。' });
         return;
     }
 
-    // 送 log（per-guild 日誌頻道）
-    try {
-        const guildSettings = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
-        const logChannelId = guildSettings?.log_channel_id;
-        if (logChannelId) {
-            const logChannel = await interaction.client.channels.fetch(logChannelId).catch(() => null);
-            if (logChannel) {
-                await logChannel.send({
-                    embeds: [{
-                        color: 0x5865F2,
-                        description: `🕶️ 對推文 \`${tweetId}\` 使用了防爆雷`,
-                        fields: [
-                            { name: '操作者', value: `<@${operatorId}>`, inline: true },
-                            { name: '頻道', value: `<#${interaction.channelId}>`, inline: true },
-                            { name: '理由', value: reason || '（無）', inline: false },
-                        ],
-                        timestamp: new Date().toISOString(),
-                    }],
-                    allowedMentions: { parse: [] }
-                });
-            }
-        }
-    } catch (e) {
-        tlog.sysError('V2-Spoiler', `送 log 失敗: ${e.message}`);
-    }
+    await sendSpoilerLog(interaction, tweetId, operatorId, reason);
 
-    // 取得快取推文資料
     const cached = getCachedTweetData(tweetId);
+    const markerText = extractMarkerTextFromMessage(message);
+    const spoilerContainer = buildSpoilerContainer(cached, markerText, operatorId, reason, tweetId);
 
-    // 從原訊息的 V2 Container 提取 marker text
-    let markerText = null;
-    try {
-        const origComps = message.components;
-        if (origComps?.[0]?.components?.[0]) {
-            const first = origComps[0].components[0];
-            const content = first.content || first.data?.content;
-            // marker 是 -# 開頭的程式行，不是推文內文
-            if (content && content.startsWith('-#')) {
-                markerText = content;
-            }
-        }
-    } catch (e) { /* 靜默失敗 */ }
-
-    // 建構防爆雷 V2 Container
-    const {
-        ContainerBuilder, TextDisplayBuilder, SeparatorBuilder,
-        MediaGalleryBuilder, MediaGalleryItemBuilder
-    } = require('discord.js');
-
-    const spoilerContainer = new ContainerBuilder().setAccentColor(0xED4245);
-    const spoilerNotice = `-# 🕶️ <@${operatorId}> 將此推文上了防爆雷\n-# 理由：${reason}`;
-    const headerParts = [];
-    if (markerText) headerParts.push(markerText);
-    headerParts.push(spoilerNotice);
-    spoilerContainer.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(headerParts.join('\n'))
-    );
-    spoilerContainer.addSeparatorComponents(new SeparatorBuilder());
-
-    if (cached?.tweet) {
-        const tweet = cached.tweet;
-        const author = tweet.author;
-        const authorUrl = `https://twitter.com/${author.screen_name}`;
-        spoilerContainer.addTextDisplayComponents(
-            new TextDisplayBuilder().setContent(
-                `||[@${author.screen_name}](${authorUrl})\n**${author.name}**\n${tweet.text || ''}||`
-            )
-        );
-        const media = tweet.media?.all || [];
-        if (media.length > 0) {
-            const items = media.map(item =>
-                new MediaGalleryItemBuilder().setURL(item.url).setSpoiler(true)
-            );
-            spoilerContainer.addMediaGalleryComponents(
-                new MediaGalleryBuilder().addItems(...items)
-            );
-        }
-    } else {
-        spoilerContainer.addTextDisplayComponents(
-            new TextDisplayBuilder().setContent('||（推文內容已過期，無法顯示）||')
-        );
-    }
-
-    // 發送防爆雷版本
     const { sendWithWebhook, canUseWebhook, hasWebhookPermission } = require('../utils/webhook-manager.js');
     const channel = interaction.channel;
     let sent = false;
+
     try {
         if (message.webhookId && canUseWebhook(channel) && hasWebhookPermission(channel)) {
             await sendWithWebhook(channel, {
@@ -515,15 +418,93 @@ async function handleV2SpoilerModalSubmit(interaction) {
             });
         }
         sent = true;
-    } catch (e) {
-        tlog.sysError('V2-Spoiler', `發送失敗: ${e.message}`);
+    } catch (error) {
+        tlog.sysError('V2-Spoiler', `發送防爆雷訊息失敗: ${error.message}`);
     }
 
     if (sent) {
-        try { await message.delete(); } catch (e) {
-            tlog.sysError('V2-Spoiler', `刪除原訊息失敗: ${e.message}`);
+        try {
+            await message.delete();
+        } catch (error) {
+            tlog.sysError('V2-Spoiler', `刪除原始訊息失敗: ${error.message}`);
         }
     }
 
-    await interaction.editReply({ content: '🕶️ 已套用防爆雷' });
+    await interaction.editReply({ content: sent ? '防爆雷訊息已重新送出。' : '防爆雷處理失敗，請稍後再試。' });
 }
+
+async function sendSpoilerLog(interaction, tweetId, operatorId, reason) {
+    try {
+        const guildSettings = interaction.guildId ? db.guilds.get(interaction.guildId) : null;
+        const logChannelId = guildSettings?.log_channel_id;
+        if (!logChannelId) return;
+
+        const logChannel = await interaction.client.channels.fetch(logChannelId).catch(() => null);
+        if (!logChannel) return;
+
+        await logChannel.send({
+            embeds: [{
+                color: 0x5865F2,
+                description: `防爆雷回報：\`${tweetId}\``,
+                fields: [
+                    { name: '操作者', value: `<@${operatorId}>`, inline: true },
+                    { name: '頻道', value: `<#${interaction.channelId}>`, inline: true },
+                    { name: '原因', value: reason || '未提供', inline: false }
+                ],
+                timestamp: new Date().toISOString()
+            }],
+            allowedMentions: { parse: [] }
+        });
+    } catch (error) {
+        tlog.sysError('V2-Spoiler', `寫入 log 失敗: ${error.message}`);
+    }
+}
+
+function buildSpoilerContainer(cached, markerText, operatorId, reason) {
+    const {
+        ContainerBuilder,
+        MediaGalleryBuilder,
+        MediaGalleryItemBuilder,
+        SeparatorBuilder,
+        TextDisplayBuilder
+    } = require('discord.js');
+
+    const spoilerContainer = new ContainerBuilder().setAccentColor(0xED4245);
+    const spoilerNotice = `-# <@${operatorId}> 已將此推文標記為防爆雷\n-# 原因：${reason}`;
+    const headerParts = [];
+    if (markerText) headerParts.push(markerText);
+    headerParts.push(spoilerNotice);
+    spoilerContainer.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(headerParts.join('\n'))
+    );
+    spoilerContainer.addSeparatorComponents(new SeparatorBuilder());
+
+    if (cached?.tweet) {
+        const tweet = cached.tweet;
+        const author = tweet.author || {};
+        const authorUrl = `https://twitter.com/${author.screen_name || 'i'}`;
+        spoilerContainer.addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                `||[@${author.screen_name || 'unknown'}](${authorUrl})\n**${author.name || 'Unknown'}**\n${tweet.text || ''}||`
+            )
+        );
+
+        const media = tweet.media?.all || [];
+        if (media.length > 0) {
+            const items = media.map(item =>
+                new MediaGalleryItemBuilder().setURL(item.url).setSpoiler(true)
+            );
+            spoilerContainer.addMediaGalleryComponents(
+                new MediaGalleryBuilder().addItems(...items)
+            );
+        }
+    } else {
+        spoilerContainer.addTextDisplayComponents(
+            new TextDisplayBuilder().setContent('||無法取得原始推文內容。||')
+        );
+    }
+
+    return spoilerContainer;
+}
+
+module.exports = { handleV2Interaction, handleV2SpoilerModalSubmit };
