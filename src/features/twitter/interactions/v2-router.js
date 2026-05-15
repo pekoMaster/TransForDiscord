@@ -10,11 +10,9 @@ const {
     TextInputBuilder,
     TextInputStyle
 } = require('discord.js');
-const TFDTwitterExtractor = require('../extractors/twitter-v2-extractor');
 const {
     buildV2Container,
     getCachedTweetData,
-    cacheTweetData,
     deriveStateFromComponents
 } = require('../containers/v2-container-builder');
 const { lookupUrl } = require('../../../../tfd-system/utils/url-stats');
@@ -34,6 +32,7 @@ const {
     getCachedV2Translation,
     setCachedV2Translation
 } = require('./v2/translation-cache');
+const { hydrateTweetBundle } = require('./v2/tweet-data');
 
 async function handleV2Interaction(interaction) {
     if (!interaction.isButton()) return;
@@ -53,44 +52,6 @@ async function handleV2Interaction(interaction) {
         tlog.sysError('V2-Interactions', `互動處理失敗: ${error.message}`);
         await safeInteractionNotice(interaction, '互動處理失敗，請稍後再試。');
     }
-}
-
-async function hydrateTweetBundle(tweetId, originalURL = null) {
-    const HTTPClient = require('../../../../tfd-system/utils/http-client');
-    const httpClient = new HTTPClient();
-    const resp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, { timeout: 5000 });
-    if (!resp?.tweet) return null;
-
-    const tweet = resp.tweet;
-    const fallbackOriginalURL = originalURL || `https://twitter.com/i/status/${tweetId}`;
-    const extractor = new TFDTwitterExtractor();
-
-    let quoteData = null;
-    let replyData = null;
-
-    if (extractor.isReplyTweet(tweet)) {
-        const replyInfo = await extractor.getReplyTweetInfo(tweet);
-        if (replyInfo) {
-            replyData = {
-                tweet: replyInfo.tweet || null,
-                tweetId: replyInfo.tweetId || null
-            };
-        }
-    }
-
-    if (extractor.isQuoteTweet(tweet)) {
-        const quoteInfo = extractor.getQuoteTweetInfo(tweet);
-        if (quoteInfo) {
-            quoteData = {
-                tweet: quoteInfo.tweet || null,
-                tweetId: quoteInfo.tweetId || null
-            };
-        }
-    }
-
-    const hydrated = { tweet, originalURL: fallbackOriginalURL, quoteData, replyData };
-    cacheTweetData(tweetId, hydrated);
-    return hydrated;
 }
 
 function buildFallbackState(interaction, tweetId, cached = null) {
