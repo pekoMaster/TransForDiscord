@@ -77,6 +77,8 @@ MessageCreate
 
 ## 🔗 互動處理器 (`handlers/`)
 
+> Twitter/X 主路徑：`src/features/twitter/`。舊的 `handlers/twitter-*` 目前保留為相容 adapter，讓 `events/interactionCreate.js` 與舊文件先維持穩定。
+
 | 檔案 | 功能 |
 |------|------|
 | `content-translation-interactions.js` | 內容翻譯按鈕互動（Twitter/Facebook 等） |
@@ -104,6 +106,8 @@ MessageCreate
 | `message-handler-v2.js` | **訊息處理主引擎** ⭐ — Embed 組裝、Webhook 發送、N/M/O 注入、V2 Container 路由 |
 
 ### 擷取器 (`tfd-system/extractors/`)
+
+> Twitter/X 擷取器主路徑：`src/features/twitter/extractors/`。舊的 `tfd-system/extractors/twitter-*` 目前保留為相容 adapter。
 
 | 檔案 | 支援站台 |
 |------|----------|
@@ -178,6 +182,8 @@ MessageCreate
 ## 🛠️ 工具函式 (`utils/`)
 
 ### 安全與限制
+
+> `utils/twitter-v2-state-store.js` 目前是 `src/features/twitter/state/v2-state-store.js` 的相容 adapter。
 
 | 檔案 | 功能 |
 |------|------|

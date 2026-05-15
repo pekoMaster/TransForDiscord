@@ -2,7 +2,7 @@
 
 Date: 2026-05-15
 
-Status: Phase 1 implementation plan created; inventory remains the source map for later phases.
+Status: Phase 1 translation migration and Phase 3 Twitter migration plans created; inventory remains the source map for later phases.
 
 Scope: Whole TransForDiscord repository, not only translation.
 
