@@ -37,9 +37,17 @@ function splitTranslatedBundle(translatedText) {
     };
 }
 
+function combineTranslatedBundle({ main = '', quote = '', reply = '' } = {}) {
+    let combined = main || '';
+    if (quote) combined += QUOTE_SEPARATOR + quote;
+    if (reply) combined += REPLY_SEPARATOR + reply;
+    return combined;
+}
+
 module.exports = {
     QUOTE_SEPARATOR,
     REPLY_SEPARATOR,
     buildTextBundle,
-    splitTranslatedBundle
+    splitTranslatedBundle,
+    combineTranslatedBundle
 };

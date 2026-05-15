@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const { buildTextBundle, splitTranslatedBundle } = require('../utils/translation/text-bundle');
+const { buildTextBundle, combineTranslatedBundle, splitTranslatedBundle } = require('../utils/translation/text-bundle');
 const { normalizeProviderError } = require('../utils/translation/errors');
 const { buildPrompt } = require('../utils/translation/prompt-builder');
 const { getEnvFallbackKey } = require('../utils/translation/key-resolver');
@@ -20,6 +20,10 @@ function testBundleRoundTrip() {
     assert.strictEqual(split.main, 'main translated');
     assert.strictEqual(split.quote, 'quote translated');
     assert.strictEqual(split.reply, 'reply translated');
+
+    const combined = combineTranslatedBundle(split);
+    assert(combined.includes('---QUOTE---'));
+    assert(combined.includes('---REPLY---'));
 }
 
 testBundleRoundTrip();
