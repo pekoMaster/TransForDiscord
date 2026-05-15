@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - 華視新聞網提取器
+ * pekoembed 系統 - 華視新聞網提取器
  * 解析頁面內嵌的 Nuxt SSR JSON（__NUXT_DATA__）取得文章資料
  */
 
@@ -11,7 +11,7 @@ const tfd = require('../../utils/tfd-logger');
 const CTS_ICON = 'https://news.cts.com.tw/favicon.ico';
 const CTS_COLOR = 0x005BAC; // 華視藍
 
-class ErmianaCTSExtractor {
+class pekoembedCTSExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.name = '華視新聞';
@@ -210,4 +210,4 @@ class ErmianaCTSExtractor {
     }
 }
 
-module.exports = ErmianaCTSExtractor;
+module.exports = pekoembedCTSExtractor;

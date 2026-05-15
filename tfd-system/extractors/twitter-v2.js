@@ -29,7 +29,7 @@ class TFDTwitterExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.name = 'Twitter/X';
-        this.iconURL = 'https://ermiana.canaria.cc/pic/twitter.png';
+        this.iconURL = 'https://pekoembed.canaria.cc/pic/twitter.png';
         this.videoOptimizer = new TwitterVideoAttachmentOptimizer();
         this.htmlBuilder = new MixedMediaHTMLBuilder();
         this.textTruncator = new TextTruncator();

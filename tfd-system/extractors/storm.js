@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - 風傳媒提取器
+ * pekoembed 系統 - 風傳媒提取器
  * 提取 storm.mg 新聞文章資訊並生成 Embed
  */
 
@@ -7,7 +7,7 @@ const { EmbedBuilder } = require('discord.js');
 const HTTPClient = require('../utils/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
 
-class ErmianaStormExtractor {
+class pekoembedStormExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.name = '風傳媒';
@@ -467,4 +467,4 @@ class ErmianaStormExtractor {
     }
 }
 
-module.exports = ErmianaStormExtractor;
+module.exports = pekoembedStormExtractor;

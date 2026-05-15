@@ -4,8 +4,10 @@
  */
 
 const { MessageFlags, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const TFDTwitterExtractor = require('../tfd-system/extractors/twitter-v2.js');
 const { buildV2Container, getCachedTweetData, cacheTweetData, deriveStateFromComponents } = require('./twitter-v2-container-builder');
 const { lookupUrl } = require('../tfd-system/utils/url-stats');
+const { getMessageState, setMessageState } = require('../utils/twitter-v2-state-store');
 const db = require('../db');
 const tlog = require('../utils/tfd-logger');
 
@@ -48,35 +50,109 @@ function extractTweetId(customId) {
 }
 
 /**
+ * 從目前訊息擷取 marker text，不再讓 reload 重新猜測整個版型。
+ */
+function extractMarkerTextFromMessage(message) {
+    const origComponents = message?.components;
+    if (!origComponents?.[0]?.components?.[0]) return null;
+
+    const first = origComponents[0].components[0];
+    if (first.data?.type === 10 || first.type === 10) {
+        return first.data?.content || first.content || null;
+    }
+
+    return null;
+}
+
+async function hydrateTweetBundle(tweetId, originalURL = null) {
+    const HTTPClient = require('../tfd-system/utils/http-client');
+    const httpClient = new HTTPClient();
+    const resp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, { timeout: 5000 });
+    if (!resp?.tweet) return null;
+
+    const tweet = resp.tweet;
+    const fallbackOriginalURL = originalURL || `https://twitter.com/i/status/${tweetId}`;
+    const extractor = new TFDTwitterExtractor();
+
+    let quoteData = null;
+    let replyData = null;
+
+    if (extractor.isReplyTweet(tweet)) {
+        const replyInfo = await extractor.getReplyTweetInfo(tweet);
+        if (replyInfo) {
+            replyData = {
+                tweet: replyInfo.tweet || null,
+                tweetId: replyInfo.tweetId || null
+            };
+        }
+    }
+
+    if (extractor.isQuoteTweet(tweet)) {
+        const quoteInfo = extractor.getQuoteTweetInfo(tweet);
+        if (quoteInfo) {
+            quoteData = {
+                tweet: quoteInfo.tweet || null,
+                tweetId: quoteInfo.tweetId || null
+            };
+        }
+    }
+
+    const hydrated = { tweet, originalURL: fallbackOriginalURL, quoteData, replyData };
+    cacheTweetData(tweetId, hydrated);
+    return hydrated;
+}
+
+// 翻譯快取 Map<tweetId, { translatedText, translatedQuoteText, translatedReplyText }>
+const v2TranslationCache = new Map();
+
+function buildFallbackState(interaction, tweetId, cached = null) {
+    const derived = deriveStateFromComponents(interaction.message.components, tweetId);
+    const cachedTranslation = v2TranslationCache.get(tweetId);
+
+    return {
+        tweetId,
+        originalURL: cached?.originalURL || `https://twitter.com/i/status/${tweetId}`,
+        markerText: extractMarkerTextFromMessage(interaction.message),
+        isTranslated: Boolean(derived.isTranslated && cachedTranslation),
+        translatedText: cachedTranslation?.translatedText || null,
+        translatedQuoteText: cachedTranslation?.translatedQuoteText || null,
+        translatedReplyText: cachedTranslation?.translatedReplyText || null,
+        isExpanded: Boolean(derived.isExpanded),
+        isQuoteShown: Boolean(derived.isQuoteShown),
+        isReplyShown: Boolean(derived.isReplyShown),
+    };
+}
+
+/**
  * 重建並更新 V2 Container
  */
-async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}) {
-    const cached = getCachedTweetData(tweetId);
-    if (!cached) {
-        // 快取已過期，嘗試從 API 重新取得
-        try {
-            const HTTPClient = require('../tfd-system/utils/http-client');
-            const httpClient = new HTTPClient();
-            const resp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, { timeout: 5000 });
-            if (resp?.tweet) {
-                cacheTweetData(tweetId, { tweet: resp.tweet, originalURL: `https://twitter.com/i/status/${tweetId}` });
-                return rebuildAndUpdate(interaction, tweetId, stateOverrides);
-            }
-        } catch (_) {}
+async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, options = {}) {
+    const { refreshData = false } = options;
 
+    let cached = getCachedTweetData(tweetId);
+    if (!cached || refreshData) {
+        try {
+            cached = await hydrateTweetBundle(tweetId, cached?.originalURL);
+        } catch (_) {
+            cached = null;
+        }
+    }
+
+    if (!cached) {
         await interaction.followUp({ content: '❌ 推文資料已過期，請重新貼文', flags: MessageFlags.Ephemeral });
-        return;
+        return false;
     }
 
     const { tweet, originalURL, quoteData, replyData } = cached;
+    const storedState = getMessageState(interaction.message.id) || buildFallbackState(interaction, tweetId, cached);
+    const newState = {
+        ...storedState,
+        ...stateOverrides,
+        tweetId,
+        originalURL,
+        markerText: stateOverrides.markerText !== undefined ? stateOverrides.markerText : storedState.markerText
+    };
 
-    // 從現有按鈕推導目前狀態
-    const currentState = deriveStateFromComponents(interaction.message.components, tweetId);
-
-    // 合併覆蓋
-    const newState = { ...currentState, ...stateOverrides };
-
-    // 重建 Container
     let urlStats = null;
     try {
         const tweetUrl = originalURL || `https://twitter.com/i/status/${tweetId}`;
@@ -98,36 +174,25 @@ async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}) {
         urlStats,
     });
 
-    // 重新加入 marker text（用戶標記行）
     const { TextDisplayBuilder, SeparatorBuilder } = require('discord.js');
-
-    // 從原訊息中提取 marker（第一個 text_display 組件）
-    let markerText = null;
-    const origComponents = interaction.message.components;
-    if (origComponents?.[0]?.components?.[0]) {
-        const first = origComponents[0].components[0];
-        // V2 Container 結構: TextDisplay(marker) → Separator → Section...
-        if (first.data?.type === 10 || first.type === 10) { // TextDisplay type = 10
-            markerText = first.data?.content || first.content;
-        }
-    }
-
-    if (markerText) {
+    if (newState.markerText) {
         container.components = [
-            new TextDisplayBuilder().setContent(markerText),
+            new TextDisplayBuilder().setContent(newState.markerText),
             new SeparatorBuilder().setDivider(true),
             ...container.components
         ];
     }
 
     await interaction.editReply({
+        content: null,
+        embeds: [],
         components: [container],
         flags: MessageFlags.IsComponentsV2,
     });
-}
 
-// 翻譯快取 Map<tweetId, { translatedText, translatedQuoteText, translatedReplyText }>
-const v2TranslationCache = new Map();
+    setMessageState(interaction.message.id, newState);
+    return true;
+}
 
 /**
  * V2 翻譯 / 原文切換
@@ -268,7 +333,7 @@ async function handleV2Toggle(interaction, type) {
     // 保留翻譯狀態
     const cachedTranslation = v2TranslationCache.get(tweetId);
     if (cachedTranslation) {
-        const currentState = deriveStateFromComponents(interaction.message.components, tweetId);
+        const currentState = getMessageState(interaction.message.id) || buildFallbackState(interaction, tweetId, getCachedTweetData(tweetId));
         if (currentState.isTranslated) {
             overrides.isTranslated = true;
             overrides.translatedText = cachedTranslation.translatedText;
@@ -290,21 +355,9 @@ async function handleV2Reload(interaction) {
     const tweetId = extractTweetId(interaction.customId);
     await interaction.deferUpdate();
     try {
-        const HTTPClient = require('../tfd-system/utils/http-client');
-        const httpClient = new HTTPClient();
-        const resp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, { timeout: 8000 });
-        if (resp?.tweet) {
-            const existingCached = getCachedTweetData(tweetId);
-            cacheTweetData(tweetId, {
-                tweet: resp.tweet,
-                originalURL: existingCached?.originalURL || `https://twitter.com/i/status/${tweetId}`,
-                quoteData: existingCached?.quoteData || null,
-                replyData: existingCached?.replyData || null,
-            });
-            await rebuildAndUpdate(interaction, tweetId, {});
+        const updated = await rebuildAndUpdate(interaction, tweetId, {}, { refreshData: true });
+        if (updated) {
             tlog.log('V2-重整', interaction, `重整成功: ${tweetId}`);
-        } else {
-            await interaction.followUp({ content: '❌ 無法重新載入推文資料', flags: MessageFlags.Ephemeral });
         }
     } catch (error) {
         tlog.sysError('V2-Interactions', `重整失敗: ${error.message}`);

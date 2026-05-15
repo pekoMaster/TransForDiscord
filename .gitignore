@@ -1,6 +1,41 @@
 node_modules/
+
+# Environment / local secrets
 .env
+.env.*
+!.env.example
+
+# Runtime data, caches, and logs
+data/
 temp/
 logs/
 *.log
-data/
+*.pid
+*.cache
+
+# Local tool state
+.claude/settings.local.json
+.vscode/
+.idea/
+
+# Local backups and generated snapshots
+BACKUP/
+*.bak
+*.bak.*
+*.backup
+*.tmp
+
+# Database files should stay local unless intentionally exported as schema
+*.db
+*.sqlite
+*.sqlite3
+
+# Private keys / certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# OS junk
+.DS_Store
+Thumbs.db

@@ -161,7 +161,7 @@ function buildUpdatedEmbed(tweet, images, currentPage, urlStats = null) {
     const footerSuffix = urlStats ? ` • ${urlStats.channel}/${urlStats.guild}/${urlStats.total}` : '';
     embed.setFooter({
         text: footerBase + footerSuffix, // 統一格式
-        iconURL: 'https://ermiana.canaria.cc/pic/twitter.png'
+        iconURL: 'https://pekoembed.canaria.cc/pic/twitter.png'
     });
 
     return embed;

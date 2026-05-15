@@ -1,4 +1,4 @@
-/**
+﻿﻿/**
  * Twitter AI 翻譯互動處理器
  * 處理推文翻譯按鈕的點擊事件
  */
@@ -50,18 +50,9 @@ async function handleTranslateButton(interaction) {
         // 必須在任何耗時操作（如資料庫查詢）之前執行
         await interaction.deferUpdate();
 
-        // 檢查用戶是否有任何 AI API Key
-        const availProviders = getAvailableProviders(userId);
-        if (availProviders.length === 0) {
-            await interaction.followUp({
-                embeds: [buildApiKeyTutorialEmbed()],
-                flags: MessageFlags.Ephemeral
-            });
-            return;
-        }
-
         // 檢查是否已選擇預設翻譯引擎
         const preferredProvider = getPreferredProvider(userId);
+        const providerName = PROVIDERS[preferredProvider]?.name || preferredProvider;
         if (!preferredProvider) {
             await interaction.followUp({
                 content: '❌ 請先使用 `/pe api model` 選擇翻譯引擎，再使用翻譯功能。',
@@ -70,8 +61,20 @@ async function handleTranslateButton(interaction) {
             return;
         }
 
+        const isFreeProvider = preferredProvider === 'free';
+
+        // 檢查用戶是否有任何 AI API Key
+        const availProviders = getAvailableProviders(userId);
+        if (!isFreeProvider && availProviders.length === 0) {
+            await interaction.followUp({
+                embeds: [buildApiKeyTutorialEmbed()],
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+
         // 檢查所選引擎是否有設定 API Key
-        if (!availProviders.includes(preferredProvider)) {
+        if (!isFreeProvider && !availProviders.includes(preferredProvider)) {
             const pName = PROVIDERS[preferredProvider]?.name || preferredProvider;
             await interaction.followUp({
                 content: `❌ 你選擇的翻譯引擎「${pName}」尚未設定 API Key。\n請使用 \`/pe api add\` 設定 Key，或使用 \`/pe api model\` 更換引擎。`,
@@ -200,7 +203,7 @@ async function handleTranslateButton(interaction) {
         }
 
         // 檢查快取
-        const cacheKey = `${tweetId}_${userId}`;
+        const cacheKey = `${tweetId}_${userId}_${preferredProvider}`;
         const cachedTranslation = getFromCache(cacheKey);
 
         let translatedFullText;
@@ -218,7 +221,7 @@ async function handleTranslateButton(interaction) {
                 const loadingEmbed = EmbedBuilder.from(originalEmbed)
                     .setDescription('🔄 正在翻譯中，請稍候...')
                     .setFooter({
-                        text: `${(originalEmbed.footer?.text || '').replace(/ \| 🌐 翻譯中\.\.\./g, '').replace(/ \| 🌐 AI 翻譯/g, '')} | 🌐 翻譯中...`,
+                        text: `${(originalEmbed.footer?.text || '').replace(/ \| 翻譯中\.\.\./g, '').replace(/ \| .+ 翻譯$/g, '')} | ${providerName} 翻譯中...`,
                         iconURL: originalEmbed.footer?.iconURL
                     });
                 const loadingEmbeds = [loadingEmbed];
@@ -259,8 +262,11 @@ async function handleTranslateButton(interaction) {
                     embeds: originalMessage.embeds.map(e => e.toJSON()),
                     components: originalMessage.components
                 }).catch(() => {});
+                const freeErrorMsg = preferredProvider === 'free'
+                    ? '🆓 免費翻譯暫時無法使用（共用額度不穩定屬正常現象）'
+                    : '❌ 翻譯失敗，請確認你的 API Key 是否有效，或改用其他廠商的 Key';
                 await interaction.followUp({
-                    content: '❌ 翻譯失敗，請確認你的 API Key 是否有效，或改用其他廠商的 Key',
+                    content: freeErrorMsg,
                     flags: MessageFlags.Ephemeral
                 });
                 return;
@@ -325,7 +331,7 @@ async function handleTranslateButton(interaction) {
         const translatedEmbed = EmbedBuilder.from(originalEmbed)
             .setDescription(displayText)
             .setFooter({
-                text: `${(originalEmbed.footer?.text || '').replace(/ \| 🌐 翻譯中\.\.\./g, '').replace(/ \| 🌐 AI 翻譯/g, '')} | 🌐 AI 翻譯`,
+                text: `${(originalEmbed.footer?.text || '').replace(/ \| 翻譯中\.\.\./g, '').replace(/ \| .+ 翻譯$/g, '')} | ${providerName} 翻譯`,
                 iconURL: originalEmbed.footer?.iconURL
             });
 
@@ -495,7 +501,7 @@ async function handleShowOriginalButton(interaction) {
         const restoredEmbed = EmbedBuilder.from(currentEmbed)
             .setDescription(displayText)
             .setFooter({
-                text: (currentEmbed.footer?.text || '').replace(' | 🌐 AI 翻譯', ''),
+                text: (currentEmbed.footer?.text || '').replace(/ \| .+ 翻譯$/, ''),
                 iconURL: currentEmbed.footer?.iconURL
             });
 

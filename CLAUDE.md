@@ -36,7 +36,7 @@ interactionCreate.js ← prefix 路由分流
 
 | 環境 | 位置 | 方式 |
 |------|------|------|
-| VPS（線上） | `root@64.118.134.188:/root/TransForDiscord` | SSH |
+| VPS（線上） | `root@64.118.148.130:/root/TransForDiscord` | SSH |
 | 本機（開發） | `d:\OneDrive\RB\DISCORDBOT\TransForDiscord` | 直接執行 |
 
 **推送 + 部署 SOP：**
@@ -47,15 +47,15 @@ git commit -m "type(scope): 描述"
 git push origin master
 
 # 2. VPS 部署
-ssh root@64.118.134.188 "cd /root/TransForDiscord && git fetch origin && git stash && git rebase origin/master && pm2 restart transfordiscord"
+ssh root@64.118.148.130 "cd /root/TransForDiscord && git fetch origin && git stash && git rebase origin/master && pm2 restart transfordiscord"
 
 # 3. 驗證
-ssh root@64.118.134.188 "pm2 logs transfordiscord --lines 15 --nostream"
+ssh root@64.118.148.130 "pm2 logs transfordiscord --lines 15 --nostream"
 ```
 
 **斜線指令變動時**須額外執行：
 ```bash
-ssh root@64.118.134.188 "cd /root/TransForDiscord && node deploy.js"
+ssh root@64.118.148.130 "cd /root/TransForDiscord && node deploy.js"
 ```
 
 ## 資料庫

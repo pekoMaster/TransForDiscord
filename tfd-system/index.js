@@ -278,6 +278,6 @@ const tfd = require('../utils/tfd-logger');
 }
 
 // 建立單例
-const ermianaSystem = new TFDSystem();
+const pekoembedSystem = new TFDSystem();
 
-module.exports = ermianaSystem;
+module.exports = pekoembedSystem;

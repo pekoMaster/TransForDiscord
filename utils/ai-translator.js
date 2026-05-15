@@ -62,9 +62,11 @@ const userRotation = new Map();
  */
 function getAvailableProviders(userId) {
     const keys = getAllKeys(userId);
-    return Object.entries(keys)
+    const providers = Object.entries(keys)
         .filter(([, key]) => key && key.trim())
         .map(([provider]) => provider);
+    if (!providers.includes('free')) providers.push('free');
+    return providers;
 }
 
 /**
@@ -242,6 +244,11 @@ async function translate(text, userId, options = {}) {
 
     const allAvailable = getAvailableProviders(userId);
 
+    // 免費翻譯
+    if (options.provider === 'free' || (!options.provider && allAvailable.length === 1 && allAvailable[0] === 'free')) {
+        return await translateFree(text, options);
+    }
+
     // 若指定了 provider，只使用該廠商
     const availableProviders = options.provider
         ? (allAvailable.includes(options.provider) ? [options.provider] : [])
@@ -332,8 +339,22 @@ function buildApiKeyTutorialEmbed() {
         .setFooter({ text: 'API Key 僅存儲於伺服器本地，不會外洩。使用 /pe api status 查看設定狀態。' });
 }
 
+/**
+ * 免費翻譯（使用共用額度，額度不穩定屬正常現象）
+ */
+async function translateFree(text, options = {}) {
+    // TODO: 接入 NotebookLM 或其他免費翻譯後端
+    return {
+        success: false,
+        error: '免費翻譯後端尚未接入，請先選擇其他翻譯引擎',
+        errorType: 'FREE_NOT_READY'
+    };
+}
+
+
 module.exports = {
     translate,
+    translateFree,
     buildApiKeyTutorialEmbed,
     getAvailableProviders
 };

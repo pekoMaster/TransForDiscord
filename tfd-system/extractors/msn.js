@@ -1,5 +1,5 @@
 /**
- * Ermiana 系統 - MSN 新聞提取器
+ * pekoembed 系統 - MSN 新聞提取器
  * 使用 MSN CAPI 取得文章結構化資料
  * API: https://assets.msn.com/content/view/v2/Detail/{locale}/{articleId}
  */
@@ -12,7 +12,7 @@ const tfd = require('../../utils/tfd-logger');
 const MSN_ICON = 'https://img-s-msn-com.akamaized.net/tenant/amp/entityid/BBfTWDV.img';
 const MSN_COLOR = 0x0067B8; // MSN 深藍
 
-class ErmianaMSNExtractor {
+class pekoembedMSNExtractor {
     constructor() {
         this.httpClient = new HTTPClient();
         this.name = 'MSN 新聞';
@@ -213,4 +213,4 @@ class ErmianaMSNExtractor {
     }
 }
 
-module.exports = ErmianaMSNExtractor;
+module.exports = pekoembedMSNExtractor;

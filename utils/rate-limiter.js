@@ -1,13 +1,16 @@
 /**
- * rate-limiter.js ??TFD 多�??�速�??�制?? *
- * 三個維度�??�檢?��?
- *   1. per-user：單一使用?��??��??��?N 次�??�個人?��?�? *   2. per-guild：單一伺�??��??��??��?N 次�??�伺?�器?��?�? *   3. per-user-per-guild：單一使用?�在?��?伺�??��??��??��?N 次�?精細�? *
- * ?�設?��?（可??.env 覆�?）�?
- *   TFD_RATE_USER_PER_MIN       (default: 10)  ?��?使用?��??��?
- *   TFD_RATE_GUILD_PER_MIN      (default: 60)  ?��?伺�??��??��?
- *   TFD_RATE_USER_GUILD_PER_MIN (default: 8)   ?��?使用?�在?��?伺�??��??��?
+ * rate-limiter.js
  *
- * 紀?�寫??SQLite rate_limit_log，�??��? bucket，自??GC（�???5 ?��??��?清�?�? */
+ * Tracks recent usage in three dimensions:
+ * 1. per-user
+ * 2. per-guild
+ * 3. per-user-per-guild
+ *
+ * Limits are configurable through .env:
+ * - TFD_RATE_USER_PER_MIN
+ * - TFD_RATE_GUILD_PER_MIN
+ * - TFD_RATE_USER_GUILD_PER_MIN
+ */
 
 const db = require('../db');
 const tlog = require('./tfd-logger');
@@ -18,17 +21,18 @@ const LIMITS = {
     userGuild: parseInt(process.env.TFD_RATE_USER_GUILD_PER_MIN, 10) || 8
 };
 
-const WINDOW_MIN = 1; // 一?��?滑�?視�?
+const WINDOW_MIN = 1;
 
 let gcInterval = null;
 
 /**
- * 檢查並�??��?次�?�? * @returns {Object} { allowed: bool, reason?: string, retryAfterSec?: number }
+ * Check whether a request is allowed before incrementing counters.
+ * @returns {{ allowed: boolean, reason?: string, limit?: number, current?: number, retryAfterSec?: number }}
  */
 function check(userId, guildId = null) {
     if (!userId) return { allowed: true };
 
-    // ?�檢?��?不�???counter，避?�被?��?人�?�?quota�?    const userCount = db.rateLimit.countRecent('user', userId, WINDOW_MIN);
+    const userCount = db.rateLimit.countRecent('user', userId, WINDOW_MIN);
     if (userCount >= LIMITS.user) {
         return {
             allowed: false,
@@ -64,7 +68,6 @@ function check(userId, guildId = null) {
         }
     }
 
-    // ?��?????計入
     db.rateLimit.increment('user', userId);
     if (guildId) {
         db.rateLimit.increment('guild', guildId);
@@ -74,14 +77,10 @@ function check(userId, guildId = null) {
     return { allowed: true };
 }
 
-/**
- * ?��??��??��?設�?（顯示用�? */
 function getLimits() {
     return { ...LIMITS, windowMinutes: WINDOW_MIN };
 }
 
-/**
- * ?��?定�?清�?（�??��???5 ?��??��? bucket，避?�表?��??�大�? */
 function startGC(intervalMs = 5 * 60 * 1000) {
     if (gcInterval) return;
     gcInterval = setInterval(() => {

@@ -6,7 +6,7 @@
 const tfd = require('../../utils/tfd-logger');
 class HTMLVideoRenderer {
     constructor() {
-        this.defaultThumbnail = 'https://ermiana.canaria.cc/pic/twitter.png';
+        this.defaultThumbnail = 'https://pekoembed.canaria.cc/pic/twitter.png';
     }
 
     /**

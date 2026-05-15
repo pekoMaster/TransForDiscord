@@ -68,7 +68,7 @@ async function getOrCreateWebhook(channel) {
         if (!webhook) {
             webhook = await targetChannel.createWebhook({
                 name: WEBHOOK_NAME,
-                reason: 'Ermiana URL 預覽系統使用'
+                reason: 'pekoembed URL 預覽系統使用'
             });
             tlog.sys('Webhook', `已在頻道 ${targetChannel.name} 建立新的 Webhook`);
         }

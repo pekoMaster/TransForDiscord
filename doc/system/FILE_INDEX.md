@@ -169,7 +169,7 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `ermiana-config.json` | Ermiana 系統全域設定 |
+| `pekoembed-config.json` | pekoembed 系統全域設定 |
 | `supported-sites.json` | 支援站台清單 |
 | `tfd-config.json` | TFD 系統設定（排除頻道、使用者等） |
 

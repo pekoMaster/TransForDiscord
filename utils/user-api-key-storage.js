@@ -13,9 +13,10 @@ const tfd = require('./tfd-logger');
 
 // 支援的 AI 廠商（保留與舊版一致）
 const PROVIDERS = {
-    openai:      { name: 'OpenAI',             prefix: 'sk-',     placeholder: 'sk-proj-...' },
-    claude:      { name: 'Claude (Anthropic)', prefix: 'sk-ant-', placeholder: 'sk-ant-...' },
-    gemini:      { name: 'Gemini (Google)',     prefix: 'AIza',    placeholder: 'AIzaSy...' },
+    free:        { name: '免費翻譯',         prefix: '',        placeholder: '' },
+    openai:      { name: 'GPT',             prefix: 'sk-',     placeholder: 'sk-proj-...' },
+    claude:      { name: 'Claude', prefix: 'sk-ant-', placeholder: 'sk-ant-...' },
+    gemini:      { name: 'Gemini',     prefix: 'AIza',    placeholder: 'AIzaSy...' },
     openrouter:  { name: 'OpenRouter',          prefix: 'sk-or-',  placeholder: 'sk-or-v1-...' }
 };
 

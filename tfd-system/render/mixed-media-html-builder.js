@@ -113,7 +113,7 @@ class MixedMediaHTMLBuilder {
     buildAdditionalTags(siteName, originalURL) {
         return [
             `<meta property="og:site_name" content="${siteName}"/>`,
-            `<meta property="twitter:site" content="@ermiana_bot"/>`,
+            `<meta property="twitter:site" content="@pekoembed_bot"/>`,
             `<meta name="theme-color" content="#1DA1F2"/>`,
             `<meta name="robots" content="noindex, nofollow"/>`,
             `<link rel="canonical" href="${originalURL}"/>`,

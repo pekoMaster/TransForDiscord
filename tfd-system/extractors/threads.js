@@ -8,6 +8,7 @@
 
 const TFDEmbedBuilder = require('../utils/embed-builder');
 const { EmbedBuilder, ContainerBuilder, TextDisplayBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder, MessageFlags } = require('discord.js');
+const tfd = require('../../utils/tfd-logger');
 
 const THREADS_COLOR = 0x000000;
 const THREADS_ICON = 'https://static.cdninstagram.com/rsrc.php/ye/r/lEu8iVizmNW.ico';
@@ -374,7 +375,6 @@ class ThreadsExtractor {
             // 3) 最後 fallback：Puppeteer minimal
             try {
                 const puppeteer = require('puppeteer');
-const tfd = require('../../utils/tfd-logger');
                 const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
                 try {
                     const page = await browser.newPage();

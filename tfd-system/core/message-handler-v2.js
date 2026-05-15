@@ -14,6 +14,7 @@ const tlog = require('../../utils/tfd-logger');
 const { sendWithWebhook, editWebhookMessage, canUseWebhook, hasWebhookPermission } = require('../../utils/webhook-manager');
 const { normalizeAuthorForBlacklist } = require('../../utils/normalize-author.js');
 const { getInstance: getGBM } = require('../../utils/guild-blacklist-manager.js');
+const { setMessageState: setTwitterV2MessageState } = require('../../utils/twitter-v2-state-store');
 
 // URL 統計（footer N/M/O 顯示用）
 const { recordUrl } = require('../utils/url-stats');
@@ -25,7 +26,7 @@ class TFDMessageHandler {
         this.linkProcessor = new LinkProcessor();
         this.config = config;
         this.processedMessages = new Set();
-        this.iconURL = 'https://ermiana.canaria.cc/pic/canaria.png'; // 原版 TFD 圖標
+        this.iconURL = 'https://pekoembed.canaria.cc/pic/canaria.png'; // 原版 TFD 圖標
     }
 
 
@@ -742,10 +743,25 @@ class TFDMessageHandler {
             ];
 
             // 使用 Webhook 發送 V2 Container（现在包含用户标记行）
-            await this.sendViaWebhook(message, {
+            const sentMsg = await this.sendViaWebhook(message, {
                 components: [container],
                 flags: MessageFlags.IsComponentsV2,
             });
+
+            if (sentMsg?.id && result.tweetId) {
+                setTwitterV2MessageState(sentMsg.id, {
+                    tweetId: result.tweetId,
+                    originalURL: originalURL || `https://twitter.com/i/status/${result.tweetId}`,
+                    markerText,
+                    isTranslated: false,
+                    translatedText: null,
+                    translatedQuoteText: null,
+                    translatedReplyText: null,
+                    isExpanded: false,
+                    isQuoteShown: false,
+                    isReplyShown: false,
+                });
+            }
 
         } catch (error) {
             this.log(`[Twitter-V2] 發送失敗，降級為 embed: ${error.message}`, 'error');
@@ -1178,7 +1194,7 @@ class TFDMessageHandler {
     async messageSender(message, iconURL, embed, textinfo, additionalContent = null, originalUrl = null) {
         try {
             // 不再覆蓋 Footer，保留提取器設定的格式
-            // const textinfo2 = textinfo || 'ermiana';
+            // const textinfo2 = textinfo || 'pekoembed';
             // const iconURL2 = iconURL || this.iconURL;
             // embed.setFooter({ text: textinfo2, iconURL: iconURL2 });
 
@@ -1790,11 +1806,11 @@ class TFDMessageHandler {
      */
     getSiteIcon(siteName) {
         const icons = {
-            'twitter': 'https://ermiana.canaria.cc/pic/twitter.png',
-            'instagram': 'https://ermiana.canaria.cc/pic/instagram.png',
-            'pixiv': 'https://ermiana.canaria.cc/pic/pixiv.png',
-            'bilibili': 'https://ermiana.canaria.cc/pic/bilibili.png',
-            'ptt': 'https://ermiana.canaria.cc/pic/ptt.png'
+            'twitter': 'https://pekoembed.canaria.cc/pic/twitter.png',
+            'instagram': 'https://pekoembed.canaria.cc/pic/instagram.png',
+            'pixiv': 'https://pekoembed.canaria.cc/pic/pixiv.png',
+            'bilibili': 'https://pekoembed.canaria.cc/pic/bilibili.png',
+            'ptt': 'https://pekoembed.canaria.cc/pic/ptt.png'
         };
         return icons[siteName] || this.iconURL;
     }
