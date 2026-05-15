@@ -2,7 +2,7 @@
 
 Date: 2026-05-15
 
-Status: Draft inventory for project-wide structure refactor.
+Status: Phase 1 implementation plan created; inventory remains the source map for later phases.
 
 Scope: Whole TransForDiscord repository, not only translation.
 

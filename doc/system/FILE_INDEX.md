@@ -188,6 +188,8 @@ MessageCreate
 
 ### 翻譯系統
 
+> 新主路徑：`src/features/translation/`。舊的 `utils/translation/*`、`utils/ai-translator.js`、`utils/user-api-key-*` 目前保留為相容 adapter。
+
 | 檔案 | 功能 |
 |------|------|
 | `translation/translation-service.js` | 統一翻譯服務入口（Classic Twitter / Twitter V2 共用 provider、key、prompt、錯誤格式） |
