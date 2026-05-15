@@ -10,6 +10,14 @@
 
 ---
 
+## Superseded Follow-Up
+
+After this plan was executed, the user clarified that TFD does not provide
+Twitter posting and translation must rely on each user's configured provider
+API key. The legacy Twitter posting handler and its legacy Gemini helper were
+removed in the follow-up cleanup commit. Treat any posting-related steps below
+as historical context, not current architecture.
+
 ## Source Documents
 
 - Inventory/spec: `docs/superpowers/specs/2026-05-15-tfd-file-inventory-and-refactor-map.md`

@@ -86,7 +86,6 @@ MessageCreate
 | `spoiler-button-interactions.js` | 通用防爆雷按鈕 + Modal（V2 Components 版） |
 | `twitter-all-interactions.js` | Twitter 全文展開/收起按鈕 |
 | `twitter-expand-interactions.js` | Twitter 單則展開/收起按鈕 |
-| `twitter-interactions.js` | Twitter 通用互動處理（Modal、API 調用） |
 | `twitter-pagination-interactions.js` | Twitter 多圖分頁按鈕 |
 | `twitter-quote-interactions.js` | Twitter 引用/回覆展開按鈕 |
 | `twitter-reload-interactions.js` | Twitter 重新載入按鈕（V1 重抓） |
@@ -204,7 +203,6 @@ MessageCreate
 | `translation/providers/` | Gemini / OpenRouter / OpenAI / Claude provider adapters |
 | `ai-translator.js` | Legacy adapter，保留舊 exports 並轉接 translation-service |
 | `deepl-translator.js` | DeepL 翻譯器 |
-| `gemini-translator.js` | Legacy Gemini helper，保留相容用途 |
 | `openrouter-translator.js` | Legacy OpenRouter helper，保留相容用途 |
 | `translator.js` | Google Translate API 翻譯器 |
 | `shared-translation-cache.js` | Provider-aware 跨頻道翻譯快取（sourceId + provider，磁碟持久化） |

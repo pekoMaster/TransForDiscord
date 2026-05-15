@@ -12,6 +12,5 @@ module.exports = {
         reload: require('./interactions/reload'),
         translation: require('./interactions/translation'),
         v2Router: require('./interactions/v2-router')
-    },
-    posting: require('./posting/twitter-posting-handler')
+    }
 };

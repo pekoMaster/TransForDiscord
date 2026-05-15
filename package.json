@@ -16,7 +16,6 @@
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.7",
     "express": "^4.21.0",
-    "opencc-js": "^1.0.5",
-    "twitter-api-v2": "^1.19.0"
+    "opencc-js": "^1.0.5"
   }
 }

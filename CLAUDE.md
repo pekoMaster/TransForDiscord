@@ -90,7 +90,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | 改黑名單邏輯 | `utils/guild-blacklist-manager.js` → `db/index.js` → `db/schema.sql` | Manager → DB API → Schema 三層 |
 | 改回報流程 | `handlers/report-button-interactions.js` | 完整的 button→modal→admin 鏈 |
 | 改翻譯功能 | `src/features/translation/` | 統一翻譯 domain；舊 `utils/*` 路徑為 adapter |
-| 改 Twitter/X | `src/features/twitter/` | Twitter domain；舊 `handlers/twitter-*`、`utils/twitter-v2-state-store.js`、`tfd-system/extractors/twitter-*` 路徑為 adapter |
+| 改 Twitter/X | `src/features/twitter/` | Twitter domain；沒有發推功能；舊 `handlers/twitter-*`、`utils/twitter-v2-state-store.js`、`tfd-system/extractors/twitter-*` 路徑為 adapter |
 | 改 webhook 行為 | `utils/webhook-manager.js` | Webhook 建立/快取/討論串邏輯 |
 | 改 Embed 元件 | `utils/spoiler-button-helper.js` + `utils/embed-helpers.js` | 按鈕附加 + 作者解析 |
 

@@ -164,7 +164,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `handlers/spoiler-button-interactions.js` | Anti-spoiler transformation and modal handling for normal messages. | interaction-handler | spoilers | `src/features/spoilers/interactions/spoiler-buttons.js` | split | Also contains spoiler rendering helpers. |
 | `handlers/twitter-all-interactions.js` | Twitter expand/collapse all for quote/reply/full text. | interaction-handler | twitter | `src/features/twitter/interactions/toggle-all.js` | move | Depends on translation/content caches. |
 | `handlers/twitter-expand-interactions.js` | Twitter full-text expand/collapse for classic embeds. | interaction-handler | twitter | `src/features/twitter/interactions/expand.js` | move | Uses cached content and translation state. |
-| `handlers/twitter-interactions.js` | Owner-only Twitter posting workflow and 5CH Japanese conversion. | interaction-handler/service | twitter | `src/features/twitter/posting/twitter-posting-handler.js` | split | Separate posting service from Discord modal UI. |
+| `handlers/twitter-interactions.js` | Removed legacy owner-only Twitter posting workflow. | adapter | twitter/legacy | n/a | delete-after-verify | TFD does not provide Twitter posting. |
 | `handlers/twitter-pagination-interactions.js` | Twitter media pagination and image merge/split controls. | interaction-handler | twitter | `src/features/twitter/interactions/media-pagination.js` | split | Media rendering logic should move to `media/`. |
 | `handlers/twitter-reload-interactions.js` | Classic Twitter embed reload flow. | interaction-handler | twitter | `src/features/twitter/interactions/reload.js` | move | Could share reload service with V2. |
 | `handlers/twitter-translate-interactions.js` | Classic Twitter translation button flow, cache/state, embed update. | interaction-handler | twitter/translation | `src/features/twitter/interactions/translation.js` | split | Handler still owns too much cache/state/UI mapping. |
@@ -266,7 +266,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `utils/user-api-key-storage.js` | Encrypted user API keys and preferred provider in SQLite. | db-access/service | translation/identity | `src/features/translation/keys/user-api-key-storage.js` | move | Provider registry should be centralized. |
 | `utils/user-api-key-service.js` | Legacy API key service adapter. | adapter | translation/legacy | `src/features/translation/legacy/user-api-key-service-adapter.js` | legacy-adapter | Old path should re-export. |
 | `utils/ai-translator.js` | Legacy AI translator adapter to translation service. | adapter | translation/legacy | `src/features/translation/legacy/ai-translator-adapter.js` | legacy-adapter | Old path should re-export. |
-| `utils/gemini-translator.js` | Legacy Gemini translator with extra 5CH Japanese helpers. | provider/service | translation/twitter-posting | `src/features/translation/legacy/gemini-translator.js` | split | Separate 5CH conversion from translation provider. |
+| `utils/gemini-translator.js` | Removed legacy Gemini helper for deleted Twitter posting flow. | adapter | translation/legacy | n/a | delete-after-verify | Translation now uses user-selected provider keys through `translation-service`. |
 | `utils/openrouter-translator.js` | Legacy OpenRouter translation helper. | provider | translation/legacy | `src/features/translation/legacy/openrouter-translator.js` | legacy-adapter/delete-after-verify | New provider exists under `utils/translation/providers`. |
 | `utils/translator.js` | Google Translate + OpenCC translator singleton. | provider | translation/legacy | `src/features/translation/providers/google-translate.js` | move | Used by Gemini legacy fallback. |
 | `utils/translation-glossary.js` | Glossary preprocessing/postprocessing for translation. | service | translation/text | `src/features/translation/text/glossary.js` | move | Feature-owned. |
@@ -324,7 +324,6 @@ Migration principle: create new files under `src/`, then turn old paths into com
 Current related files:
 - `utils/translation/*`
 - `utils/ai-translator.js`
-- `utils/gemini-translator.js`
 - `utils/openrouter-translator.js`
 - `utils/translator.js`
 - `utils/translation-glossary.js`
@@ -349,7 +348,7 @@ Plan:
 - Move current unified translation files first.
 - Move cache/key/glossary into subfolders.
 - Keep old `utils/*` paths as adapters.
-- Split `gemini-translator.js`: 5CH posting conversion should not live in the generic translation provider.
+- Remove `gemini-translator.js`: the legacy 5CH/Twitter posting flow is not part of TFD.
 
 ### 2. Twitter
 
