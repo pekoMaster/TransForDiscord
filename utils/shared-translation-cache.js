@@ -1,27 +1,61 @@
 /**
- * 共享持久翻譯快取
- * - 以 tweetId 為 key，所有用戶共享同一則翻譯
- * - 儲存到磁碟，重啟後不遺失
- * - 7 天後自動清理
+ * Shared persistent cache for tweet translations.
+ *
+ * Cache entries are provider-aware so the same tweet can be translated by
+ * Gemini, OpenRouter, OpenAI, or Claude without overwriting each other.
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const tfd = require('./tfd-logger');
 
 const CACHE_DIR = path.join(__dirname, '../data/translation_cache');
-const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
+const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-// 記憶體索引（啟動時從磁碟載入，之後同步維護）
 const memoryIndex = new Map();
 
-/**
- * 初始化：建立目錄並從磁碟載入所有快取
- */
+function makeKey(sourceId, provider = 'unknown') {
+    return `${sourceId}_${provider || 'unknown'}`;
+}
+
+function fileNameForKey(cacheKey) {
+    return `${crypto.createHash('sha1').update(cacheKey).digest('hex')}.json`;
+}
+
+function filePathForKey(cacheKey) {
+    return path.join(CACHE_DIR, fileNameForKey(cacheKey));
+}
+
+function normalizeEntry(sourceId, provider, data = {}) {
+    const translated = data.translated || {
+        main: data.translatedText || data.fullText || '',
+        quote: data.translatedQuoteText || data.quoteText || '',
+        reply: data.translatedReplyText || data.replyText || ''
+    };
+    const original = data.original || {
+        main: data.originalText || '',
+        quote: data.originalQuoteText || '',
+        reply: data.originalReplyText || ''
+    };
+
+    return {
+        cacheKey: makeKey(sourceId, provider),
+        sourceId,
+        provider,
+        original,
+        translated,
+        translatedText: translated.main,
+        originalText: original.main,
+        model: data.model || provider || 'unknown',
+        timestamp: data.timestamp || Date.now()
+    };
+}
+
 function init() {
     if (!fs.existsSync(CACHE_DIR)) {
         fs.mkdirSync(CACHE_DIR, { recursive: true });
-        tfd.sys('SharedCache', `建立快取目錄: ${CACHE_DIR}`);
+        tfd.sys('SharedCache', `Created translation cache directory: ${CACHE_DIR}`);
     }
 
     let loaded = 0;
@@ -29,100 +63,86 @@ function init() {
     const cutoff = Date.now() - TTL_MS;
 
     try {
-        const files = fs.readdirSync(CACHE_DIR).filter(f => f.endsWith('.json'));
+        const files = fs.readdirSync(CACHE_DIR).filter(file => file.endsWith('.json'));
         for (const file of files) {
+            const fullPath = path.join(CACHE_DIR, file);
             try {
-                const raw = fs.readFileSync(path.join(CACHE_DIR, file), 'utf8');
-                const entry = JSON.parse(raw);
-
-                if (entry.timestamp < cutoff) {
-                    // 過期，直接清理
-                    fs.unlinkSync(path.join(CACHE_DIR, file));
+                const entry = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+                if (!entry.timestamp || entry.timestamp < cutoff) {
+                    fs.unlinkSync(fullPath);
                     cleaned++;
-                } else {
-                    memoryIndex.set(entry.tweetId, entry);
-                    loaded++;
+                    continue;
                 }
+
+                const sourceId = entry.sourceId || entry.tweetId;
+                if (!sourceId) continue;
+                const provider = entry.provider || entry.model || 'unknown';
+                const normalized = normalizeEntry(sourceId, provider, entry);
+                memoryIndex.set(normalized.cacheKey, normalized);
+                loaded++;
             } catch (_) {
-                // 損壞的檔案，跳過
+                try { fs.unlinkSync(fullPath); } catch (_) {}
+                cleaned++;
             }
         }
     } catch (_) {}
 
-    tfd.sys('SharedCache', `載入 ${loaded} 筆翻譯快取，清理 ${cleaned} 筆過期快取`);
+    tfd.sys('SharedCache', `Loaded ${loaded} translation cache entries, cleaned ${cleaned}.`);
 }
 
-/**
- * 取得快取翻譯
- * @param {string} tweetId
- * @returns {{ translatedText, originalText, model, timestamp } | null}
- */
-function get(tweetId) {
-    const entry = memoryIndex.get(tweetId);
+function get(sourceId, provider = 'unknown') {
+    const cacheKey = makeKey(sourceId, provider);
+    const entry = memoryIndex.get(cacheKey);
     if (!entry) return null;
 
-    // 二次確認是否過期
     if (Date.now() - entry.timestamp > TTL_MS) {
-        memoryIndex.delete(tweetId);
-        try { fs.unlinkSync(path.join(CACHE_DIR, `${tweetId}.json`)); } catch (_) {}
+        memoryIndex.delete(cacheKey);
+        try { fs.unlinkSync(filePathForKey(cacheKey)); } catch (_) {}
         return null;
     }
 
     return entry;
 }
 
-/**
- * 儲存翻譯到快取
- * @param {string} tweetId
- * @param {{ translatedText: string, originalText: string, model: string }} data
- */
-function set(tweetId, data) {
-    const entry = {
-        tweetId,
-        translatedText: data.translatedText,
-        originalText: data.originalText,
-        model: data.model || 'unknown',
-        timestamp: Date.now()
-    };
+function set(sourceId, providerOrData, maybeData = null) {
+    const provider = typeof providerOrData === 'string'
+        ? providerOrData
+        : providerOrData?.provider || providerOrData?.model || 'unknown';
+    const data = typeof providerOrData === 'string' ? (maybeData || {}) : (providerOrData || {});
+    const entry = normalizeEntry(sourceId, provider, data);
 
-    memoryIndex.set(tweetId, entry);
+    memoryIndex.set(entry.cacheKey, entry);
 
-    // 非同步寫入磁碟（不阻塞回應）
     try {
         fs.writeFileSync(
-            path.join(CACHE_DIR, `${tweetId}.json`),
+            filePathForKey(entry.cacheKey),
             JSON.stringify(entry),
             'utf8'
         );
-    } catch (err) {
-        tfd.sysError('SharedCache', `寫入失敗: ${err.message}`);
+    } catch (error) {
+        tfd.sysError('SharedCache', `Failed to write translation cache: ${error.message}`);
     }
+
+    return entry;
 }
 
-/**
- * 清理過期快取（7 天以上）
- * 每 24 小時由 index.js 呼叫一次
- */
 function cleanup() {
     const cutoff = Date.now() - TTL_MS;
     let count = 0;
 
-    for (const [id, entry] of memoryIndex) {
+    for (const [cacheKey, entry] of memoryIndex) {
         if (entry.timestamp < cutoff) {
-            memoryIndex.delete(id);
-            try { fs.unlinkSync(path.join(CACHE_DIR, `${id}.json`)); } catch (_) {}
+            memoryIndex.delete(cacheKey);
+            try { fs.unlinkSync(filePathForKey(cacheKey)); } catch (_) {}
             count++;
         }
     }
 
     if (count > 0) {
-        tfd.sys('SharedCache', `清理 ${count} 筆過期翻譯快取`);
+        tfd.sys('SharedCache', `Cleaned ${count} expired translation cache entries.`);
     }
 }
 
-/**
- * 取得快取統計資訊
- */
 function stats() {
     return {
         count: memoryIndex.size,
@@ -130,4 +150,4 @@ function stats() {
     };
 }
 
-module.exports = { init, get, set, cleanup, stats };
+module.exports = { init, get, set, cleanup, stats, makeKey };

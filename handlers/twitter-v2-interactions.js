@@ -22,6 +22,7 @@ const { getMessageState, setMessageState } = require('../utils/twitter-v2-state-
 const { getPreferredProvider, PROVIDERS } = require('../utils/user-api-key-storage');
 const { buildTextBundle } = require('../utils/translation/text-bundle');
 const { translateTweet } = require('../utils/translation/translation-service');
+const sharedTranslationCache = require('../utils/shared-translation-cache');
 const db = require('../db');
 const tlog = require('../utils/tfd-logger');
 
@@ -121,6 +122,15 @@ function getCachedV2Translation(tweetId, provider = null) {
     if (provider) {
         const providerCached = v2TranslationCache.get(getV2TranslationCacheKey(tweetId, provider));
         if (providerCached) return providerCached;
+
+        const sharedCached = sharedTranslationCache.get(tweetId, provider);
+        if (sharedCached?.translated) {
+            return {
+                translatedText: sharedCached.translated.main || '',
+                translatedQuoteText: sharedCached.translated.quote || '',
+                translatedReplyText: sharedCached.translated.reply || ''
+            };
+        }
     }
     return v2TranslationCache.get(tweetId);
 }
@@ -300,6 +310,19 @@ async function handleV2Translate(interaction) {
         translatedReplyText: result.translated.reply
     };
     setCachedV2Translation(tweetId, preferredProvider, translationData);
+    sharedTranslationCache.set(tweetId, preferredProvider, {
+        original: {
+            main: textBundle.main,
+            quote: textBundle.quote,
+            reply: textBundle.reply
+        },
+        translated: {
+            main: result.translated.main,
+            quote: result.translated.quote,
+            reply: result.translated.reply
+        },
+        model: result.model || preferredProvider
+    });
 
     await rebuildAndUpdate(interaction, tweetId, {
         isTranslated: true,

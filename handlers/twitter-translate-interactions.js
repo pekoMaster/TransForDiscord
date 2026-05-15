@@ -10,6 +10,7 @@ const { buildTextBundle } = require('../utils/translation/text-bundle');
 
 // 引入快取系統以取得完整文字
 const { getCachedContent } = require('./content-translation-interactions.js');
+const sharedTranslationCache = require('../utils/shared-translation-cache');
 const tlog = require('../utils/tfd-logger');
 
 // 翻譯快取 (避免重複翻譯相同內容)
@@ -201,7 +202,12 @@ async function handleTranslateButton(interaction) {
 
         // 檢查快取
         const cacheKey = `${tweetId}_${userId}_${preferredProvider}`;
-        const cachedTranslation = getFromCache(cacheKey);
+        const sharedCachedTranslation = sharedTranslationCache.get(tweetId, preferredProvider);
+        const cachedTranslation = getFromCache(cacheKey) || (sharedCachedTranslation ? {
+            fullText: sharedCachedTranslation.translated?.main || '',
+            quoteText: sharedCachedTranslation.translated?.quote || '',
+            replyText: sharedCachedTranslation.translated?.reply || ''
+        } : null);
 
         let translatedFullText;
         let translatedQuoteText = '';
@@ -291,6 +297,19 @@ async function handleTranslateButton(interaction) {
 
             // 儲存完整翻譯到快取（包含引用和回覆翻譯）
             saveToCache(cacheKey, { fullText: translatedFullText, quoteText: translatedQuoteText, replyText: translatedReplyText });
+            sharedTranslationCache.set(tweetId, preferredProvider, {
+                original: {
+                    main: fullOriginalText,
+                    quote: quoteOriginalText,
+                    reply: replyOriginalText
+                },
+                translated: {
+                    main: translatedFullText,
+                    quote: translatedQuoteText,
+                    reply: translatedReplyText
+                },
+                model: translateResult.model || preferredProvider
+            });
         }
 
         // 檢查當前是展開還是收起狀態（檢查是否有 expand/collapse 按鈕）
