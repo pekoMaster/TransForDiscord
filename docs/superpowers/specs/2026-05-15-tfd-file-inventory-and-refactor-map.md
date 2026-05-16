@@ -92,7 +92,7 @@ Imported status:
 - `tfd is not defined`: fix by moving logger requires to module scope where they are still block-scoped.
 - `normalize-author` embed compatibility: done in `src/features/moderation/normalize-author.js`; old `utils/normalize-author.js` remains an adapter.
 - PTT `result.data.author`: add to moderation author normalization and smoke coverage.
-- V2 blacklist Level 1 warning and unsafe `result.embed.data` access: schedule as a focused `message-handler-v2` moderation pipeline phase.
+- V2 blacklist Level 1 warning and unsafe `result.embed.data` access: moved to `src/features/moderation/blacklist-result-decorator.js`; `message-handler-v2` now delegates Level 1/2 decoration.
 - `/pe blacklist list` Embed pagination: schedule as a focused slash-command phase.
 - Twitter quote auto-expand and V1/V2 transition behavior: schedule as a focused Twitter quote phase using current TFD paths under `src/features/twitter`.
 

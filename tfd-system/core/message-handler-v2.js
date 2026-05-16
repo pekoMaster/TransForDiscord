@@ -13,6 +13,7 @@ const tlog = require('../../utils/tfd-logger');
 // Webhook 管理器 - 用於以使用者身份發送訊息
 const { sendWithWebhook, editWebhookMessage, canUseWebhook, hasWebhookPermission } = require('../../utils/webhook-manager');
 const { normalizeAuthorForBlacklist } = require('../../src/features/moderation/normalize-author');
+const { applyBlacklistDecoration } = require('../../src/features/moderation/blacklist-result-decorator');
 const { getInstance: getGBM } = require('../../utils/guild-blacklist-manager.js');
 const { setMessageState: setTwitterV2MessageState } = require('../../utils/twitter-v2-state-store');
 const { sanitizeComponentsForSend } = require('../../src/shared/discord/component-sanitizer');
@@ -1416,80 +1417,10 @@ class TFDMessageHandler {
                             continue;
                         }
 
+                        applyBlacklistDecoration(result, entry, this.log.bind(this));
+
                         if (entry.level === 2) {
-                            // Level 2: Auto-spoiler
-                            const label = entry.label || '防爆雷';
-
-                            // V2 Container: modify TextDisplay content + MediaGallery
-                            if (result.isV2 && result.v2Container) {
-                                try {
-                                    const container = result.v2Container;
-                                    const comps = container.components || [];
-                                    for (const comp of comps) {
-                                        // TextDisplay: wrap content in spoiler
-                                        if (comp.data && comp.data.content && comp.data.type === 1) {
-                                            const txt = comp.data.content;
-                                            // Skip header lines (start with -#)
-                                            const lines = txt.split('\n');
-                                            const headerLines = [];
-                                            const bodyLines = [];
-                                            for (const line of lines) {
-                                                if (line.startsWith('-#')) headerLines.push(line);
-                                                else bodyLines.push(line);
-                                            }
-                                            if (bodyLines.length > 0) {
-                                                comp.data.content = [...headerLines, '||' + bodyLines.join('\n') + '||'].join('\n');
-                                            }
-                                        }
-                                        // MediaGallery: setSpoiler on items
-                                        if (comp.components) {
-                                            for (const item of comp.components) {
-                                                if (item.data) item.data.spoiler = true;
-                                            }
-                                        }
-                                    }
-                                    // Add spoiler footer
-                                    container.addTextDisplayComponents(
-                                        new TextDisplayBuilder().setContent(`🕶️ 本伺服器已對此作者自動防爆雷【${label}】`)
-                                    );
-                                } catch (e) {
-                                    this.log(`V2 防爆雷失敗: ${e.message}`, 'error');
-                                }
-                            }
-
-                            // Traditional embed: wrap text content
-                            if (result.embed) {
-                                if (result.embed.data && result.embed.data.description) {
-                                    result.embed.data.description = '||' + result.embed.data.description + '||';
-                                }
-                                if (result.embed.data && result.embed.data.title) {
-                                    result.embed.data.title = '||🕶️ ' + result.embed.data.title + '||';
-                                }
-                                if (result.embed.data && result.embed.data.fields) {
-                                    for (const field of result.embed.data.fields) {
-                                        field.value = '||' + field.value + '||';
-                                    }
-                                }
-                                const existingFooter = (result.embed.data && result.embed.data.footer && result.embed.data.footer.text) || '';
-                                const footerText = existingFooter
-                                    ? `🕶️ 本伺服器已對此作者自動防爆雷【${label}】| ${existingFooter}`
-                                    : `🕶️ 本伺服器已對此作者自動防爆雷【${label}】`;
-                                try { result.embed.setFooter({ text: footerText }); } catch (_) {}
-                            }
-
                             this.log(`${platform} 作者 ${author || 'unknown'} 自動防爆雷(等級 2)`);
-                        }
-
-                        if (entry.level === 1) {
-                            // Level 1: Warning footer
-                            if (result.embed && typeof result.embed.setFooter === 'function') {
-                                const label = entry.label || '未指定';
-                                const existingFooter = result.embed.data?.footer?.text || '';
-                                const warningText = existingFooter
-                                    ? `⚠️ 此作者有 [提示] 標記：${label} | ${existingFooter}`
-                                    : `⚠️ 此作者在本伺服器有 [提示] 等級標記：${label}`;
-                                result.embed.setFooter({ text: warningText });
-                            }
                         }
                     }
                 }
