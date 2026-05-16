@@ -11,6 +11,7 @@ const MixedMediaHTMLBuilder = require('../../../../tfd-system/render/mixed-media
 const TextTruncator = require('../../../../tfd-system/utils/text-truncator');
 const URLConverterLogger = require('../../../../tfd-system/utils/url-converter-logger');
 const tfd = require('../../../../utils/tfd-logger');
+const mediaClassifier = require('./v2/media-classifier');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -582,74 +583,42 @@ class TFDTwitterExtractor {
      * 檢查是否為回覆推文
      */
     isReplyTweet(tweet) {
-        return !!(
-            tweet.replying_to ||
-            tweet.replying_to_status ||
-            (tweet.text && tweet.text.startsWith('@'))
-        );
+        return mediaClassifier.isReplyTweet(tweet);
     }
 
     /**
      * 檢查是否為引用轉推
      */
     isQuoteTweet(tweet) {
-        return !!(tweet.quote && tweet.quote.author);
+        return mediaClassifier.isQuoteTweet(tweet);
     }
 
     /**
      * 檢查是否有影片內容
      */
     hasVideoContent(tweet) {
-        try {
-            if (tweet.media && tweet.media.all && tweet.media.all.length > 0) {
-                return tweet.media.all.some(media => media && (media.type === 'video' || media.type === 'gif'));
-            }
-            return false;
-        } catch (error) {
-            return false;
-        }
+        return mediaClassifier.hasVideoContent(tweet);
     }
 
     /**
      * 檢查是否有圖片內容
      */
     hasImageContent(tweet) {
-        try {
-            if (tweet.media && tweet.media.all && tweet.media.all.length > 0) {
-                return tweet.media.all.some(media => media && media.type !== 'video');
-            }
-            return false;
-        } catch (error) {
-            return false;
-        }
+        return mediaClassifier.hasImageContent(tweet);
     }
 
     /**
      * 獲取圖片數量
      */
     getImageCount(tweet) {
-        try {
-            if (tweet.media && tweet.media.all && tweet.media.all.length > 0) {
-                return tweet.media.all.filter(media => media && media.type !== 'video').length;
-            }
-            return 0;
-        } catch (error) {
-            return 0;
-        }
+        return mediaClassifier.getImageCount(tweet);
     }
 
     /**
      * 獲取影片數量
      */
     getVideoCount(tweet) {
-        try {
-            if (tweet.media && tweet.media.all && tweet.media.all.length > 0) {
-                return tweet.media.all.filter(media => media && (media.type === 'video' || media.type === 'gif')).length;
-            }
-            return 0;
-        } catch (error) {
-            return 0;
-        }
+        return mediaClassifier.getVideoCount(tweet);
     }
 
     /**
