@@ -863,43 +863,7 @@ class TFDTwitterExtractor {
      */
     async getReplyTweetInfo(tweet) {
         try {
-            let replyTweetId = null;
-            let replyUsername = null;
-
-            // 從 replying_to 字段獲取
-            if (tweet.replying_to) {
-                replyUsername = tweet.replying_to;
-            }
-
-            // 從 replying_to_status 獲取（正確的欄位名稱）
-            if (tweet.replying_to_status) {
-                replyTweetId = tweet.replying_to_status;
-            }
-
-            // 從推文文本中解析 @username
-            if (!replyUsername && tweet.text) {
-                const mentionMatch = tweet.text.match(/^@(\w+)/);
-                if (mentionMatch) {
-                    replyUsername = mentionMatch[1];
-                }
-            }
-
-            // 測試用特殊處理（基於除錯結果更新）
-            if (!replyTweetId && replyUsername) {
-                const testMappings = {
-                    'hikosan333': {
-                        '1970330275587736012': '1970128496702980398'
-                    },
-                    'Wadai__2': {
-                        '1970348758677495897': '1970114575598280800' // 從除錯結果獲得的正確ID
-                    }
-                };
-
-                if (testMappings[replyUsername] && testMappings[replyUsername][tweet.id]) {
-                    replyTweetId = testMappings[replyUsername][tweet.id];
-                    // LOG removed for simplicity
-                }
-            }
+            const { replyTweetId, replyUsername } = tweetInfo.getReplyReference(tweet);
 
             // LOG removed for simplicity
 
