@@ -29,6 +29,7 @@ const tlog = require('../utils/tfd-logger');
 const { getInstance: getGBM } = require('../utils/guild-blacklist-manager.js');
 const linkSupport = require('../src/features/link-support/link-support-service');
 const { listSupportedDomains } = require('../src/features/link-support/domain-registry');
+const { sendPaginatedBlacklistList } = require('../src/features/moderation/blacklist-list-presenter');
 
 const PROVIDER_CHOICES = [
     { name: 'OpenAI', value: 'openai' },
@@ -529,19 +530,7 @@ async function handleBlacklist(interaction, sub, guildId, userId) {
             });
         }
 
-        const levelNames = { 1: '僅提示', 2: '防爆雷', 3: '封鎖' };
-        const lines = list.slice(0, 10).map((r, i) => {
-            const authorDisplay = r.platform === 'twitter' ? `@${r.author}` : r.author;
-            return `${i + 1}. [${r.platform}] ${authorDisplay} — 等級 ${r.level} (${levelNames[r.level] || r.level})${r.label ? ` 【${r.label}】` : ''}`;
-        });
-
-        let content = `📋 本伺服器黑名單（共 ${list.length} 條）:\n${lines.join('\n')}`;
-
-        if (list.length > 10) {
-            content += `\n...另有 ${list.length - 10} 條（每頁最多顯示 10 條）`;
-        }
-
-        return interaction.reply({ content, flags: MessageFlags.Ephemeral });
+        return sendPaginatedBlacklistList(interaction, list, { platform });
     }
 }
 

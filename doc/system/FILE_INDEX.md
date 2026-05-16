@@ -218,6 +218,7 @@ MessageCreate
 
 | 路徑 | 功能 |
 |------|------|
+| `blacklist-list-presenter.js` | `/pe blacklist list` Embed 分頁呈現與按鈕 collector |
 | `blacklist-result-decorator.js` | 黑名單 Level 1/2 顯示套用，支援傳統 embed 與 V2 Container |
 | `normalize-author.js` | 黑名單比對用作者正規化，支援 plain embed 與 Discord EmbedBuilder `data` 結構；舊 `utils/normalize-author.js` 僅保留 adapter |
 
@@ -345,6 +346,7 @@ MessageCreate
 | `tfd-logger-smoke.js` | Shared logging adapter smoke test |
 | `url-converter-logger-smoke.js` | Shared logging URL converter logger smoke test |
 | `url-stats-smoke.js` | Shared analytics URL stats adapter and persistence smoke test |
+| `blacklist-list-presenter-smoke.js` | Moderation blacklist list embed pagination smoke test |
 | `blacklist-result-decorator-smoke.js` | Moderation blacklist Level 1/2 embed and V2 Container decoration smoke test |
 | `normalize-author-smoke.js` | Moderation author normalization adapter and embed compatibility smoke test |
 | `crypto-helper-smoke.js` | Shared crypto adapter and key-path smoke test |
