@@ -16,6 +16,9 @@ function extractTweetId(customId) {
 }
 
 function extractMarkerTextFromMessage(message) {
+    const contentMarker = message?.content?.split('\n').find(line => line.startsWith('-# <@'));
+    if (contentMarker) return contentMarker;
+
     const origComponents = message?.components;
     if (!origComponents?.[0]?.components?.[0]) return null;
 

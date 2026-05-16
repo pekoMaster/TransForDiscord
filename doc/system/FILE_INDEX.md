@@ -154,6 +154,7 @@ MessageCreate
 | `extractors/v2/media-classifier.js` | 回覆/引用/媒體類型判斷與圖片/影片數量 |
 | `extractors/v2/media-policy.js` | 多 Embed 與 GAS 模式顯示策略 |
 | `extractors/v2/normalizer.js` | vxtwitter API 回應轉 fxtwitter 相容格式 |
+| `extractors/v2/quote-display-policy.js` | Twitter quote V1/V2 initial display and transition policy |
 | `extractors/v2/response-builders.js` | Profile Embed、passthrough、error response 建構 |
 | `extractors/v2/tweet-fetcher.js` | fxtwitter 優先、vxtwitter fallback 的推文抓取流程 |
 | `extractors/v2/tweet-info.js` | URL 推文 ID、引用推文資訊、回覆目標解析 |
@@ -354,6 +355,7 @@ MessageCreate
 | `embed-builder-smoke.js` | Shared Discord embed builder smoke test |
 | `http-client-smoke.js` | Shared HTTP client adapter and retry behavior smoke test |
 | `tunnel-url-provider-smoke.js` | Shared web tunnel URL provider adapter and cache smoke test |
+| `twitter-quote-display-policy-smoke.js` | Twitter quote V1/V2 display policy smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---

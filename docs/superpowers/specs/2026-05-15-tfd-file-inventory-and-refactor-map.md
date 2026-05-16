@@ -94,7 +94,7 @@ Imported status:
 - PTT `result.data.author`: add to moderation author normalization and smoke coverage.
 - V2 blacklist Level 1 warning and unsafe `result.embed.data` access: moved to `src/features/moderation/blacklist-result-decorator.js`; `message-handler-v2` now delegates Level 1/2 decoration.
 - `/pe blacklist list` Embed pagination: moved to `src/features/moderation/blacklist-list-presenter.js`; `commands/pe.js` delegates list rendering and pagination.
-- Twitter quote auto-expand and V1/V2 transition behavior: schedule as a focused Twitter quote phase using current TFD paths under `src/features/twitter`.
+- Twitter quote auto-expand and V1/V2 transition behavior: moved initial display policy to `src/features/twitter/extractors/v2/quote-display-policy.js`; extractor now applies V1/V2 default state, V1 expand can route to V2, and V2 collapse attempts V1 edit with bot-send fallback if Discord rejects Components V2 -> Embed edits.
 
 ## Proposed Top-Level Structure
 

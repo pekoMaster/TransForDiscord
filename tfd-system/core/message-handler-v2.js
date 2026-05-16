@@ -755,6 +755,7 @@ class TFDMessageHandler {
             });
 
             if (sentMsg?.id && result.tweetId) {
+                const initialV2State = result.initialV2State || {};
                 setTwitterV2MessageState(sentMsg.id, {
                     tweetId: result.tweetId,
                     originalURL: originalURL || `https://twitter.com/i/status/${result.tweetId}`,
@@ -763,9 +764,9 @@ class TFDMessageHandler {
                     translatedText: null,
                     translatedQuoteText: null,
                     translatedReplyText: null,
-                    isExpanded: false,
-                    isQuoteShown: false,
-                    isReplyShown: false,
+                    isExpanded: Boolean(initialV2State.isExpanded),
+                    isQuoteShown: Boolean(initialV2State.isQuoteShown),
+                    isReplyShown: Boolean(initialV2State.isReplyShown),
                 });
             }
 

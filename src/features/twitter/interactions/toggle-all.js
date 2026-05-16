@@ -7,6 +7,9 @@
 const { ActionRowBuilder, MessageFlags } = require('discord.js');
 const { getTranslationState } = require('./translation');
 const { getCachedContent } = require('../../translation/cache/content-cache');
+const { shouldTransitionV1QuoteToV2 } = require('../extractors/v2/quote-display-policy');
+const { extractMarkerTextFromMessage } = require('./v2/shared');
+const { rebuildAndUpdate } = require('./v2/view-updater');
 const tlog = require('../../../../utils/tfd-logger');
 
 /**
@@ -78,6 +81,20 @@ async function handleTwitterAllToggleInteraction(interaction) {
             // 1. 展開引用推文
             const quoteInfo = extractor.getQuoteTweetInfo(tweet);
             if (quoteInfo && quoteInfo.tweet) {
+                const quotedHasVideo = extractor.hasVideoContent(quoteInfo.tweet);
+                if (shouldTransitionV1QuoteToV2({
+                    quoterHasImages: extractor.hasImageContent(tweet),
+                    quotedHasVideo
+                })) {
+                    const transitioned = await rebuildAndUpdate(interaction, tweetId, {
+                        isQuoteShown: true,
+                        isReplyShown: true,
+                        isExpanded: true,
+                        markerText: extractMarkerTextFromMessage(message)
+                    });
+                    if (transitioned) return true;
+                }
+
                 const quoteTweet = quoteInfo.tweet;
                 const quoteUsername = quoteTweet.author.screen_name;
                 const quoteDisplayName = quoteTweet.author.name || quoteUsername;

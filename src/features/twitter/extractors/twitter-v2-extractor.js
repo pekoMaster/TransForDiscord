@@ -20,6 +20,7 @@ const tweetInfo = require('./v2/tweet-info');
 const responseBuilders = require('./v2/response-builders');
 const mediaPolicy = require('./v2/media-policy');
 const tweetFetcher = require('./v2/tweet-fetcher');
+const { getQuoteDisplayPolicy } = require('./v2/quote-display-policy');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -112,10 +113,27 @@ class TFDTwitterExtractor {
 
             // 分析推文類型
             const tweetType = this.analyzeTweetType(tweet);
+            let quoteInfo = null;
+            let quotePolicy = getQuoteDisplayPolicy({ isQuote: false, hasQuoteTweet: false });
+            if (this.isQuoteTweet(tweet)) {
+                quoteInfo = this.getQuoteTweetInfo(tweet);
+                quotePolicy = getQuoteDisplayPolicy({
+                    isQuote: true,
+                    hasQuoteTweet: Boolean(quoteInfo?.tweet),
+                    quoterHasImages: this.hasImageContent(tweet),
+                    quotedHasVideo: quoteInfo?.tweet ? this.hasVideoContent(quoteInfo.tweet) : false
+                });
+            }
             // 分析推文類型完成
 
             // 處理不同類型的推文
             // 2026-04-11: 所有影片類型推文改用 V2 Container（取代 vxtwitter redirect）
+            if (quotePolicy.shouldUseV2ForQuote) {
+                return await this.handleVideoTweetV2(tweet, originalURL, tweetType, message, {
+                    isQuoteShown: true
+                });
+            }
+
             const videoTypes = ['video', 'multi-video', 'multi-video-with-images', 'video-with-images'];
             if (videoTypes.includes(tweetType)) {
                 return await this.handleVideoTweetV2(tweet, originalURL, tweetType, message);
@@ -134,12 +152,6 @@ class TFDTwitterExtractor {
             }
 
             // 🔧 獲取引用資訊（檢查推文本身是否為引用轉推，而非依賴 tweetType）
-            let quoteInfo = null;
-            if (this.isQuoteTweet(tweet)) {
-                // LOG removed for simplicity
-                quoteInfo = this.getQuoteTweetInfo(tweet);
-            }
-
             // 2026-04-11: 回覆/引用含影片時不再轉 vxtwitter，統一走 embed 流程 + Vercel 影片 URL
 
             // 🌐 檢查是否應該使用 Google Apps Script 模式
@@ -165,7 +177,7 @@ class TFDTwitterExtractor {
 
             // 建立增強版嵌入式訊息（預設隱藏引用原文）
             // 方法內部會處理文字截斷並返回 truncationResult
-            const embedResult = this.buildEnhancedEmbed(tweet, originalURL, replyInfo, tweetType, quoteInfo, false);
+            const embedResult = this.buildEnhancedEmbed(tweet, originalURL, replyInfo, tweetType, quoteInfo, quotePolicy.shouldAutoExpandQuote);
             const embed = embedResult.embed;
             const truncationResult = embedResult.truncationResult;
 
@@ -192,7 +204,7 @@ class TFDTwitterExtractor {
             // 單一展開按鈕（合併引用、回覆、全文）
             const hasExpandable = (quoteInfo && quoteInfo.tweet) || (replyInfo && replyInfo.tweet) || (truncationResult && truncationResult.isTruncated);
             if (hasExpandable) {
-                toggleButtons.push(this.buildAllToggleButtonComponent(tweet.id, false)); // false = 初始收起狀態
+                toggleButtons.push(this.buildAllToggleButtonComponent(tweet.id, quotePolicy.shouldAutoExpandQuote)); // false = 初始收起狀態
             }
 
             // 🔄 重新整理按鈕（用於重新讀取推文跟圖片）
@@ -479,7 +491,7 @@ class TFDTwitterExtractor {
      * @param {string} tweetType - 推文類型
      * @param {Object} message - Discord 訊息物件（可選）
      */
-    async handleVideoTweetV2(tweet, originalURL, tweetType, message = null) {
+    async handleVideoTweetV2(tweet, originalURL, tweetType, message = null, v2Options = {}) {
         try {
             // 取得回覆/引用資訊
             let replyData = null;
@@ -508,6 +520,9 @@ class TFDTwitterExtractor {
             const container = buildV2Container(tweet, originalURL, {
                 quoteData,
                 replyData,
+                isQuoteShown: Boolean(v2Options.isQuoteShown),
+                isReplyShown: Boolean(v2Options.isReplyShown),
+                isExpanded: Boolean(v2Options.isExpanded),
             });
 
             // 快取推文資料（供按鈕互動重建 Container 用）
@@ -525,6 +540,11 @@ class TFDTwitterExtractor {
                 tweetId: tweet.id,
                 originalURL: originalURL,
                 originalText: tweet.text,
+                initialV2State: {
+                    isQuoteShown: Boolean(v2Options.isQuoteShown),
+                    isReplyShown: Boolean(v2Options.isReplyShown),
+                    isExpanded: Boolean(v2Options.isExpanded),
+                },
                 tweet: tweet,  // 供降級時重建舊版 embed 使用
             };
         } catch (error) {
