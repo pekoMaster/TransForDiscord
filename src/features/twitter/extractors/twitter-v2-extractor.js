@@ -4,7 +4,7 @@
  * 支援回覆推文、引用轉推、多圖片分頁、影片重導向等功能
  */
 
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder } = require('discord.js');
 const HTTPClient = require('../../../../tfd-system/utils/http-client');
 const TwitterVideoAttachmentOptimizer = require('../media/video-attachment-optimizer');
 const MixedMediaHTMLBuilder = require('../../../../tfd-system/render/mixed-media-html-builder');
@@ -13,6 +13,7 @@ const URLConverterLogger = require('../../../../tfd-system/utils/url-converter-l
 const tfd = require('../../../../utils/tfd-logger');
 const mediaClassifier = require('./v2/media-classifier');
 const videoLinks = require('./v2/video-links');
+const classicComponents = require('./v2/classic-components');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -1326,50 +1327,7 @@ class TFDTwitterExtractor {
      * 建立分頁按鈕（針對多圖片推文和混合媒體）
      */
     buildPaginationButtons(tweet, tweetType) {
-        // 支援多圖片、回覆帶圖片、以及混合媒體類型
-        const supportedTypes = ['multi-image', 'reply-with-media', 'video-with-images'];
-        if (!supportedTypes.includes(tweetType)) {
-            return null;
-        }
-
-        try {
-            const images = this.extractImagesFromTweet(tweet);
-            if (images.length <= 1) {
-                return null; // 只有一張圖片或沒有圖片，不需要按鈕
-            }
-
-            // LOG removed for simplicity
-
-            const row = new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`twitter_first_${tweet.id}_0`)
-                        .setLabel('⏪')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId(`twitter_prev_${tweet.id}_0`)
-                        .setLabel('◀️')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId(`twitter_page_${tweet.id}_0`)
-                        .setLabel('1 / ' + images.length)
-                        .setStyle(ButtonStyle.Primary)
-                        .setDisabled(true),
-                    new ButtonBuilder()
-                        .setCustomId(`twitter_next_${tweet.id}_1`)
-                        .setLabel('▶️')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId(`twitter_last_${tweet.id}_${images.length - 1}`)
-                        .setLabel('⏩')
-                        .setStyle(ButtonStyle.Secondary)
-                );
-
-            return [row];
-        } catch (error) {
-            // LOG removed for simplicity
-            return null;
-        }
+        return classicComponents.buildPaginationButtons(tweet, tweetType, item => this.extractImagesFromTweet(item));
     }
 
     /**
@@ -1379,10 +1337,7 @@ class TFDTwitterExtractor {
      * @returns {ButtonBuilder}
      */
     buildExpandToggleButtonComponent(tweetId, isExpanded) {
-        return new ButtonBuilder()
-            .setCustomId(isExpanded ? `twitter_collapse_${tweetId}` : `twitter_expand_${tweetId}`)
-            .setLabel(isExpanded ? '收回全文' : '展開全文')
-            .setStyle(ButtonStyle.Secondary);
+        return classicComponents.buildExpandToggleButtonComponent(tweetId, isExpanded);
     }
 
     /**
@@ -1392,10 +1347,7 @@ class TFDTwitterExtractor {
      * @returns {ButtonBuilder}
      */
     buildAllToggleButtonComponent(tweetId, isAllExpanded) {
-        return new ButtonBuilder()
-            .setCustomId(isAllExpanded ? `twitter_collapse_all_${tweetId}` : `twitter_expand_all_${tweetId}`)
-            .setLabel(isAllExpanded ? '收回' : '展開')
-            .setStyle(ButtonStyle.Secondary);
+        return classicComponents.buildAllToggleButtonComponent(tweetId, isAllExpanded);
     }
 
     /**
@@ -1405,10 +1357,7 @@ class TFDTwitterExtractor {
      * @returns {ButtonBuilder}
      */
     buildTranslateButtonComponent(tweetId, isTranslated) {
-        return new ButtonBuilder()
-            .setCustomId(isTranslated ? `twitter_original_${tweetId}` : `twitter_translate_${tweetId}`)
-            .setLabel(isTranslated ? '原文' : '翻譯')
-            .setStyle(ButtonStyle.Secondary);
+        return classicComponents.buildTranslateButtonComponent(tweetId, isTranslated);
     }
 
     /**
@@ -1418,39 +1367,11 @@ class TFDTwitterExtractor {
      * @returns {Array|null} 更新後的 components
      */
     addTranslateButtonToComponents(components, tweet) {
-        // 檢查文字內容是否足夠
-        const textContent = tweet.text || '';
-        if (textContent.trim().length < 10) {
-            return components;
-        }
-
-        // 建立翻譯按鈕
-        const translateButton = this.buildTranslateButtonComponent(tweet.id, false);
-
-        if (!components || components.length === 0) {
-            // 沒有現有 components，創建新的
-            return [new ActionRowBuilder().addComponents(translateButton)];
-        }
-
-        // 檢查第一個 ActionRow 是否有空間（最多 5 個按鈕）
-        const firstRow = components[0];
-        if (firstRow && firstRow.components && firstRow.components.length < 5) {
-            // 在第一個 ActionRow 最前面插入翻譯按鈕
-            const newFirstRow = new ActionRowBuilder().addComponents(
-                translateButton,
-                ...firstRow.components
-            );
-            return [newFirstRow, ...components.slice(1)];
-        }
-
-        // 第一個 ActionRow 已滿，創建新的 ActionRow 放在最前面
-        if (components.length < 5) {
-            const newRow = new ActionRowBuilder().addComponents(translateButton);
-            return [newRow, ...components];
-        }
-
-        // components 已達上限，無法添加
-        return components;
+        return classicComponents.addTranslateButtonToComponents(
+            components,
+            tweet,
+            (tweetId, isTranslated) => this.buildTranslateButtonComponent(tweetId, isTranslated)
+        );
     }
 
     /**
@@ -1670,10 +1591,7 @@ class TFDTwitterExtractor {
 }
 
 TFDTwitterExtractor.prototype.buildReloadButtonComponent = function(tweetId) {
-    return new ButtonBuilder()
-        .setCustomId(`twitter_reload_${tweetId}`)
-        .setLabel('重整')
-        .setStyle(ButtonStyle.Secondary);
+    return classicComponents.buildReloadButtonComponent(tweetId);
 };
 
 module.exports = TFDTwitterExtractor;
