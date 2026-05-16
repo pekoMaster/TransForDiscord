@@ -15,6 +15,7 @@ const mediaClassifier = require('./v2/media-classifier');
 const videoLinks = require('./v2/video-links');
 const classicComponents = require('./v2/classic-components');
 const imageHelpers = require('./v2/images');
+const normalizer = require('./v2/normalizer');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -855,61 +856,7 @@ class TFDTwitterExtractor {
      * @returns {Object|null}
      */
     normalizeVxTwitterResponse(data, tid) {
-        if (!data) return null;
-
-        const tweetId = data.tweetID || tid;
-        const text = data.text || data.description || '';
-        const userScreenName = data.user_screen_name || '';
-        const userName = data.user_name || userScreenName;
-        const profileImageUrl = data.user_profile_image_url || '';
-
-        if (!userScreenName) return null;
-
-        const tweet = {
-            id: tweetId,
-            text: text,
-            created_timestamp: data.date_epoch || null,
-            author: {
-                id: null,
-                name: userName,
-                screen_name: userScreenName,
-                profile_image_url_https: profileImageUrl,
-                avatar_url: profileImageUrl
-            },
-            engagement: {
-                likes: data.likes || 0,
-                retweets: data.retweets || 0,
-                replies: data.replies || 0,
-                views: data.views || 0
-            },
-            media: null,
-            replying_to: null,
-            replying_to_status: null,
-            quote: null,
-            _fromVxTwitter: true
-        };
-
-        // 轉換媒體格式（media_extended 陣列）
-        if (data.media_extended && data.media_extended.length > 0) {
-            tweet.media = {
-                all: data.media_extended.map(m => {
-                    const mType = m.type === 'image' ? 'photo' : (m.type || 'photo');
-                    if (mType === 'video' || mType === 'gif') {
-                        return {
-                            type: mType,
-                            url: m.thumbnail_url || m.url,
-                            variants: m.url ? [{ url: m.url, bitrate: 2176000, content_type: 'video/mp4' }] : []
-                        };
-                    }
-                    return { type: 'photo', url: m.url };
-                })
-            };
-        } else if (data.mediaURLs && data.mediaURLs.length > 0) {
-            // 簡化格式 fallback
-            tweet.media = { all: data.mediaURLs.map(url => ({ type: 'photo', url })) };
-        }
-
-        return tweet;
+        return normalizer.normalizeVxTwitterResponse(data, tid);
     }
 
     /**
