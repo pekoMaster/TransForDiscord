@@ -12,6 +12,7 @@ const TextTruncator = require('../../../../tfd-system/utils/text-truncator');
 const URLConverterLogger = require('../../../../tfd-system/utils/url-converter-logger');
 const tfd = require('../../../../utils/tfd-logger');
 const mediaClassifier = require('./v2/media-classifier');
+const videoLinks = require('./v2/video-links');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -1456,14 +1457,7 @@ class TFDTwitterExtractor {
      * 格式化影片 URLs 為連結格式
      */
     formatVideoUrls(videoUrls) {
-        if (!videoUrls || videoUrls.length === 0) {
-            return [];
-        }
-
-        return videoUrls.map((url, index) => {
-            const videoNumber = index + 1;
-            return `[影片${videoNumber}](${url})`;
-        });
+        return videoLinks.formatVideoUrls(videoUrls);
     }
 
     /**
@@ -1471,40 +1465,14 @@ class TFDTwitterExtractor {
      * 2026-04-11: 若有設定 Vercel embed，單影片推文改用 Vercel embed URL
      */
     extractVideoUrls(tweet) {
-        const videoUrls = [];
-        try {
-            if (tweet.media && tweet.media.all) {
-                const videos = tweet.media.all.filter(media => media && (media.type === 'video' || media.type === 'gif') && media.url);
-
-                // 由洗頻暫時註解 - 單影片且有 Vercel embed → 使用 Vercel URL 讓 Discord 自動渲染影片
-                // if (videos.length === 1 && this.vercelEmbedBaseUrl) {
-                //     videoUrls.push(`${this.vercelEmbedBaseUrl}/embed/twitter/${tweet.id}`);
-                // } else {
-                    // 多影片或無 Vercel → 使用原始影片 URL
-                    videos.forEach(media => {
-                        const formattedVideoUrl = this.videoLinkFormat(media.url);
-                        videoUrls.push(formattedVideoUrl);
-                    });
-                // }
-            }
-        } catch (error) {
-            // LOG removed for simplicity
-        }
-        return videoUrls;
+        return videoLinks.extractVideoUrls(tweet, url => this.videoLinkFormat(url));
     }
 
     /**
      * 視頻連結格式化
      */
     videoLinkFormat(videoUrl) {
-        if (!videoUrl) return '';
-
-        try {
-            // 保持 TFD 原始格式
-            return videoUrl;
-        } catch (error) {
-            return videoUrl;
-        }
+        return videoLinks.videoLinkFormat(videoUrl);
     }
 
 
