@@ -119,7 +119,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | `src/shared/discord/component-sanitizer.js` | message-handler-v2, webhook-manager | 送出/編輯 Discord components 前過濾空 ActionRow、拆分超過 5 個子元件的 row |
 | `src/shared/discord/embed-builder.js` | ptt, instagram, pixiv, facebook, threads, twitter-legacy extractors | Generic Discord EmbedBuilder wrapper；`tfd-system/utils/embed-builder.js` 保留相容轉接 |
 | `src/shared/discord/text-truncator.js` | twitter interactions/extractors/containers | Discord-safe 文字截斷、CJK 權重計算與 URL 保護；`tfd-system/utils/text-truncator.js` 保留相容轉接 |
-| `utils/normalize-author.js` | message-handler-v2 | 各平台作者名正規化（for 黑名單比對） |
+| `src/features/moderation/normalize-author.js` | message-handler-v2 | 各平台作者名正規化（for 黑名單比對）；`utils/normalize-author.js` 保留相容轉接 |
 | `src/shared/logging/tfd-logger.js` | 全專案 | 統一日誌格式 `[MM/DD-HH:mm:ss] [Server] [Fn] [User] detail`；`utils/tfd-logger.js` 保留相容轉接 |
 | `src/shared/logging/url-converter-logger.js` | tfd-system extractors, twitter-v2-extractor | URL 轉換決策 logger；`tfd-system/utils/url-converter-logger.js` 保留相容轉接 |
 | `src/shared/analytics/url-stats.js` | message-handler-v2, Twitter interactions | URL 重複貼文統計（channel/guild/total）；`tfd-system/utils/url-stats.js` 保留相容轉接 |

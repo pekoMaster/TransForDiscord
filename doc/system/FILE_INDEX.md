@@ -214,6 +214,12 @@ MessageCreate
 | `link-support/domain-registry.js` | TFD 支援網域 registry，負責網域正規化與 domain → siteName 對應 |
 | `link-support/link-support-service.js` | Per-guild 支援網域 on/off 服務，轉接 SQLite `guild_link_domains` |
 
+### Moderation 功能模組 (`src/features/moderation/`)
+
+| 路徑 | 功能 |
+|------|------|
+| `normalize-author.js` | 黑名單比對用作者正規化，支援 plain embed 與 Discord EmbedBuilder `data` 結構；舊 `utils/normalize-author.js` 僅保留 adapter |
+
 ### 正規表達式 (`tfd-system/regex/`)
 
 | 檔案 | 功能 |
@@ -263,6 +269,7 @@ MessageCreate
 | `abuse-detector.js` | 濫用偵測器（SQLite 後端，含自動 GC） |
 | `blacklist-manager.js` | 黑名單管理器（PTT/Twitter 等） |
 | `crypto-helper.js` | 舊路徑 adapter，轉接至 `src/shared/crypto/crypto-helper.js` |
+| `normalize-author.js` | 舊路徑 adapter，轉接至 `src/features/moderation/normalize-author.js` |
 
 ### 翻譯系統
 
@@ -337,6 +344,7 @@ MessageCreate
 | `tfd-logger-smoke.js` | Shared logging adapter smoke test |
 | `url-converter-logger-smoke.js` | Shared logging URL converter logger smoke test |
 | `url-stats-smoke.js` | Shared analytics URL stats adapter and persistence smoke test |
+| `normalize-author-smoke.js` | Moderation author normalization adapter and embed compatibility smoke test |
 | `crypto-helper-smoke.js` | Shared crypto adapter and key-path smoke test |
 | `dom-parser-smoke.js` | Shared HTML DOM parser smoke test |
 | `embed-builder-smoke.js` | Shared Discord embed builder smoke test |

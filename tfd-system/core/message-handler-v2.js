@@ -12,7 +12,7 @@ const tlog = require('../../utils/tfd-logger');
 
 // Webhook 管理器 - 用於以使用者身份發送訊息
 const { sendWithWebhook, editWebhookMessage, canUseWebhook, hasWebhookPermission } = require('../../utils/webhook-manager');
-const { normalizeAuthorForBlacklist } = require('../../utils/normalize-author.js');
+const { normalizeAuthorForBlacklist } = require('../../src/features/moderation/normalize-author');
 const { getInstance: getGBM } = require('../../utils/guild-blacklist-manager.js');
 const { setMessageState: setTwitterV2MessageState } = require('../../utils/twitter-v2-state-store');
 const { sanitizeComponentsForSend } = require('../../src/shared/discord/component-sanitizer');
