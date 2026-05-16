@@ -4,7 +4,7 @@
  */
 
 const HTTPClient = require('../utils/http-client');
-const DOMParser = require('../utils/dom-parser');
+const DOMParser = require('../../src/shared/html/dom-parser');
 const TFDEmbedBuilder = require('../utils/embed-builder');
 const tfd = require('../../utils/tfd-logger');
 const PTTCacheManager = require('../../utils/ptt-cache-manager');

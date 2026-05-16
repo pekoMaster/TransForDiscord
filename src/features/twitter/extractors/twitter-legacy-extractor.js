@@ -4,7 +4,7 @@
  */
 
 const HTTPClient = require('../../../../tfd-system/utils/http-client');
-const DOMParser = require('../../../../tfd-system/utils/dom-parser');
+const DOMParser = require('../../../shared/html/dom-parser');
 const TFDEmbedBuilder = require('../../../../tfd-system/utils/embed-builder');
 const tfd = require('../../../../utils/tfd-logger');
 

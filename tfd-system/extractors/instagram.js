@@ -4,7 +4,7 @@
  */
 
 const HTTPClient = require('../utils/http-client');
-const DOMParser = require('../utils/dom-parser');
+const DOMParser = require('../../src/shared/html/dom-parser');
 const TFDEmbedBuilder = require('../utils/embed-builder');
 const URLConverterLogger = require('../utils/url-converter-logger');
 const axios = require('axios');

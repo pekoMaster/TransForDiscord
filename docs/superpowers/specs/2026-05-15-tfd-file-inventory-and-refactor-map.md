@@ -195,7 +195,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `tfd-system/regex/patterns.js` | URL regex patterns. | config | core/routing | `src/core/routing/url-patterns.js` | move | Could be generated from supported-sites metadata later. |
 | `tfd-system/render/html-video-renderer.js` | HTML video page renderer. | renderer | core/rendering | `src/core/rendering/html-video-renderer.js` | move | Shared by Twitter mixed media. |
 | `tfd-system/render/mixed-media-html-builder.js` | Mixed media HTML builder. | renderer | core/rendering | `src/core/rendering/mixed-media-html-builder.js` | move | Uses HTMLVideoRenderer. |
-| `tfd-system/utils/dom-parser.js` | Cheerio DOM extraction helper. | utility | shared/html | `src/shared/html/dom-parser.js` | move | Shared extractor helper. |
+| `tfd-system/utils/dom-parser.js` | Legacy adapter for Cheerio DOM extraction helper. | adapter | shared/html | `src/shared/html/dom-parser.js` | done-adapter | Runtime extractor imports moved to shared path. |
 | `tfd-system/utils/embed-builder.js` | Generic Discord embed builder wrapper. | renderer | shared/discord | `src/shared/discord/embed-builder.js` | move | Shared render helper. |
 | `tfd-system/utils/http-client.js` | Axios HTTP client with config defaults. | utility | shared/http | `src/shared/http/http-client.js` | move | Widely used by extractors. |
 | `tfd-system/utils/text-truncator.js` | Legacy adapter for Discord-safe text truncation. | adapter | shared/discord | `src/shared/discord/text-truncator.js` | done-adapter | Runtime Twitter imports moved to shared path. |

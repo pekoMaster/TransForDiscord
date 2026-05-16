@@ -181,6 +181,12 @@ MessageCreate
 |------|------|
 | `crypto-helper.js` | AES-256-GCM API Key 加解密 helper；fallback key 固定為專案 `data/.encryption-key` |
 
+### Shared HTML 模組 (`src/shared/html/`)
+
+| 路徑 | 功能 |
+|------|------|
+| `dom-parser.js` | Cheerio DOM/metadata parser，舊 `tfd-system/utils/dom-parser.js` 僅保留 adapter |
+
 ### Link Support 功能模組 (`src/features/link-support/`)
 
 | 路徑 | 功能 |
@@ -206,7 +212,7 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `dom-parser.js` | DOM 解析工具 |
+| `dom-parser.js` | 舊路徑 adapter，轉接至 `src/shared/html/dom-parser.js` |
 | `embed-builder.js` | Embed 建構輔助 |
 | `http-client.js` | HTTP 請求客戶端（含 User-Agent 輪替） |
 | `text-truncator.js` | 舊路徑 adapter，轉接至 `src/shared/discord/text-truncator.js` |
@@ -310,6 +316,7 @@ MessageCreate
 | `text-truncator-smoke.js` | Shared Discord text truncator smoke test |
 | `tfd-logger-smoke.js` | Shared logging adapter smoke test |
 | `crypto-helper-smoke.js` | Shared crypto adapter and key-path smoke test |
+| `dom-parser-smoke.js` | Shared HTML DOM parser smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---
