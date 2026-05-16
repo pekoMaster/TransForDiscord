@@ -818,40 +818,9 @@ class TFDTwitterExtractor {
      * 提取多圖片URL陣列
      */
     extractMultipleImages(tweet) {
-        const images = [];
-        const blacklistEntry = tweet._blacklistEntry;
-
-        try {
-            if (tweet.media && tweet.media.all) {
-                tweet.media.all.forEach(media => {
-                    if (media && media.type !== 'video' && media.url) {
-                        // 將 ?name=orig 改為 ?name=large，降低 Discord 外鏈抓取失敗機率
-                        const optimizedUrl = media.url.replace('?name=orig', '?name=large');
-                        // 🔒 等級 2：多圖片防爆雷
-                        if (blacklistEntry && blacklistEntry.level === 2) {
-                            images.push(`SPOILER_${optimizedUrl}`);
-                        } else {
-                            images.push(optimizedUrl);
-                        }
-                    }
-                });
-            }
-
-            // 2026-04-12: 若沒有媒體但有卡片圖片（外部連結卡片），使用卡片圖片
-            if (images.length === 0 && tweet.card && tweet.card.image && tweet.card.image.url) {
-                const cardImageUrl = tweet.card.image.url;
-                const optimizedUrl = cardImageUrl.replace(/\?name=\w+/, '?name=large');
-                // 🔒 等級 2：卡片圖片也需要防爆雷
-                if (blacklistEntry && blacklistEntry.level === 2) {
-                    images.push(`SPOILER_${optimizedUrl}`);
-                } else {
-                    images.push(optimizedUrl);
-                }
-            }
-        } catch (error) {
+        return imageHelpers.extractMultipleImages(tweet, error => {
             tfd.sysError('Enhanced-Twitter', `提取多圖片失敗: ${error.message}`);
-        }
-        return images;
+        });
     }
 
     /**
