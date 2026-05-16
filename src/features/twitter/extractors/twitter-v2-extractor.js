@@ -19,6 +19,7 @@ const normalizer = require('./v2/normalizer');
 const tweetInfo = require('./v2/tweet-info');
 const responseBuilders = require('./v2/response-builders');
 const mediaPolicy = require('./v2/media-policy');
+const tweetFetcher = require('./v2/tweet-fetcher');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -822,23 +823,11 @@ class TFDTwitterExtractor {
      * @returns {Promise<{tweet: Object, source: string}|null>}
      */
     async fetchTweetData(tid) {
-        // 嘗試 fxtwitter
-        const fxResp = await this.httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tid}`);
-        if (fxResp && fxResp.tweet) {
-            return { tweet: fxResp.tweet, source: 'fxtwitter' };
-        }
-
-        // fxtwitter 失敗，嘗試 vxtwitter 作為 fallback
-        tfd.sys('Twitter-Extractor', `fxtwitter 失敗，嘗試 vxtwitter fallback | TweetID: ${tid}`);
-        const vxResp = await this.httpClient.fetchJSON(`https://api.vxtwitter.com/i/status/${tid}`);
-        if (vxResp) {
-            const normalized = this.normalizeVxTwitterResponse(vxResp, tid);
-            if (normalized) {
-                return { tweet: normalized, source: 'vxtwitter' };
-            }
-        }
-
-        return null;
+        return tweetFetcher.fetchTweetData(tid, {
+            fetchJSON: url => this.httpClient.fetchJSON(url),
+            normalizeVxTwitterResponse: (data, tweetId) => this.normalizeVxTwitterResponse(data, tweetId),
+            logFallback: tweetId => tfd.sys('Twitter-Extractor', `fxtwitter 失敗，嘗試 vxtwitter fallback | TweetID: ${tweetId}`),
+        });
     }
 
     /**
