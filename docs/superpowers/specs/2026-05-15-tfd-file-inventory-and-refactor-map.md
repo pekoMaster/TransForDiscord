@@ -244,7 +244,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 
 | Current path | Purpose | Type | Domain | Proposed target | Action | Notes |
 |---|---|---|---|---|---|---|
-| `utils/tfd-logger.js` | TFD logging helpers. | utility | shared/logging | `src/shared/logging/tfd-logger.js` | move | Root-level dependency; move early with adapter. |
+| `utils/tfd-logger.js` | Legacy adapter for TFD logging helpers. | adapter | shared/logging | `src/shared/logging/tfd-logger.js` | done-adapter | Implementation moved; broad runtime import migration can happen in later slices. |
 | `utils/webhook-manager.js` | Webhook create/cache/send/edit and permission checks. | service | shared/webhook | `src/shared/webhook/webhook-manager.js` | move | Widely used; adapter first. |
 | `utils/crypto-helper.js` | AES-GCM encryption/decryption and key masking. | utility | shared/crypto | `src/shared/crypto/crypto-helper.js` | move | Used by API key storage. |
 | `utils/embed-helpers.js` | Legacy adapter for Discord message author/platform/url helpers. | adapter | shared/discord | `src/shared/discord/message-helpers.js` | done-adapter | Runtime imports moved to shared Discord message helpers. |

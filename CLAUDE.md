@@ -118,7 +118,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | `src/shared/discord/spoiler-button-helper.js` | message-handler-v2, twitter-reload, pixiv-reload, twitter-v2-container-builder | 回報/防爆雷按鈕附加；`utils/spoiler-button-helper.js` 保留相容轉接 |
 | `src/shared/discord/component-sanitizer.js` | message-handler-v2, webhook-manager | 送出/編輯 Discord components 前過濾空 ActionRow、拆分超過 5 個子元件的 row |
 | `utils/normalize-author.js` | message-handler-v2 | 各平台作者名正規化（for 黑名單比對） |
-| `utils/tfd-logger.js` | 全專案 | 統一日誌格式 `[MM/DD-HH:mm:ss] [Server] [Fn] [User] detail` |
+| `src/shared/logging/tfd-logger.js` | 全專案 | 統一日誌格式 `[MM/DD-HH:mm:ss] [Server] [Fn] [User] detail`；`utils/tfd-logger.js` 保留相容轉接 |
 
 ## interactionCreate 路由表
 

@@ -168,6 +168,12 @@ MessageCreate
 | `message-helpers.js` | 從 Discord message 解析原作者、URL 與平台 |
 | `spoiler-button-helper.js` | 回報/防爆雷按鈕共用 helper，舊 `utils/spoiler-button-helper.js` 僅保留 adapter |
 
+### Shared Logging 模組 (`src/shared/logging/`)
+
+| 路徑 | 功能 |
+|------|------|
+| `tfd-logger.js` | TFD 統一日誌 helper，舊 `utils/tfd-logger.js` 僅保留 adapter |
+
 ### Link Support 功能模組 (`src/features/link-support/`)
 
 | 路徑 | 功能 |
@@ -257,6 +263,7 @@ MessageCreate
 | `webhook-manager.js` | Webhook 管理器 ⭐ — 自訂名稱/頭像發送、閒置重命名、flags 傳遞 |
 | `spoiler-button-helper.js` | 舊路徑 adapter，轉接至 `src/shared/discord/spoiler-button-helper.js` |
 | `embed-helpers.js` | 舊路徑 adapter，轉接至 `src/shared/discord/message-helpers.js` |
+| `tfd-logger.js` | 舊路徑 adapter，轉接至 `src/shared/logging/tfd-logger.js` |
 
 ### 外部服務
 
@@ -293,6 +300,7 @@ MessageCreate
 | `component-sanitizer-smoke.js` | Discord components 合法化 smoke test |
 | `message-helpers-smoke.js` | Shared Discord message helper smoke test |
 | `spoiler-button-helper-smoke.js` | Shared Discord 回報/防爆雷按鈕 helper smoke test |
+| `tfd-logger-smoke.js` | Shared logging adapter smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---
