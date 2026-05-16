@@ -167,6 +167,7 @@ MessageCreate
 | `component-sanitizer.js` | Discord 訊息 components 送出前合法化，過濾空 ActionRow 並拆分超過 5 個子元件的 row |
 | `message-helpers.js` | 從 Discord message 解析原作者、URL 與平台 |
 | `spoiler-button-helper.js` | 回報/防爆雷按鈕共用 helper，舊 `utils/spoiler-button-helper.js` 僅保留 adapter |
+| `text-truncator.js` | Discord-safe 文字截斷 helper，含 CJK 權重計算與 URL 保護 |
 
 ### Shared Logging 模組 (`src/shared/logging/`)
 
@@ -208,7 +209,7 @@ MessageCreate
 | `dom-parser.js` | DOM 解析工具 |
 | `embed-builder.js` | Embed 建構輔助 |
 | `http-client.js` | HTTP 請求客戶端（含 User-Agent 輪替） |
-| `text-truncator.js` | 文字截斷工具（Discord 字數限制） |
+| `text-truncator.js` | 舊路徑 adapter，轉接至 `src/shared/discord/text-truncator.js` |
 | `translation-button-builder.js` | 翻譯按鈕建構器 |
 | `tunnel-url-provider.js` | Cloudflare Tunnel URL 提供器 |
 | `url-converter-logger.js` | URL 轉換記錄器 |
@@ -306,6 +307,7 @@ MessageCreate
 | `component-sanitizer-smoke.js` | Discord components 合法化 smoke test |
 | `message-helpers-smoke.js` | Shared Discord message helper smoke test |
 | `spoiler-button-helper-smoke.js` | Shared Discord 回報/防爆雷按鈕 helper smoke test |
+| `text-truncator-smoke.js` | Shared Discord text truncator smoke test |
 | `tfd-logger-smoke.js` | Shared logging adapter smoke test |
 | `crypto-helper-smoke.js` | Shared crypto adapter and key-path smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |

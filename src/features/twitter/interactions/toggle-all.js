@@ -53,7 +53,7 @@ async function handleTwitterAllToggleInteraction(interaction) {
 
         const TFDTwitterExtractor = require('../extractors/twitter-v2-extractor');
         const extractor = new TFDTwitterExtractor();
-        const TextTruncator = require('../../../../tfd-system/utils/text-truncator.js');
+        const TextTruncator = require('../../../shared/discord/text-truncator.js');
         const truncator = new TextTruncator();
 
         const translationState = getTranslationState(tweetId);

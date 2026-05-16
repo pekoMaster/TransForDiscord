@@ -322,7 +322,7 @@ async function handleTranslateButton(interaction) {
         // 根據當前狀態決定顯示截斷還是完整翻譯
         let displayText = translatedFullText;
         if (!isCurrentlyExpanded) {
-            const TextTruncator = require('../../../../tfd-system/utils/text-truncator.js');
+            const TextTruncator = require('../../../shared/discord/text-truncator.js');
             const truncator = new TextTruncator();
             const truncationResult = truncator.truncateText(translatedFullText);
             if (truncationResult.isTruncated) {
@@ -498,7 +498,7 @@ async function handleShowOriginalButton(interaction) {
         let displayText = originalFullText;
         if (!isCurrentlyExpanded) {
             // 如果目前是收起狀態，截斷原文
-            const TextTruncator = require('../../../../tfd-system/utils/text-truncator.js');
+            const TextTruncator = require('../../../shared/discord/text-truncator.js');
             const truncator = new TextTruncator();
             const truncationResult = truncator.truncateText(originalFullText);
             if (truncationResult.isTruncated) {

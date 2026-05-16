@@ -117,6 +117,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | `utils/recall-limiter.js` | tfd-context-actions, report-button-interactions | 共用收回次數限制（3次/10分鐘） |
 | `src/shared/discord/spoiler-button-helper.js` | message-handler-v2, twitter-reload, pixiv-reload, twitter-v2-container-builder | 回報/防爆雷按鈕附加；`utils/spoiler-button-helper.js` 保留相容轉接 |
 | `src/shared/discord/component-sanitizer.js` | message-handler-v2, webhook-manager | 送出/編輯 Discord components 前過濾空 ActionRow、拆分超過 5 個子元件的 row |
+| `src/shared/discord/text-truncator.js` | twitter interactions/extractors/containers | Discord-safe 文字截斷、CJK 權重計算與 URL 保護；`tfd-system/utils/text-truncator.js` 保留相容轉接 |
 | `utils/normalize-author.js` | message-handler-v2 | 各平台作者名正規化（for 黑名單比對） |
 | `src/shared/logging/tfd-logger.js` | 全專案 | 統一日誌格式 `[MM/DD-HH:mm:ss] [Server] [Fn] [User] detail`；`utils/tfd-logger.js` 保留相容轉接 |
 | `src/shared/crypto/crypto-helper.js` | user-api-key-storage, migrate-from-json | AES-256-GCM API Key 加解密；`utils/crypto-helper.js` 保留相容轉接；fallback key 固定為 `data/.encryption-key` |

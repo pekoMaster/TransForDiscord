@@ -59,7 +59,7 @@ async function handleTwitterExpandInteraction(interaction) {
         let originalFullText = getCachedContent(tweetId);
 
         // 使用 TextTruncator 進行截斷處理
-        const TextTruncator = require('../../../../tfd-system/utils/text-truncator.js');
+        const TextTruncator = require('../../../shared/discord/text-truncator.js');
         const truncator = new TextTruncator();
 
         // 決定要使用的文字（翻譯文字或原文）
