@@ -142,6 +142,24 @@ MessageCreate
 | `xfastest.js` | XFastest 滄者極限 |
 | `youtube.js` | YouTube — /live/ 轉換、短網址解析 |
 
+### Twitter 功能模組 (`src/features/twitter/`)
+
+> Twitter/X 新主路徑：`src/features/twitter/`。舊的 `handlers/twitter-*`、`utils/twitter-v2-state-store.js`、`tfd-system/extractors/twitter-*` 目前保留為相容 adapter。
+
+| 路徑 | 功能 |
+|------|------|
+| `extractors/twitter-v2-extractor.js` | Twitter V2 擷取 orchestrator，保留舊 method 介面並委派到 `extractors/v2/` helpers |
+| `extractors/v2/classic-components.js` | Classic Embed 分頁、翻譯、展開、重整按鈕建構 |
+| `extractors/v2/images.js` | 圖片清單、多圖片 URL、卡片圖片 fallback、防爆雷 URL prefix |
+| `extractors/v2/media-classifier.js` | 回覆/引用/媒體類型判斷與圖片/影片數量 |
+| `extractors/v2/media-policy.js` | 多 Embed 與 GAS 模式顯示策略 |
+| `extractors/v2/normalizer.js` | vxtwitter API 回應轉 fxtwitter 相容格式 |
+| `extractors/v2/response-builders.js` | Profile Embed、passthrough、error response 建構 |
+| `extractors/v2/tweet-fetcher.js` | fxtwitter 優先、vxtwitter fallback 的推文抓取流程 |
+| `extractors/v2/tweet-info.js` | URL 推文 ID、引用推文資訊、回覆目標解析 |
+| `extractors/v2/video-links.js` | 影片 URL 擷取與 Discord 連結文字格式 |
+| `interactions/v2/` | Twitter V2 Container 翻譯、展開、重整、防爆雷等互動子模組 |
+
 ### 正規表達式 (`tfd-system/regex/`)
 
 | 檔案 | 功能 |

@@ -15,3 +15,20 @@ remain as compatibility adapters during the project-wide restructure.
 buttons and modals. Detailed action logic lives in `interactions/v2/`:
 translation, expand/collapse toggles, reload, spoiler handling, shared cache,
 tweet hydration, and view rebuild/update helpers.
+
+## V2 Extractor Helpers
+
+`extractors/twitter-v2-extractor.js` remains the compatibility-facing
+orchestrator. Focused helper logic lives in `extractors/v2/`:
+
+| File | Responsibility |
+|------|----------------|
+| `classic-components.js` | Classic embed pagination, translate, expand, and reload buttons |
+| `images.js` | Extractor-specific image lists, multiple image URLs, card fallback, spoiler URL prefixing |
+| `media-classifier.js` | Reply/quote/media type checks and media counts |
+| `media-policy.js` | Multiple embed and GAS-mode display policy decisions |
+| `normalizer.js` | vxtwitter API response normalization into fxtwitter-compatible tweet data |
+| `response-builders.js` | Profile embed, passthrough response, and error response builders |
+| `tweet-fetcher.js` | fxtwitter first, vxtwitter fallback tweet fetch orchestration |
+| `tweet-info.js` | URL tweet ID, quote info, and reply reference parsing |
+| `video-links.js` | Video URL extraction and Discord link label formatting |
