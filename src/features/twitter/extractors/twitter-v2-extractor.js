@@ -16,6 +16,7 @@ const videoLinks = require('./v2/video-links');
 const classicComponents = require('./v2/classic-components');
 const imageHelpers = require('./v2/images');
 const normalizer = require('./v2/normalizer');
+const tweetInfo = require('./v2/tweet-info');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -689,8 +690,7 @@ class TFDTwitterExtractor {
      * 從 URL 中提取推文 ID
      */
     extractTweetId(url) {
-        const match = url.match(/status\/(\d+)/);
-        return match ? match[1] : null;
+        return tweetInfo.extractTweetId(url);
     }
 
     /**
@@ -863,20 +863,7 @@ class TFDTwitterExtractor {
      * 獲取被引用推文的資訊
      */
     getQuoteTweetInfo(tweet) {
-        try {
-            if (tweet.quote && tweet.quote.author) {
-                const quoteTweet = tweet.quote;
-                return {
-                    tweet: quoteTweet,
-                    tweetId: quoteTweet.id,
-                    username: quoteTweet.author.screen_name
-                };
-            }
-            return null;
-        } catch (error) {
-            // LOG removed for simplicity
-            return null;
-        }
+        return tweetInfo.getQuoteTweetInfo(tweet);
     }
 
     /**
