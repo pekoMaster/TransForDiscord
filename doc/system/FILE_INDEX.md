@@ -174,6 +174,12 @@ MessageCreate
 |------|------|
 | `tfd-logger.js` | TFD 統一日誌 helper，舊 `utils/tfd-logger.js` 僅保留 adapter |
 
+### Shared Crypto 模組 (`src/shared/crypto/`)
+
+| 路徑 | 功能 |
+|------|------|
+| `crypto-helper.js` | AES-256-GCM API Key 加解密 helper；fallback key 固定為專案 `data/.encryption-key` |
+
 ### Link Support 功能模組 (`src/features/link-support/`)
 
 | 路徑 | 功能 |
@@ -229,7 +235,7 @@ MessageCreate
 | `rate-limiter.js` | 速率限制器（SQLite 後端，含自動 GC） |
 | `abuse-detector.js` | 濫用偵測器（SQLite 後端，含自動 GC） |
 | `blacklist-manager.js` | 黑名單管理器（PTT/Twitter 等） |
-| `crypto-helper.js` | AES-256-GCM 加解密（API Key 儲存用） |
+| `crypto-helper.js` | 舊路徑 adapter，轉接至 `src/shared/crypto/crypto-helper.js` |
 
 ### 翻譯系統
 
@@ -301,6 +307,7 @@ MessageCreate
 | `message-helpers-smoke.js` | Shared Discord message helper smoke test |
 | `spoiler-button-helper-smoke.js` | Shared Discord 回報/防爆雷按鈕 helper smoke test |
 | `tfd-logger-smoke.js` | Shared logging adapter smoke test |
+| `crypto-helper-smoke.js` | Shared crypto adapter and key-path smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---

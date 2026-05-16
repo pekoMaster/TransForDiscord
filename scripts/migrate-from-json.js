@@ -22,7 +22,7 @@ const fs = require('fs');
 const path = require('path');
 
 const db = require('../db');
-const { encrypt } = require('../utils/crypto-helper.js');
+const { encrypt } = require('../src/shared/crypto/crypto-helper.js');
 
 const ROOT = path.join(__dirname, '..');
 const CONFIG_PATH = path.join(ROOT, 'tfd-system', 'config', 'tfd-config.json');
@@ -178,7 +178,16 @@ async function main() {
     console.log(`  5. 確認舊資料無誤後，可刪除 ${API_KEYS_PATH}`);
 }
 
-main().catch(err => {
-    console.error('遷移失敗:', err);
-    process.exit(1);
-});
+if (require.main === module) {
+    main().catch(err => {
+        console.error('遷移失敗:', err);
+        process.exit(1);
+    });
+}
+
+module.exports = {
+    main,
+    migrateConfig,
+    migrateApiKeys,
+    backupJsons
+};

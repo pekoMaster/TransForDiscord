@@ -2,13 +2,13 @@
  * user-api-key-storage.js
  *
  * 使用者個人 AI API Key 儲存層
- * 後端：SQLite (db/index.js) + AES-256-GCM 加密 (utils/crypto-helper.js)
+ * 後端：SQLite (db/index.js) + AES-256-GCM 加密 (src/shared/crypto/crypto-helper.js)
  *
  * API 與舊版 JSON 版相容：saveKey / getKey / removeKey / hasKey / getKeyStatus / getAllKeys / hasAnyKey
  */
 
 const db = require('../../../../db');
-const { encrypt, decrypt } = require('../../../../utils/crypto-helper.js');
+const { encrypt, decrypt } = require('../../../shared/crypto/crypto-helper.js');
 const tfd = require('../../../../utils/tfd-logger');
 
 // 支援的 AI 廠商（保留與舊版一致）

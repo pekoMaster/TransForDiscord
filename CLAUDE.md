@@ -119,6 +119,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | `src/shared/discord/component-sanitizer.js` | message-handler-v2, webhook-manager | 送出/編輯 Discord components 前過濾空 ActionRow、拆分超過 5 個子元件的 row |
 | `utils/normalize-author.js` | message-handler-v2 | 各平台作者名正規化（for 黑名單比對） |
 | `src/shared/logging/tfd-logger.js` | 全專案 | 統一日誌格式 `[MM/DD-HH:mm:ss] [Server] [Fn] [User] detail`；`utils/tfd-logger.js` 保留相容轉接 |
+| `src/shared/crypto/crypto-helper.js` | user-api-key-storage, migrate-from-json | AES-256-GCM API Key 加解密；`utils/crypto-helper.js` 保留相容轉接；fallback key 固定為 `data/.encryption-key` |
 
 ## interactionCreate 路由表
 
