@@ -250,60 +250,7 @@ class TFDTwitterExtractor {
      * 分析推文類型 (支援混合媒體)
      */
     analyzeTweetType(tweet) {
-        // Twitter 文章（長文模式）
-        if (tweet.article) {
-            return 'article';
-        }
-
-        const hasVideo = this.hasVideoContent(tweet);
-        const hasImages = this.hasImageContent(tweet);
-        const isReply = this.isReplyTweet(tweet);
-        const isQuote = this.isQuoteTweet(tweet);
-        const imageCount = this.getImageCount(tweet);
-        const videoCount = this.getVideoCount(tweet);
-
-        // 混合媒體處理 (影片+圖片)
-        if (hasVideo && hasImages) {
-            if (videoCount === 1) {
-                return 'video-with-images'; // 1影片+圖片: 圖片放嵌入式訊息，影片單獨傳送
-            } else {
-                return 'multi-video-with-images'; // 多影片+圖片: 影片們在外面，嵌入式訊息有影片預覽圖
-            }
-        }
-
-        // 純影片處理
-        if (hasVideo && !hasImages) {
-            if (videoCount === 1) {
-                return 'video'; // 單影片: 直接使用 FIXUP 處理
-            } else {
-                return 'multi-video'; // 多影片: 影片們在外面，嵌入式訊息有影片預覽圖
-            }
-        }
-
-        // 原有邏輯 - 加入引用轉推和回覆的多圖片檢測
-        if (isQuote && hasImages) {
-            // 🔧 修復：檢查引用轉推是否有多圖片
-            if (imageCount > 1) {
-                return 'multi-image'; // 引用轉推+多圖片 → 使用多圖片模式
-            }
-            return 'quote-with-media';
-        } else if (isQuote) {
-            return 'quote';
-        } else if (isReply && hasImages) {
-            // 🔧 修復：檢查回覆是否有多圖片
-            if (imageCount > 1) {
-                return 'multi-image'; // 回覆+多圖片 → 使用多圖片模式
-            }
-            return 'reply-with-media';
-        } else if (isReply) {
-            return 'reply';
-        } else if (imageCount > 1) {
-            return 'multi-image';
-        } else if (imageCount === 1) {
-            return 'single-image';
-        } else {
-            return 'text';
-        }
+        return mediaClassifier.analyzeTweetType(tweet);
     }
 
     /**

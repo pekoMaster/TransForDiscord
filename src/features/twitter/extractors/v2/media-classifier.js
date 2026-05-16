@@ -38,7 +38,56 @@ function getVideoCount(tweet) {
     return getAllMedia(tweet).filter(isVideoMedia).length;
 }
 
+function analyzeTweetType(tweet) {
+    if (tweet.article) {
+        return 'article';
+    }
+
+    const hasVideo = hasVideoContent(tweet);
+    const hasImages = hasImageContent(tweet);
+    const isReply = isReplyTweet(tweet);
+    const isQuote = isQuoteTweet(tweet);
+    const imageCount = getImageCount(tweet);
+    const videoCount = getVideoCount(tweet);
+
+    if (hasVideo && hasImages) {
+        if (videoCount === 1) {
+            return 'video-with-images';
+        }
+        return 'multi-video-with-images';
+    }
+
+    if (hasVideo && !hasImages) {
+        if (videoCount === 1) {
+            return 'video';
+        }
+        return 'multi-video';
+    }
+
+    if (isQuote && hasImages) {
+        if (imageCount > 1) {
+            return 'multi-image';
+        }
+        return 'quote-with-media';
+    } else if (isQuote) {
+        return 'quote';
+    } else if (isReply && hasImages) {
+        if (imageCount > 1) {
+            return 'multi-image';
+        }
+        return 'reply-with-media';
+    } else if (isReply) {
+        return 'reply';
+    } else if (imageCount > 1) {
+        return 'multi-image';
+    } else if (imageCount === 1) {
+        return 'single-image';
+    }
+    return 'text';
+}
+
 module.exports = {
+    analyzeTweetType,
     isReplyTweet,
     isQuoteTweet,
     hasVideoContent,
