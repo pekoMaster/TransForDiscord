@@ -15,48 +15,12 @@ const {
 
 const TextTruncator = require('../../../shared/discord/text-truncator');
 const { REPORT_BTN_PREFIX } = require('../../../shared/discord/spoiler-button-helper');
+const {
+    cacheTweetData,
+    getCachedTweetData
+} = require('../state/v2-tweet-cache');
 
-// V2 推文資料快取（供按鈕互動時重建 Container 使用）
-// 格式: Map<tweetId, { tweet, originalURL, quoteData, replyData, timestamp }>
-const v2TweetCache = new Map();
-const CACHE_TTL = 30 * 60 * 1000; // 30 分鐘
-
-// 定期清理過期快取
-setInterval(() => {
-    const now = Date.now();
-    for (const [key, value] of v2TweetCache.entries()) {
-        if (now - value.timestamp > CACHE_TTL) {
-            v2TweetCache.delete(key);
-        }
-    }
-}, 5 * 60 * 1000);
-
-/**
- * 快取推文資料
- * @param {string} tweetId
- * @param {Object} data - { tweet, originalURL, quoteData?, replyData? }
- */
-function cacheTweetData(tweetId, data) {
-    v2TweetCache.set(tweetId, {
-        ...data,
-        timestamp: Date.now()
-    });
-}
-
-/**
- * 取得快取的推文資料
- * @param {string} tweetId
- * @returns {Object|null}
- */
-function getCachedTweetData(tweetId) {
-    const cached = v2TweetCache.get(tweetId);
-    if (!cached) return null;
-    if (Date.now() - cached.timestamp > CACHE_TTL) {
-        v2TweetCache.delete(tweetId);
-        return null;
-    }
-    return cached;
-}
+// Cache functions are re-exported here for old callers; storage lives in ../state/v2-tweet-cache.
 
 /**
  * 建構 V2 Container

@@ -21,6 +21,7 @@ const responseBuilders = require('./v2/response-builders');
 const mediaPolicy = require('./v2/media-policy');
 const tweetFetcher = require('./v2/tweet-fetcher');
 const { getQuoteDisplayPolicy } = require('./v2/quote-display-policy');
+const { cacheTweetData } = require('../state/v2-tweet-cache');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -30,7 +31,7 @@ function getV2ContainerBuilder() {
             _v2ContainerBuilder = require('../containers/v2-container-builder');
         } catch (e) {
             tfd.sysWarn('Twitter-V2', 'twitter-v2-container-builder 模組不存在，影片 V2 功能停用');
-            _v2ContainerBuilder = { buildV2Container: null, cacheTweetData: () => {} };
+            _v2ContainerBuilder = { buildV2Container: null };
         }
     }
     return _v2ContainerBuilder;
@@ -512,7 +513,7 @@ class TFDTwitterExtractor {
             }
 
             // 建構 V2 Container
-            const { buildV2Container, cacheTweetData } = getV2ContainerBuilder();
+            const { buildV2Container } = getV2ContainerBuilder();
             if (!buildV2Container) {
                 // V2 模組不存在，降級為 vxtwitter redirect
                 return this.handleVideoTweet(tweet, originalURL, message);

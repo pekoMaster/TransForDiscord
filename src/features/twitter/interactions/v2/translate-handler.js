@@ -1,5 +1,5 @@
 const { MessageFlags } = require('discord.js');
-const { getCachedTweetData } = require('../../containers/v2-container-builder');
+const { getCachedTweetData } = require('../../state/v2-tweet-cache');
 const { getPreferredProvider, PROVIDERS } = require('../../../translation/keys/user-api-key-storage');
 const { buildTextBundle } = require('../../../translation/text/text-bundle');
 const { translateTweet } = require('../../../translation/service/translation-service');

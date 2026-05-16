@@ -10,7 +10,7 @@ const {
     TextInputBuilder,
     TextInputStyle
 } = require('discord.js');
-const { getCachedTweetData } = require('../../containers/v2-container-builder');
+const { getCachedTweetData } = require('../../state/v2-tweet-cache');
 const db = require('../../../../../db');
 const tlog = require('../../../../../utils/tfd-logger');
 const { extractTweetId, extractMarkerTextFromMessage } = require('./shared');
