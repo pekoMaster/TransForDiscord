@@ -5,7 +5,7 @@
 
 const HTTPClient = require('../../../../tfd-system/utils/http-client');
 const DOMParser = require('../../../shared/html/dom-parser');
-const TFDEmbedBuilder = require('../../../../tfd-system/utils/embed-builder');
+const TFDEmbedBuilder = require('../../../shared/discord/embed-builder');
 const tfd = require('../../../../utils/tfd-logger');
 
 class TwitterExtractor {

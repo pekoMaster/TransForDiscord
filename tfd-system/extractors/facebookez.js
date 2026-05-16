@@ -4,7 +4,7 @@
  */
 
 const HTTPClient = require('../utils/http-client');
-const TFDEmbedBuilder = require('../utils/embed-builder');
+const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
 const tfd = require('../../utils/tfd-logger');
 
 class FacebookEZExtractor {

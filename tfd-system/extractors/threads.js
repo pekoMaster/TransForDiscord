@@ -6,7 +6,7 @@
  * 支援域名：threads.com
  */
 
-const TFDEmbedBuilder = require('../utils/embed-builder');
+const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
 const { EmbedBuilder, ContainerBuilder, TextDisplayBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder, MessageFlags } = require('discord.js');
 const tfd = require('../../utils/tfd-logger');
 

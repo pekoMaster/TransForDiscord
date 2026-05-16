@@ -165,6 +165,7 @@ MessageCreate
 | 路徑 | 功能 |
 |------|------|
 | `component-sanitizer.js` | Discord 訊息 components 送出前合法化，過濾空 ActionRow 並拆分超過 5 個子元件的 row |
+| `embed-builder.js` | Generic Discord EmbedBuilder wrapper，舊 `tfd-system/utils/embed-builder.js` 僅保留 adapter |
 | `message-helpers.js` | 從 Discord message 解析原作者、URL 與平台 |
 | `spoiler-button-helper.js` | 回報/防爆雷按鈕共用 helper，舊 `utils/spoiler-button-helper.js` 僅保留 adapter |
 | `text-truncator.js` | Discord-safe 文字截斷 helper，含 CJK 權重計算與 URL 保護 |
@@ -213,7 +214,7 @@ MessageCreate
 | 檔案 | 功能 |
 |------|------|
 | `dom-parser.js` | 舊路徑 adapter，轉接至 `src/shared/html/dom-parser.js` |
-| `embed-builder.js` | Embed 建構輔助 |
+| `embed-builder.js` | 舊路徑 adapter，轉接至 `src/shared/discord/embed-builder.js` |
 | `http-client.js` | HTTP 請求客戶端（含 User-Agent 輪替） |
 | `text-truncator.js` | 舊路徑 adapter，轉接至 `src/shared/discord/text-truncator.js` |
 | `translation-button-builder.js` | 翻譯按鈕建構器 |
@@ -317,6 +318,7 @@ MessageCreate
 | `tfd-logger-smoke.js` | Shared logging adapter smoke test |
 | `crypto-helper-smoke.js` | Shared crypto adapter and key-path smoke test |
 | `dom-parser-smoke.js` | Shared HTML DOM parser smoke test |
+| `embed-builder-smoke.js` | Shared Discord embed builder smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---
