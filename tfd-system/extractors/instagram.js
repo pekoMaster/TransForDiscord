@@ -3,7 +3,7 @@
  * 提取 Instagram 貼文和個人資料資訊
  */
 
-const HTTPClient = require('../utils/http-client');
+const HTTPClient = require('../../src/shared/http/http-client');
 const DOMParser = require('../../src/shared/html/dom-parser');
 const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
 const URLConverterLogger = require('../utils/url-converter-logger');

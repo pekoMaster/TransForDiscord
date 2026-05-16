@@ -41,7 +41,7 @@ async function handleTwitterAllToggleInteraction(interaction) {
         }
 
         // 從 API 取得最新推文資料（引用/回覆需要完整內容）
-        const HTTPClient = require('../../../../tfd-system/utils/http-client');
+        const HTTPClient = require('../../../shared/http/http-client');
         const httpClient = new HTTPClient();
         let tweet = null;
         try {

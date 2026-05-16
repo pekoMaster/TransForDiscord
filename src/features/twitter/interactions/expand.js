@@ -100,7 +100,7 @@ async function handleTwitterExpandInteraction(interaction) {
         // 如果需要從 API 獲取原文
         if (needsAPIFetch) {
             try {
-                const HTTPClient = require('../../../../tfd-system/utils/http-client');
+                const HTTPClient = require('../../../shared/http/http-client');
                 const httpClient = new HTTPClient();
                 const fxapiResp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, {
                     timeout: 5000

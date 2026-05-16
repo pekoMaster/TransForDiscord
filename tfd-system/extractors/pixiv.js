@@ -3,7 +3,7 @@
  * 提取 Pixiv 藝術作品和用戶資訊
  */
 
-const HTTPClient = require('../utils/http-client');
+const HTTPClient = require('../../src/shared/http/http-client');
 const DOMParser = require('../../src/shared/html/dom-parser');
 const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
 const URLConverterLogger = require('../utils/url-converter-logger');

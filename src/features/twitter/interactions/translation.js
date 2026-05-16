@@ -105,7 +105,7 @@ async function handleTranslateButton(interaction) {
         if (!fullOriginalText) {
             tlog.log('Twitter-翻譯', interaction, `快取中無完整文字，從 API 獲取: ${tweetId}`);
             try {
-                const HTTPClient = require('../../../../tfd-system/utils/http-client');
+                const HTTPClient = require('../../../shared/http/http-client');
                 const httpClient = new HTTPClient();
                 const fxapiResp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, {
                     timeout: 5000
@@ -121,7 +121,7 @@ async function handleTranslateButton(interaction) {
         } else {
             // 有快取文字但沒有 tweetData，嘗試獲取（為了引用推文上下文）
             try {
-                const HTTPClient = require('../../../../tfd-system/utils/http-client');
+                const HTTPClient = require('../../../shared/http/http-client');
                 const httpClient = new HTTPClient();
                 const fxapiResp = await httpClient.fetchJSON(`https://api.fxtwitter.com/i/status/${tweetId}`, {
                     timeout: 5000
@@ -158,7 +158,7 @@ async function handleTranslateButton(interaction) {
             // 回覆對象（replying_to_status 是推文 ID 字串，需要額外 API 呼叫取得內容）
             if (tweetData.replying_to_status) {
                 try {
-                    const HTTPClient = require('../../../../tfd-system/utils/http-client');
+                    const HTTPClient = require('../../../shared/http/http-client');
                     const replyHttpClient = new HTTPClient();
                     const replyResp = await replyHttpClient.fetchJSON(
                         `https://api.fxtwitter.com/i/status/${tweetData.replying_to_status}`,
@@ -463,7 +463,7 @@ async function handleShowOriginalButton(interaction) {
         // 如果還是沒有，從 API 獲取
         if (!originalFullText) {
             tlog.log('Twitter-翻譯', interaction, `快取中無原文，從 API 獲取: ${tweetId}`);
-            const HTTPClient = require('../../../../tfd-system/utils/http-client');
+            const HTTPClient = require('../../../shared/http/http-client');
             const httpClient = new HTTPClient();
 
             try {

@@ -3,7 +3,7 @@
  * 使用 facebed.com 服務處理 Facebook 和 EmbedEZ 風格處理 Instagram
  */
 
-const HTTPClient = require('../utils/http-client');
+const HTTPClient = require('../../src/shared/http/http-client');
 const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
 const tfd = require('../../utils/tfd-logger');
 

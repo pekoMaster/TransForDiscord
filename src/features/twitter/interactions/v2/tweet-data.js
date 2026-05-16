@@ -1,4 +1,4 @@
-const HTTPClient = require('../../../../../tfd-system/utils/http-client');
+const HTTPClient = require('../../../../shared/http/http-client');
 const TFDTwitterExtractor = require('../../extractors/twitter-v2-extractor');
 const { cacheTweetData } = require('../../containers/v2-container-builder');
 

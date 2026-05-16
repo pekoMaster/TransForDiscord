@@ -4,7 +4,7 @@
  */
 
 const { EmbedBuilder } = require('discord.js');
-const HTTPClient = require('../utils/http-client');
+const HTTPClient = require('../../src/shared/http/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
 
 class pekoembedStormExtractor {

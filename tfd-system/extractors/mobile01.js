@@ -5,7 +5,7 @@
 
 const { EmbedBuilder } = require('discord.js');
 const cheerio = require('cheerio');
-const HTTPClient = require('../utils/http-client');
+const HTTPClient = require('../../src/shared/http/http-client');
 const tfd = require('../../utils/tfd-logger');
 
 class Mobile01Extractor {

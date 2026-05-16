@@ -15,7 +15,7 @@ const { EmbedBuilder } = require('discord.js');
 const cheerio = require('cheerio');
 const fs = require('fs').promises;
 const path = require('path');
-const HTTPClient = require('../utils/http-client');
+const HTTPClient = require('../../src/shared/http/http-client');
 const config = require('../config/tfd-config.json');
 const FacebookExtractor = require('./facebook');
 const FacebookMBasicExtractor = require('./facebook-mbasic');
@@ -742,4 +742,3 @@ class FacebookSmartExtractor {
 }
 
 module.exports = FacebookSmartExtractor;
-

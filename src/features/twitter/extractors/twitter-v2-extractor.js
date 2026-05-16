@@ -5,7 +5,7 @@
  */
 
 const { EmbedBuilder, ActionRowBuilder } = require('discord.js');
-const HTTPClient = require('../../../../tfd-system/utils/http-client');
+const HTTPClient = require('../../../shared/http/http-client');
 const TwitterVideoAttachmentOptimizer = require('../media/video-attachment-optimizer');
 const MixedMediaHTMLBuilder = require('../../../../tfd-system/render/mixed-media-html-builder');
 const TextTruncator = require('../../../shared/discord/text-truncator');

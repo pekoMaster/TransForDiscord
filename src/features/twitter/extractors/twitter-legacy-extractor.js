@@ -3,7 +3,7 @@
  * 提取 Twitter/X 推文和個人資料資訊
  */
 
-const HTTPClient = require('../../../../tfd-system/utils/http-client');
+const HTTPClient = require('../../../shared/http/http-client');
 const DOMParser = require('../../../shared/html/dom-parser');
 const TFDEmbedBuilder = require('../../../shared/discord/embed-builder');
 const tfd = require('../../../../utils/tfd-logger');

@@ -11,7 +11,7 @@
  */
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const HTTPClient = require('../utils/http-client');
+const HTTPClient = require('../../src/shared/http/http-client');
 const URLConverterLogger = require('../utils/url-converter-logger');
 const tfd = require('../../utils/tfd-logger');
 
