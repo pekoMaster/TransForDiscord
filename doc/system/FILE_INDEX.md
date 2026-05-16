@@ -78,6 +78,7 @@ MessageCreate
 ## 🔗 互動處理器 (`handlers/`)
 
 > Twitter/X 主路徑：`src/features/twitter/`。舊的 `handlers/twitter-*` 目前保留為相容 adapter，讓 `events/interactionCreate.js` 與舊文件先維持穩定。
+> Twitter V2 互動細節在 `src/features/twitter/interactions/v2/`；`v2-router.js` 現在只負責分派 `v2_*` 按鈕與 modal。
 
 | 檔案 | 功能 |
 |------|------|
