@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-const { sanitizeComponentsForSend } = require('../src/features/discord/component-sanitizer');
+const { sanitizeComponentsForSend } = require('../src/shared/discord/component-sanitizer');
 
 function button(id) {
     return new ButtonBuilder()

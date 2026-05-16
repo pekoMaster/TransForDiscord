@@ -160,11 +160,16 @@ MessageCreate
 | `extractors/v2/video-links.js` | 影片 URL 擷取與 Discord 連結文字格式 |
 | `interactions/v2/` | Twitter V2 Container 翻譯、展開、重整、防爆雷等互動子模組 |
 
-### Discord / Link Support 功能模組 (`src/features/`)
+### Shared Discord 模組 (`src/shared/discord/`)
 
 | 路徑 | 功能 |
 |------|------|
-| `discord/component-sanitizer.js` | Discord 訊息 components 送出前合法化，過濾空 ActionRow 並拆分超過 5 個子元件的 row |
+| `component-sanitizer.js` | Discord 訊息 components 送出前合法化，過濾空 ActionRow 並拆分超過 5 個子元件的 row |
+
+### Link Support 功能模組 (`src/features/link-support/`)
+
+| 路徑 | 功能 |
+|------|------|
 | `link-support/domain-registry.js` | TFD 支援網域 registry，負責網域正規化與 domain → siteName 對應 |
 | `link-support/link-support-service.js` | Per-guild 支援網域 on/off 服務，轉接 SQLite `guild_link_domains` |
 

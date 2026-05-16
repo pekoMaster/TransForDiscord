@@ -15,7 +15,7 @@ const { sendWithWebhook, editWebhookMessage, canUseWebhook, hasWebhookPermission
 const { normalizeAuthorForBlacklist } = require('../../utils/normalize-author.js');
 const { getInstance: getGBM } = require('../../utils/guild-blacklist-manager.js');
 const { setMessageState: setTwitterV2MessageState } = require('../../utils/twitter-v2-state-store');
-const { sanitizeComponentsForSend } = require('../../src/features/discord/component-sanitizer');
+const { sanitizeComponentsForSend } = require('../../src/shared/discord/component-sanitizer');
 
 // URL 統計（footer N/M/O 顯示用）
 const { recordUrl } = require('../utils/url-stats');

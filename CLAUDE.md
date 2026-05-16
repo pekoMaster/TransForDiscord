@@ -93,7 +93,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | 改 Twitter/X | `src/features/twitter/` | Twitter domain；沒有發推功能；舊 `handlers/twitter-*`、`utils/twitter-v2-state-store.js`、`tfd-system/extractors/twitter-*` 路徑為 adapter |
 | 改 Twitter V2 互動 | `src/features/twitter/interactions/v2/` | `v2-router.js` 只做分派；翻譯/展開/重整/防爆雷在 v2 子模組 |
 | 改 Twitter V2 擷取 helper | `src/features/twitter/extractors/v2/` | `twitter-v2-extractor.js` 保留相容 method；純 helper 優先放在 v2 子模組 |
-| 改 webhook 行為 | `utils/webhook-manager.js` + `src/features/discord/component-sanitizer.js` | Webhook 建立/快取/討論串邏輯；送出前 components 必須合法化 |
+| 改 webhook 行為 | `utils/webhook-manager.js` + `src/shared/discord/component-sanitizer.js` | Webhook 建立/快取/討論串邏輯；送出前 components 必須合法化 |
 | 改支援網域開關 | `src/features/link-support/` + `commands/pe.js` + `db/schema.sql` | `/pe linksup` per-guild domain on/off，domain registry → DB → command 三層 |
 | 改 Embed 元件 | `utils/spoiler-button-helper.js` + `utils/embed-helpers.js` | 按鈕附加 + 作者解析 |
 
@@ -116,7 +116,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | `utils/embed-helpers.js` | tfd-context-actions, report-button-interactions | `resolveAuthorId` / `detectPlatformFromUrl` / `extractUrlFromMessage` |
 | `utils/recall-limiter.js` | tfd-context-actions, report-button-interactions | 共用收回次數限制（3次/10分鐘） |
 | `utils/spoiler-button-helper.js` | message-handler-v2, twitter-reload, pixiv-reload, twitter-v2-container-builder | 回報/防爆雷按鈕附加 |
-| `src/features/discord/component-sanitizer.js` | message-handler-v2, webhook-manager | 送出/編輯 Discord components 前過濾空 ActionRow、拆分超過 5 個子元件的 row |
+| `src/shared/discord/component-sanitizer.js` | message-handler-v2, webhook-manager | 送出/編輯 Discord components 前過濾空 ActionRow、拆分超過 5 個子元件的 row |
 | `utils/normalize-author.js` | message-handler-v2 | 各平台作者名正規化（for 黑名單比對） |
 | `utils/tfd-logger.js` | 全專案 | 統一日誌格式 `[MM/DD-HH:mm:ss] [Server] [Fn] [User] detail` |
 

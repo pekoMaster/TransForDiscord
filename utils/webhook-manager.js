@@ -9,7 +9,7 @@
 
 const { WebhookClient } = require('discord.js');
 const tlog = require('./tfd-logger');
-const { sanitizeComponentsForSend } = require('../src/features/discord/component-sanitizer');
+const { sanitizeComponentsForSend } = require('../src/shared/discord/component-sanitizer');
 
 // Webhook 名稱（用於識別 Bot 建立的 Webhook）
 const WEBHOOK_NAME = 'MB_MessageBubble';
