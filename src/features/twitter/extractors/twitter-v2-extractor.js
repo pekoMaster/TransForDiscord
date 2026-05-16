@@ -18,6 +18,7 @@ const imageHelpers = require('./v2/images');
 const normalizer = require('./v2/normalizer');
 const tweetInfo = require('./v2/tweet-info');
 const responseBuilders = require('./v2/response-builders');
+const mediaPolicy = require('./v2/media-policy');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -631,24 +632,14 @@ class TFDTwitterExtractor {
      * 檢查是否應該使用多嵌入式訊息顯示多圖片
      */
     shouldUseMultipleEmbeds(tweetId, tweetType) {
-        // 所有多圖片推文都使用多嵌入式訊息方式
-        return tweetType === 'multi-image';
+        return mediaPolicy.shouldUseMultipleEmbeds(tweetId, tweetType);
     }
 
     /**
      * 檢查是否應該使用 Google Apps Script 影片播放模式
      */
     shouldUseGASVideoMode(tweetId, tweetType) {
-        // 暫時停用 GAS 模式，恢復到之前的處理方式
-        const supportedTypes = [
-            // 'multi-video',  // 已停用
-            // 'multi-image'   // 已停用
-        ];
-
-        const isSupported = supportedTypes.includes(tweetType);
-        // LOG removed for simplicity
-
-        return false; // 完全停用 GAS 模式
+        return mediaPolicy.shouldUseGASVideoMode(tweetId, tweetType);
     }
 
     /**
