@@ -105,7 +105,7 @@ class TFDMessageHandler {
 
         // 🕶️ 附加防爆雷按鈕（非 V2 Components 訊息）
         if (!isV2Components && options.addSpoilerButton !== false) {
-            const { appendReportButton } = require('../../utils/spoiler-button-helper.js');
+            const { appendReportButton } = require('../../src/shared/discord/spoiler-button-helper.js');
             options.components = sanitizeComponentsForSend(appendReportButton(options.components));
         }
 

@@ -254,7 +254,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `utils/recall-limiter.js` | Recall action cooldown limiter. | utility | reports | `src/features/reports/recall-limiter.js` | move | Report-specific. |
 | `utils/blacklist-manager.js` | Legacy JSON blacklist manager. | cache-store/service | moderation/legacy | `src/features/moderation/legacy/json-blacklist-manager.js` | delete-after-verify | Confirm no runtime imports before deleting. |
 | `utils/guild-blacklist-manager.js` | SQLite-backed guild blacklist manager. | service | moderation | `src/features/moderation/guild-blacklist-manager.js` | move | Used by commands/reports/message pipeline. |
-| `utils/spoiler-button-helper.js` | Adds report/spoiler buttons to components. | renderer | reports/spoilers | `src/features/reports/components/report-button-helper.js` | split | Report and spoiler constants should separate. |
+| `utils/spoiler-button-helper.js` | Legacy adapter for report/spoiler component helper. | adapter | shared/discord | `src/shared/discord/spoiler-button-helper.js` | done-adapter | Implementation moved to shared Discord; future split can separate report/spoiler semantics. |
 | `utils/bahamut-auth.js` | Bahamut cookie/session auth helper. | service | sites/bahamut | `src/features/sites/bahamut/bahamut-auth.js` | move | Feature-owned. |
 | `utils/lightpanda-client.js` | Lightpanda/Puppeteer CDP metadata fetch helper. | service | shared/browser | `src/shared/browser/lightpanda-client.js` | move | Shared browser helper. |
 | `utils/playwright-semantic-browser.js` | Playwright semantic browser helper. | service | shared/browser | `src/shared/browser/playwright-semantic-browser.js` | move | Shared browser helper. |
@@ -434,7 +434,7 @@ Plan:
 Current related files:
 - `handlers/report-button-interactions.js`
 - `handlers/spoiler-button-interactions.js`
-- `utils/spoiler-button-helper.js`
+- `src/shared/discord/spoiler-button-helper.js` (`utils/spoiler-button-helper.js` adapter)
 - `utils/guild-blacklist-manager.js`
 - `utils/blacklist-manager.js`
 - `utils/abuse-detector.js`

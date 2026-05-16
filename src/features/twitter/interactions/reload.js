@@ -10,7 +10,7 @@
 
 const { EmbedBuilder, MessageFlags } = require('discord.js');
 const TFDTwitterExtractor = require('../extractors/twitter-v2-extractor');
-const { appendReportButton } = require('../../../../utils/spoiler-button-helper.js');
+const { appendReportButton } = require('../../../shared/discord/spoiler-button-helper.js');
 const tlog = require('../../../../utils/tfd-logger');
 
 module.exports = {

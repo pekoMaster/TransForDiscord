@@ -14,7 +14,7 @@ const {
 } = require('discord.js');
 
 const TextTruncator = require('../../../../tfd-system/utils/text-truncator');
-const { REPORT_BTN_PREFIX } = require('../../../../utils/spoiler-button-helper');
+const { REPORT_BTN_PREFIX } = require('../../../shared/discord/spoiler-button-helper');
 
 // V2 推文資料快取（供按鈕互動時重建 Container 使用）
 // 格式: Map<tweetId, { tweet, originalURL, quoteData, replyData, timestamp }>

@@ -9,7 +9,7 @@
 const { MessageFlags, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const TFDTwitterExtractor = require('../extractors/twitter-v2-extractor');
 const HTTPClient = require('../../../../tfd-system/utils/http-client');
-const { appendSpoilerButton } = require('../../../../utils/spoiler-button-helper.js');
+const { appendSpoilerButton } = require('../../../shared/discord/spoiler-button-helper.js');
 const { lookupUrl } = require('../../../../tfd-system/utils/url-stats');
 const tlog = require('../../../../utils/tfd-logger');
 

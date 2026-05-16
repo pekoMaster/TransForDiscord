@@ -165,6 +165,7 @@ MessageCreate
 | 路徑 | 功能 |
 |------|------|
 | `component-sanitizer.js` | Discord 訊息 components 送出前合法化，過濾空 ActionRow 並拆分超過 5 個子元件的 row |
+| `spoiler-button-helper.js` | 回報/防爆雷按鈕共用 helper，舊 `utils/spoiler-button-helper.js` 僅保留 adapter |
 
 ### Link Support 功能模組 (`src/features/link-support/`)
 
@@ -253,7 +254,7 @@ MessageCreate
 | 檔案 | 功能 |
 |------|------|
 | `webhook-manager.js` | Webhook 管理器 ⭐ — 自訂名稱/頭像發送、閒置重命名、flags 傳遞 |
-| `spoiler-button-helper.js` | 防爆雷按鈕輔助（為 Embed 附加防雷 components） |
+| `spoiler-button-helper.js` | 舊路徑 adapter，轉接至 `src/shared/discord/spoiler-button-helper.js` |
 
 ### 外部服務
 
@@ -288,6 +289,7 @@ MessageCreate
 |------|------|
 | `migrate-from-json.js` | 從舊版 JSON 遷移到 SQLite + 加密 API Key（含 `--dry-run`） |
 | `component-sanitizer-smoke.js` | Discord components 合法化 smoke test |
+| `spoiler-button-helper-smoke.js` | Shared Discord 回報/防爆雷按鈕 helper smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---

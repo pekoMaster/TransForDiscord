@@ -15,7 +15,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('
 const PixivExtractor = require('../tfd-system/extractors/pixiv.js');
 const PixivCacheManager = require('../utils/pixiv-cache-manager.js');
 const { editWebhookMessage } = require('../utils/webhook-manager.js');
-const { appendReportButton } = require('../utils/spoiler-button-helper.js');
+const { appendReportButton } = require('../src/shared/discord/spoiler-button-helper.js');
 const tlog = require('../utils/tfd-logger');
 
 function getTimePrefix() {
