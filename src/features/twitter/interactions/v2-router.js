@@ -33,6 +33,7 @@ const {
     setCachedV2Translation
 } = require('./v2/translation-cache');
 const { hydrateTweetBundle } = require('./v2/tweet-data');
+const viewUpdater = require('./v2/view-updater');
 
 async function handleV2Interaction(interaction) {
     if (!interaction.isButton()) return;
@@ -150,7 +151,7 @@ async function handleV2Translate(interaction) {
     await interaction.deferUpdate();
 
     if (!isTranslateAction) {
-        await rebuildAndUpdate(interaction, tweetId, { isTranslated: false });
+        await viewUpdater.rebuildAndUpdate(interaction, tweetId, { isTranslated: false });
         tlog.log('V2-翻譯', interaction, `切回原文: ${tweetId}`);
         return;
     }
@@ -169,7 +170,7 @@ async function handleV2Translate(interaction) {
 
     const cached = getCachedV2Translation(tweetId, preferredProvider);
     if (cached) {
-        await rebuildAndUpdate(interaction, tweetId, {
+        await viewUpdater.rebuildAndUpdate(interaction, tweetId, {
             isTranslated: true,
             ...cached
         });
@@ -232,7 +233,7 @@ async function handleV2Translate(interaction) {
         model: result.model || preferredProvider
     });
 
-    await rebuildAndUpdate(interaction, tweetId, {
+    await viewUpdater.rebuildAndUpdate(interaction, tweetId, {
         isTranslated: true,
         ...translationData
     });
@@ -255,7 +256,7 @@ async function handleV2Toggle(interaction, type) {
 
     const cachedTranslation = getCachedV2Translation(tweetId);
     if (cachedTranslation) {
-        const currentState = getMessageState(interaction.message.id) || buildFallbackState(interaction, tweetId, getCachedTweetData(tweetId));
+        const currentState = getMessageState(interaction.message.id) || viewUpdater.buildFallbackState(interaction, tweetId, getCachedTweetData(tweetId));
         if (currentState.isTranslated) {
             overrides.isTranslated = true;
             overrides.translatedText = cachedTranslation.translatedText;
@@ -264,7 +265,7 @@ async function handleV2Toggle(interaction, type) {
         }
     }
 
-    await rebuildAndUpdate(interaction, tweetId, overrides);
+    await viewUpdater.rebuildAndUpdate(interaction, tweetId, overrides);
     tlog.log('V2-展開', interaction, `${type} 切換: ${tweetId}`);
 }
 
@@ -272,7 +273,7 @@ async function handleV2Reload(interaction) {
     const tweetId = extractTweetId(interaction.customId);
     await interaction.deferUpdate();
     try {
-        const updated = await rebuildAndUpdate(interaction, tweetId, {}, { refreshData: true });
+        const updated = await viewUpdater.rebuildAndUpdate(interaction, tweetId, {}, { refreshData: true });
         if (updated) {
             tlog.log('V2-重整', interaction, `重整成功: ${tweetId}`);
         }
