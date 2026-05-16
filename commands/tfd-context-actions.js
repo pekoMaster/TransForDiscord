@@ -8,7 +8,7 @@ const db = require('../db');
 const tlog = require('../utils/tfd-logger');
 const { buildSpoilerComponents, sendSpoilerAndCleanup } = require('../handlers/spoiler-button-interactions');
 const { getInstance: getGBM } = require('../utils/guild-blacklist-manager');
-const { resolveAuthorId, detectPlatformFromUrl, extractUrlFromMessage } = require('../utils/embed-helpers');
+const { resolveAuthorId, detectPlatformFromUrl, extractUrlFromMessage } = require('../src/shared/discord/message-helpers');
 const { recallCounts, RECALL_LIMIT_MS, RECALL_LIMIT_COUNT, checkRecallLimit } = require('../utils/recall-limiter');
 
 const cooldowns = new Map();

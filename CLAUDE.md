@@ -95,7 +95,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | 改 Twitter V2 擷取 helper | `src/features/twitter/extractors/v2/` | `twitter-v2-extractor.js` 保留相容 method；純 helper 優先放在 v2 子模組 |
 | 改 webhook 行為 | `utils/webhook-manager.js` + `src/shared/discord/component-sanitizer.js` | Webhook 建立/快取/討論串邏輯；送出前 components 必須合法化 |
 | 改支援網域開關 | `src/features/link-support/` + `commands/pe.js` + `db/schema.sql` | `/pe linksup` per-guild domain on/off，domain registry → DB → command 三層 |
-| 改 Embed 元件 | `src/shared/discord/spoiler-button-helper.js` + `utils/embed-helpers.js` | 按鈕附加 + 作者解析；舊 `utils/spoiler-button-helper.js` 為 adapter |
+| 改 Discord 訊息元件 | `src/shared/discord/` | 按鈕附加、作者/URL/平台解析；舊 `utils/spoiler-button-helper.js`、`utils/embed-helpers.js` 為 adapter |
 
 ## 命名規則
 
@@ -113,7 +113,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 
 | 模組 | 消費者 | 說明 |
 |------|--------|------|
-| `utils/embed-helpers.js` | tfd-context-actions, report-button-interactions | `resolveAuthorId` / `detectPlatformFromUrl` / `extractUrlFromMessage` |
+| `src/shared/discord/message-helpers.js` | tfd-context-actions, report-button-interactions | `resolveAuthorId` / `detectPlatformFromUrl` / `extractUrlFromMessage`；`utils/embed-helpers.js` 保留相容轉接 |
 | `utils/recall-limiter.js` | tfd-context-actions, report-button-interactions | 共用收回次數限制（3次/10分鐘） |
 | `src/shared/discord/spoiler-button-helper.js` | message-handler-v2, twitter-reload, pixiv-reload, twitter-v2-container-builder | 回報/防爆雷按鈕附加；`utils/spoiler-button-helper.js` 保留相容轉接 |
 | `src/shared/discord/component-sanitizer.js` | message-handler-v2, webhook-manager | 送出/編輯 Discord components 前過濾空 ActionRow、拆分超過 5 個子元件的 row |

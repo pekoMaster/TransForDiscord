@@ -247,7 +247,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `utils/tfd-logger.js` | TFD logging helpers. | utility | shared/logging | `src/shared/logging/tfd-logger.js` | move | Root-level dependency; move early with adapter. |
 | `utils/webhook-manager.js` | Webhook create/cache/send/edit and permission checks. | service | shared/webhook | `src/shared/webhook/webhook-manager.js` | move | Widely used; adapter first. |
 | `utils/crypto-helper.js` | AES-GCM encryption/decryption and key masking. | utility | shared/crypto | `src/shared/crypto/crypto-helper.js` | move | Used by API key storage. |
-| `utils/embed-helpers.js` | Resolve author/platform/url from Discord messages. | utility | shared/discord | `src/shared/discord/message-helpers.js` | move | Used by reports/context commands. |
+| `utils/embed-helpers.js` | Legacy adapter for Discord message author/platform/url helpers. | adapter | shared/discord | `src/shared/discord/message-helpers.js` | done-adapter | Runtime imports moved to shared Discord message helpers. |
 | `utils/normalize-author.js` | Normalizes extractor/message author data for blacklist. | utility | moderation | `src/features/moderation/normalize-author.js` | move | Feature-owned, not generic. |
 | `utils/rate-limiter.js` | Per-user/guild URL rate limiting with SQLite logs. | service | shared/rate-limit | `src/shared/rate-limit/rate-limiter.js` | move | Started from `index.js`. |
 | `utils/abuse-detector.js` | Short/long-term abuse detection and auto-exclusion. | service | moderation | `src/features/moderation/abuse-detector.js` | move | Depends on DB and crypto. |
