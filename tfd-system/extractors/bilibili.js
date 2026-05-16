@@ -4,7 +4,7 @@
  * 包含語言參數處理和智能 URL 解析
  */
 
-const URLConverterLogger = require('../utils/url-converter-logger');
+const URLConverterLogger = require('../../src/shared/logging/url-converter-logger');
 
 class BilibiliExtractor {
     constructor() {

@@ -6,7 +6,7 @@
 const HTTPClient = require('../../src/shared/http/http-client');
 const DOMParser = require('../../src/shared/html/dom-parser');
 const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
-const URLConverterLogger = require('../utils/url-converter-logger');
+const URLConverterLogger = require('../../src/shared/logging/url-converter-logger');
 const axios = require('axios');
 const { EmbedBuilder } = require('discord.js');
 const tfd = require('../../utils/tfd-logger');

@@ -175,6 +175,7 @@ MessageCreate
 | 路徑 | 功能 |
 |------|------|
 | `tfd-logger.js` | TFD 統一日誌 helper，舊 `utils/tfd-logger.js` 僅保留 adapter |
+| `url-converter-logger.js` | URL 轉換決策 logger，舊 `tfd-system/utils/url-converter-logger.js` 僅保留 adapter |
 
 ### Shared Crypto 模組 (`src/shared/crypto/`)
 
@@ -231,7 +232,7 @@ MessageCreate
 | `text-truncator.js` | 舊路徑 adapter，轉接至 `src/shared/discord/text-truncator.js` |
 | `translation-button-builder.js` | 翻譯按鈕建構器 |
 | `tunnel-url-provider.js` | 舊路徑 adapter，轉接至 `src/shared/web/tunnel-url-provider.js` |
-| `url-converter-logger.js` | URL 轉換記錄器 |
+| `url-converter-logger.js` | 舊路徑 adapter，轉接至 `src/shared/logging/url-converter-logger.js` |
 | `url-stats.js` | URL 統計系統（N/M/O 計數：頻道/伺服器/全域） |
 
 ### 設定 (`tfd-system/config/`)
@@ -328,6 +329,7 @@ MessageCreate
 | `spoiler-button-helper-smoke.js` | Shared Discord 回報/防爆雷按鈕 helper smoke test |
 | `text-truncator-smoke.js` | Shared Discord text truncator smoke test |
 | `tfd-logger-smoke.js` | Shared logging adapter smoke test |
+| `url-converter-logger-smoke.js` | Shared logging URL converter logger smoke test |
 | `crypto-helper-smoke.js` | Shared crypto adapter and key-path smoke test |
 | `dom-parser-smoke.js` | Shared HTML DOM parser smoke test |
 | `embed-builder-smoke.js` | Shared Discord embed builder smoke test |

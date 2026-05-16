@@ -3,7 +3,7 @@
  * 使用域名替換提供嵌入預覽功能
  */
 
-const URLConverterLogger = require('../utils/url-converter-logger');
+const URLConverterLogger = require('../../src/shared/logging/url-converter-logger');
 const tfd = require('../../utils/tfd-logger');
 
 class PornhubExtractor {

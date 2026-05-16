@@ -121,6 +121,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | `src/shared/discord/text-truncator.js` | twitter interactions/extractors/containers | Discord-safe 文字截斷、CJK 權重計算與 URL 保護；`tfd-system/utils/text-truncator.js` 保留相容轉接 |
 | `utils/normalize-author.js` | message-handler-v2 | 各平台作者名正規化（for 黑名單比對） |
 | `src/shared/logging/tfd-logger.js` | 全專案 | 統一日誌格式 `[MM/DD-HH:mm:ss] [Server] [Fn] [User] detail`；`utils/tfd-logger.js` 保留相容轉接 |
+| `src/shared/logging/url-converter-logger.js` | tfd-system extractors, twitter-v2-extractor | URL 轉換決策 logger；`tfd-system/utils/url-converter-logger.js` 保留相容轉接 |
 | `src/shared/crypto/crypto-helper.js` | user-api-key-storage, migrate-from-json | AES-256-GCM API Key 加解密；`utils/crypto-helper.js` 保留相容轉接；fallback key 固定為 `data/.encryption-key` |
 | `src/shared/html/dom-parser.js` | ptt, instagram, pixiv, twitter-legacy extractors | Cheerio DOM/metadata parser；`tfd-system/utils/dom-parser.js` 保留相容轉接 |
 | `src/shared/http/http-client.js` | tfd-system extractors, Twitter interactions/extractors | Axios HTTP client，含 timeout/retry/bot-block handling；`tfd-system/utils/http-client.js` 保留相容轉接 |

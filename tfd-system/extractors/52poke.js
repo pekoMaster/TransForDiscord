@@ -5,7 +5,7 @@
 
 const { EmbedBuilder } = require('discord.js');
 const HTTPClient = require('../../src/shared/http/http-client');
-const URLConverterLogger = require('../utils/url-converter-logger');
+const URLConverterLogger = require('../../src/shared/logging/url-converter-logger');
 const cheerio = require('cheerio');
 
 const POKE_COLOR = 0xE3350D; // 寶可夢紅

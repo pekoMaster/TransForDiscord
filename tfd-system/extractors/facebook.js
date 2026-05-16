@@ -6,7 +6,7 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
 const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
-const URLConverterLogger = require('../utils/url-converter-logger');
+const URLConverterLogger = require('../../src/shared/logging/url-converter-logger');
 
 class FacebookExtractor {
     constructor() {
