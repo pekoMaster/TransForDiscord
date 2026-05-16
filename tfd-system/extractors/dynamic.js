@@ -11,6 +11,7 @@
 
 const PlaywrightSemanticBrowser = require('../../utils/playwright-semantic-browser');
 const path = require('path');
+const tfd = require('../../utils/tfd-logger');
 
 class DynamicExtractor {
     constructor() {
@@ -66,7 +67,6 @@ class DynamicExtractor {
 
             // 確保 temp 目錄存在
             const fs = require('fs').promises;
-const tfd = require('../../utils/tfd-logger');
             await fs.mkdir(path.dirname(screenshotPath), { recursive: true }).catch(() => {});
 
             await this.browser.screenshot(screenshotPath);

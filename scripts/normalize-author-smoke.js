@@ -39,6 +39,14 @@ assert.deepStrictEqual(
 assert.deepStrictEqual(
     normalizeAuthorForBlacklist({
         siteName: 'ptt',
+        data: { author: 'l00011799z (nickname)' }
+    }),
+    { platform: 'ptt', author: 'l00011799z', uid: null }
+);
+
+assert.deepStrictEqual(
+    normalizeAuthorForBlacklist({
+        siteName: 'ptt',
         embed: { data: { author: { name: 'BoardUser' } } }
     }),
     { platform: 'ptt', author: 'boarduser', uid: null }

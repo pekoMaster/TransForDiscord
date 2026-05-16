@@ -80,6 +80,22 @@ Known current violations or smell:
 - `events/interactionCreate.js` contains the routing table inline instead of delegating to feature routers.
 - `utils/` contains feature-owned modules for translation, Pixiv, PTT, Twitter state, moderation, browser, webhook, auth, and cache.
 
+## Imported Fix Requirements
+
+2026-05-16 reference inputs:
+
+- `doc/FIX_TFD_IS_NOT_DEFINED.md`: local reference report for blacklist misses, `tfd is not defined`, PTT author fallback, V2 blacklist warning behavior, and `/pe blacklist list` pagination.
+- `D:\OneDrive\RB\DISCORDBOT\4.0\docs\twitter-quote-expand-optimization.md`: external 4.0 design reference for Twitter quote auto-expand and V1/V2 transition behavior; do not edit 4.0 as part of TFD work.
+
+Imported status:
+
+- `tfd is not defined`: fix by moving logger requires to module scope where they are still block-scoped.
+- `normalize-author` embed compatibility: done in `src/features/moderation/normalize-author.js`; old `utils/normalize-author.js` remains an adapter.
+- PTT `result.data.author`: add to moderation author normalization and smoke coverage.
+- V2 blacklist Level 1 warning and unsafe `result.embed.data` access: schedule as a focused `message-handler-v2` moderation pipeline phase.
+- `/pe blacklist list` Embed pagination: schedule as a focused slash-command phase.
+- Twitter quote auto-expand and V1/V2 transition behavior: schedule as a focused Twitter quote phase using current TFD paths under `src/features/twitter`.
+
 ## Proposed Top-Level Structure
 
 ```txt

@@ -7,6 +7,7 @@ const puppeteer = require('puppeteer');
 const path = require('path');
 const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
 const URLConverterLogger = require('../../src/shared/logging/url-converter-logger');
+const tfd = require('../../utils/tfd-logger');
 
 class FacebookExtractor {
     constructor() {
@@ -1136,7 +1137,6 @@ class FacebookExtractor {
      */
     async autoLogin() {
         const puppeteer = require('puppeteer');
-const tfd = require('../../utils/tfd-logger');
         let browser = null;
 
         try {

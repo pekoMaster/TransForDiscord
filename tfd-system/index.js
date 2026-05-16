@@ -4,6 +4,7 @@
  */
 
 const config = require('./config/tfd-config.json');
+const tfd = require('../utils/tfd-logger');
 
 class TFDSystem {
     constructor() {
@@ -52,7 +53,6 @@ class TFDSystem {
     _getMessageHandler() {
         if (!this.messageHandler) {
             const MessageHandler = require('./core/message-handler-v2');
-const tfd = require('../utils/tfd-logger');
             this.messageHandler = new MessageHandler();
         }
         return this.messageHandler;

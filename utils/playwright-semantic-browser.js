@@ -8,6 +8,7 @@
  */
 
 const { chromium } = require('playwright');
+const tfd = require('./tfd-logger');
 
 class PlaywrightSemanticBrowser {
     constructor(options = {}) {
@@ -299,7 +300,6 @@ class PlaywrightSemanticBrowser {
         if (!this.context) throw new Error('未初始化瀏覽器');
 
         const fs = require('fs').promises;
-const tfd = require('./tfd-logger');
         const data = JSON.parse(await fs.readFile(filePath, 'utf-8'));
 
         // 恢復 Cookies

@@ -48,9 +48,10 @@ const normalizers = {
     },
 
     ptt(result) {
-        if (result.author) {
-            const m = result.author.match(/^([^\s(]+)/);
-            return { author: m ? m[1] : result.author, uid: null };
+        const rawAuthor = result.author || result.data?.author;
+        if (rawAuthor) {
+            const m = rawAuthor.match(/^([^\s(]+)/);
+            return { author: m ? m[1] : rawAuthor, uid: null };
         }
         const authorName = getEmbedAuthorName(result.embed);
         if (authorName) {
