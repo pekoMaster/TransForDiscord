@@ -15,6 +15,7 @@ const { sendWithWebhook, editWebhookMessage, canUseWebhook, hasWebhookPermission
 const { normalizeAuthorForBlacklist } = require('../../utils/normalize-author.js');
 const { getInstance: getGBM } = require('../../utils/guild-blacklist-manager.js');
 const { setMessageState: setTwitterV2MessageState } = require('../../utils/twitter-v2-state-store');
+const { sanitizeComponentsForSend } = require('../../src/features/discord/component-sanitizer');
 
 // URL 統計（footer N/M/O 顯示用）
 const { recordUrl } = require('../utils/url-stats');
@@ -50,6 +51,10 @@ class TFDMessageHandler {
         const author = message.author;
         const deleteOriginal = options.deleteOriginal !== false; // 預設刪除
         const addUserMention = options.addUserMention !== false; // 預設加入標記
+        options = {
+            ...options,
+            components: sanitizeComponentsForSend(options.components)
+        };
 
         // 检查是否使用 V2 Components
         const isV2Components = options.flags && (options.flags & 32768); // 32768 = IsComponentsV2
@@ -101,7 +106,7 @@ class TFDMessageHandler {
         // 🕶️ 附加防爆雷按鈕（非 V2 Components 訊息）
         if (!isV2Components && options.addSpoilerButton !== false) {
             const { appendReportButton } = require('../../utils/spoiler-button-helper.js');
-            options.components = appendReportButton(options.components);
+            options.components = sanitizeComponentsForSend(appendReportButton(options.components));
         }
 
         let sentMsg = null;

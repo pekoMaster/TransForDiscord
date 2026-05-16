@@ -6,6 +6,8 @@
 const URLMatcher = require('../regex/matcher');
 const ExtractorManager = require('../extractors');
 const config = require('../config/tfd-config.json');
+const linkSupport = require('../../src/features/link-support/link-support-service');
+const tfd = require('../../utils/tfd-logger');
 
 class LinkProcessor {
     constructor() {
@@ -32,7 +34,8 @@ class LinkProcessor {
             }
 
             // 檢查頻道限制
-            if (!this.isChannelAllowed(message.channel.id)) {
+            const guildId = message.guildId || message.guild?.id || null;
+            if (!this.isChannelAllowed(message.channel.id, guildId)) {
                 return [];
             }
 
@@ -83,21 +86,6 @@ class LinkProcessor {
      * @returns {Promise<Object|null>}
      */
     async processSingleURL(url, message) {
-        // 檢查快取
-        if (this.processedCache.has(url)) {
-            const cached = this.processedCache.get(url);
-            if (Date.now() - cached.timestamp < 300000) { // 5分鐘快取
-                // 如果快取結果是 null 或有錯誤，清除快取重新處理
-                if (!cached.result || (cached.result && cached.result.success === false)) {
-                    tfd.sys('TFD-LinkProcessor', `清除無效快取: ${url}`);
-                    this.processedCache.delete(url);
-                } else {
-                    tfd.sys('TFD-LinkProcessor', `使用快取結果: ${url}`);
-                    return cached.result;
-                }
-            }
-        }
-
         // 匹配 URL 模式
         const matchResult = this.urlMatcher.matchURL(url);
         if (!matchResult) {
@@ -106,9 +94,25 @@ class LinkProcessor {
         }
 
         // 檢查網站是否啟用
-        if (!this.isSiteEnabled(matchResult.siteName)) {
+        const guildId = message?.guildId || message?.guild?.id || null;
+        if (!this.isSiteEnabled(matchResult.siteName, guildId, url)) {
             tfd.sys('TFD-LinkProcessor', `網站已停用: ${matchResult.siteName}`);
             return null;
+        }
+
+        const cacheKey = guildId ? `${guildId}:${url}` : url;
+        if (this.processedCache.has(cacheKey)) {
+            const cached = this.processedCache.get(cacheKey);
+            if (Date.now() - cached.timestamp < 300000) { // 5分鐘快取
+                // 如果快取結果是 null 或有錯誤，清除快取重新處理
+                if (!cached.result || (cached.result && cached.result.success === false)) {
+                    tfd.sys('TFD-LinkProcessor', `清除無效快取: ${url}`);
+                    this.processedCache.delete(cacheKey);
+                } else {
+                    tfd.sys('TFD-LinkProcessor', `使用快取結果: ${url}`);
+                    return cached.result;
+                }
+            }
         }
 
         // 使用提取器處理
@@ -116,7 +120,7 @@ class LinkProcessor {
             const result = await this.extractorManager.extract(matchResult, message);
 
             // 快取結果
-            this.processedCache.set(url, {
+            this.processedCache.set(cacheKey, {
                 result: result,
                 timestamp: Date.now()
             });
@@ -143,7 +147,6 @@ class LinkProcessor {
         // 公開版：只用 per-guild blocked channels（不再支援全域 allowedChannels）
         if (!guildId) return true;
         const db = require('../../db');
-const tfd = require('../../utils/tfd-logger');
         return !db.blockedChannels.has(guildId, channelId);
     }
 
@@ -152,8 +155,10 @@ const tfd = require('../../utils/tfd-logger');
      * @param {string} siteName
      * @returns {boolean}
      */
-    isSiteEnabled(siteName) {
-        return this.extractorManager.isSupported(siteName);
+    isSiteEnabled(siteName, guildId = null, url = null) {
+        if (!this.extractorManager.isSupported(siteName)) return false;
+        if (!guildId || !url) return true;
+        return linkSupport.isDomainEnabled(guildId, url);
     }
 
     /**

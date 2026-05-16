@@ -9,6 +9,7 @@
 
 const { WebhookClient } = require('discord.js');
 const tlog = require('./tfd-logger');
+const { sanitizeComponentsForSend } = require('../src/features/discord/component-sanitizer');
 
 // Webhook 名稱（用於識別 Bot 建立的 Webhook）
 const WEBHOOK_NAME = 'MB_MessageBubble';
@@ -127,6 +128,11 @@ function resetIdleTimer(channel) {
  * @returns {Promise<Message>} 發送的訊息
  */
 async function sendWithWebhook(channel, options) {
+    options = {
+        ...options,
+        components: sanitizeComponentsForSend(options.components)
+    };
+
     const buildSendOptions = (threadId) => {
         const opts = {
             username: options.username || 'Message Bubble',
@@ -226,6 +232,11 @@ function hasWebhookPermission(channel) {
  * @returns {Promise<Message>} 編輯後的訊息
  */
 async function editWebhookMessage(channel, messageId, options) {
+    options = {
+        ...options,
+        components: sanitizeComponentsForSend(options.components)
+    };
+
     const buildEditOptions = (threadId) => {
         const opts = {
             content: options.content,

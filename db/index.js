@@ -205,6 +205,21 @@ function _prepareStatements() {
     stmts.reportApprove = db.prepare('UPDATE blacklist_reports SET status = \x27approved\x27, admin_id = ?, final_level = ?, admin_reason = ?, updated_at = ? WHERE id = ?');
     stmts.reportReject = db.prepare('UPDATE blacklist_reports SET status = \x27rejected\x27, admin_id = ?, updated_at = ? WHERE id = ?');
     stmts.reportSetLogMsgId = db.prepare('UPDATE blacklist_reports SET log_message_id = ? WHERE id = ?');
+
+    // guild_link_domains
+    stmts.linkDomainUpsert = db.prepare(`
+        INSERT INTO guild_link_domains (guild_id, site_name, domain, enabled, updated_by, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(guild_id, domain) DO UPDATE SET
+            site_name = excluded.site_name,
+            enabled = excluded.enabled,
+            updated_by = excluded.updated_by,
+            updated_at = excluded.updated_at
+    `);
+    stmts.linkDomainGet = db.prepare('SELECT * FROM guild_link_domains WHERE guild_id = ? AND domain = ?');
+    stmts.linkDomainRemove = db.prepare('DELETE FROM guild_link_domains WHERE guild_id = ? AND domain = ?');
+    stmts.linkDomainList = db.prepare('SELECT * FROM guild_link_domains WHERE guild_id = ? ORDER BY site_name, domain');
+    stmts.linkDomainListDisabled = db.prepare('SELECT * FROM guild_link_domains WHERE guild_id = ? AND enabled = 0 ORDER BY site_name, domain');
 }
 
 // ────────────────────────────────────────────────────────────
@@ -315,6 +330,48 @@ const excludedUsers = {
 
     has(guildId, userId) {
         return !!_stmt('excludedUserHas').get(guildId, userId);
+    }
+};
+
+// ────────────────────────────────────────────────────────────
+// guild_link_domains API
+// ────────────────────────────────────────────────────────────
+
+const linkDomains = {
+    set(guildId, siteName, domain, enabled, updatedBy = null) {
+        guilds._ensure(guildId);
+        const ts = now();
+        const existing = _stmt('linkDomainGet').get(guildId, domain);
+        return _stmt('linkDomainUpsert').run(
+            guildId,
+            siteName,
+            domain,
+            enabled ? 1 : 0,
+            updatedBy,
+            existing ? existing.created_at : ts,
+            ts
+        );
+    },
+
+    get(guildId, domain) {
+        return _stmt('linkDomainGet').get(guildId, domain) || null;
+    },
+
+    remove(guildId, domain) {
+        return _stmt('linkDomainRemove').run(guildId, domain);
+    },
+
+    list(guildId) {
+        return _stmt('linkDomainList').all(guildId);
+    },
+
+    listDisabled(guildId) {
+        return _stmt('linkDomainListDisabled').all(guildId);
+    },
+
+    isEnabled(guildId, domain) {
+        const row = linkDomains.get(guildId, domain);
+        return row ? !!row.enabled : true;
     }
 };
 
@@ -552,6 +609,7 @@ module.exports = {
     guilds,
     blockedChannels,
     excludedUsers,
+    linkDomains,
     apiKeys,
     urlStats,
     rateLimit,

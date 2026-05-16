@@ -196,3 +196,20 @@ CREATE TABLE IF NOT EXISTS tfd_stats (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tfd_stats_type_date ON tfd_stats(stat_type, created_at);
+
+-- ============================================================
+-- 14. Per-guild link domain support overrides
+-- ============================================================
+CREATE TABLE IF NOT EXISTS guild_link_domains (
+  guild_id    TEXT NOT NULL,
+  site_name   TEXT NOT NULL,
+  domain      TEXT NOT NULL COLLATE NOCASE,
+  enabled     INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+  updated_by  TEXT,
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, domain),
+  FOREIGN KEY (guild_id) REFERENCES guild_settings(guild_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_guild_link_domains_disabled ON guild_link_domains(guild_id, enabled);

@@ -26,6 +26,7 @@ const FourGamersExtractor = require('./4gamers');
 const ThreadsExtractor = require('./threads');
 const YouTubeExtractor = require('./youtube');
 const HololiveShopExtractor = require('./hololive-shop');
+const tfd = require('../../utils/tfd-logger');
 
 class ExtractorManager {
     constructor() {
@@ -228,7 +229,6 @@ class ExtractorManager {
 
                 // 重新載入提取器
                 const ExtractorClass = require(extractorPaths[siteName]);
-const tfd = require('../../utils/tfd-logger');
                 this.extractors.set(siteName, new ExtractorClass());
 
                 tfd.sys('TFD-ExtractorManager', `${siteName} 提取器重新載入成功`);

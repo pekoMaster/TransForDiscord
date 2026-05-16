@@ -160,6 +160,14 @@ MessageCreate
 | `extractors/v2/video-links.js` | 影片 URL 擷取與 Discord 連結文字格式 |
 | `interactions/v2/` | Twitter V2 Container 翻譯、展開、重整、防爆雷等互動子模組 |
 
+### Discord / Link Support 功能模組 (`src/features/`)
+
+| 路徑 | 功能 |
+|------|------|
+| `discord/component-sanitizer.js` | Discord 訊息 components 送出前合法化，過濾空 ActionRow 並拆分超過 5 個子元件的 row |
+| `link-support/domain-registry.js` | TFD 支援網域 registry，負責網域正規化與 domain → siteName 對應 |
+| `link-support/link-support-service.js` | Per-guild 支援網域 on/off 服務，轉接 SQLite `guild_link_domains` |
+
 ### 正規表達式 (`tfd-system/regex/`)
 
 | 檔案 | 功能 |
@@ -264,7 +272,7 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `index.js` | SQLite 統一介面（better-sqlite3，WAL 模式）— rate_limits、abuse_log、url_stats、guild_settings、user_api_keys |
+| `index.js` | SQLite 統一介面（better-sqlite3，WAL 模式）— rate_limits、abuse_log、url_stats、guild_settings、user_api_keys、guild_link_domains |
 | `schema.sql` | 資料庫 Schema 定義 |
 
 ---
@@ -274,6 +282,8 @@ MessageCreate
 | 檔案 | 功能 |
 |------|------|
 | `migrate-from-json.js` | 從舊版 JSON 遷移到 SQLite + 加密 API Key（含 `--dry-run`） |
+| `component-sanitizer-smoke.js` | Discord components 合法化 smoke test |
+| `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---
 

@@ -8,6 +8,7 @@
  *   /pe nouser                    — 排除使用者（管理員，per-guild）
  *   /pe noch                      — 排除頻道（管理員，per-guild）
  *   /pe owner                     — 設定本伺服器活動 owner（管理員）
+ *   /pe linksup                   — 啟用/停用本伺服器支援網域（管理員）
  *   /pe status                    — 查看本伺服器 Peko Embed 狀態（管理員）
  *
  * 多租戶設計：
@@ -26,6 +27,8 @@ const db = require('../db');
 const { PROVIDERS, saveKey, removeKey, getKeyStatus, hasAnyKey, getPreferredProvider, setPreferredProvider } = require('../utils/user-api-key-storage.js');
 const tlog = require('../utils/tfd-logger');
 const { getInstance: getGBM } = require('../utils/guild-blacklist-manager.js');
+const linkSupport = require('../src/features/link-support/link-support-service');
+const { listSupportedDomains } = require('../src/features/link-support/domain-registry');
 
 const PROVIDER_CHOICES = [
     { name: 'OpenAI', value: 'openai' },
@@ -152,6 +155,17 @@ module.exports = {
             .addUserOption(o => o.setName('user').setDescription('owner 使用者；不填則清除').setRequired(false))
         )
 
+        // ── /pe linksup（管理員，per-guild）──
+        .addSubcommand(s => s.setName('linksup').setDescription('啟用/停用本伺服器支援網域')
+            .addStringOption(o => o.setName('action').setDescription('操作').setRequired(true)
+                .addChoices(
+                    { name: 'ON - 啟用支援網域', value: 'on' },
+                    { name: 'OFF - 停用支援網域', value: 'off' },
+                    { name: 'LIST - 查看停用網域', value: 'list' }
+                ))
+            .addStringOption(o => o.setName('domain').setDescription('支援網域，例如 x.com / twitter.com / pixiv.net').setRequired(false))
+        )
+
         // ── /pe status（管理員）──
         .addSubcommand(s => s.setName('status').setDescription('查看本伺服器 Peko Embed 狀態（管理員）')),
 
@@ -192,6 +206,7 @@ module.exports = {
                 case 'nouser': return await handleNoUser(interaction, guildId, userId);
                 case 'noch': return await handleNoChannel(interaction, guildId, userId);
                 case 'owner': return await handleOwner(interaction, guildId);
+                case 'linksup': return await handleLinkSupport(interaction, guildId, userId);
                 case 'status': return await handleStatus(interaction, guildId);
             }
 
@@ -382,12 +397,66 @@ async function handleOwner(interaction, guildId) {
 }
 
 // ────────────────────────────────────────────────────────────
+// /pe linksup（per-guild）
+// ────────────────────────────────────────────────────────────
+async function handleLinkSupport(interaction, guildId, userId) {
+    const action = interaction.options.getString('action');
+    const domain = interaction.options.getString('domain');
+
+    if (action === 'list') {
+        const disabled = linkSupport.listDisabledDomains(guildId);
+        if (disabled.length === 0) {
+            return interaction.reply({
+                content: `📋 本伺服器目前沒有停用任何支援網域。\n可用範例：\`/pe linksup action:off domain:x.com\``,
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+        const lines = disabled.slice(0, 20).map(row => `• ${row.domain}（${row.site_name}）`);
+        if (disabled.length > 20) lines.push(`...另有 ${disabled.length - 20} 個`);
+        return interaction.reply({
+            content: `📋 本伺服器已停用支援網域（${disabled.length}）：\n${lines.join('\n')}`,
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    if (!domain?.trim()) {
+        return interaction.reply({
+            content: `❌ 請提供要設定的支援網域。\n可用範例：\`/pe linksup action:${action} domain:x.com\`\n${formatSupportedDomainHint()}`,
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    const enabled = action === 'on';
+    const result = linkSupport.setDomainEnabled(guildId, domain, enabled, userId);
+    if (!result.ok) {
+        return interaction.reply({
+            content: `❌ 不支援或無法辨識的網域：\`${domain}\`\n${formatSupportedDomainHint()}`,
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    return interaction.reply({
+        content: enabled
+            ? `✅ 已啟用本伺服器支援網域：\`${result.domain}\`（${result.label}）`
+            : `✅ 已停用本伺服器支援網域：\`${result.domain}\`（${result.label}）`,
+        flags: MessageFlags.Ephemeral
+    });
+}
+
+function formatSupportedDomainHint(limit = 14) {
+    const domains = listSupportedDomains().slice(0, limit).map(entry => entry.domain);
+    return `支援網域範例：${domains.map(domain => `\`${domain}\``).join('、')} 等。`;
+}
+
+// ────────────────────────────────────────────────────────────
 // /pe status（per-guild）
 // ────────────────────────────────────────────────────────────
 async function handleStatus(interaction, guildId) {
     const g = db.guilds.get(guildId) || {};
     const blocked = db.blockedChannels.list(guildId).length;
     const excluded = db.excludedUsers.list(guildId).length;
+    const disabledDomains = db.linkDomains.listDisabled(guildId).length;
 
     const lines = [
         '**🔧 Peko Embed 本伺服器狀態**\n',
@@ -396,10 +465,11 @@ async function handleStatus(interaction, guildId) {
         `**活動 Owner：** ${g.owner_user_id ? `<@${g.owner_user_id}>` : '_未設定_'}`,
         `**排除使用者：** ${excluded} 位`,
         `**排除頻道：** ${blocked} 個`,
+        `**停用支援網域：** ${disabledDomains} 個`,
         '',
-        '**🌐 翻譯系統（僅限 Twitter）：**',
-        '• 引擎：Google Gemini AI（用戶自備 Key）',
-        '• 設定：`/pe api add provider:Gemini apikey:你的金鑰`'
+        '**🌐 連結支援：**',
+        '• 網域開關：`/pe linksup action:list`',
+        '• 翻譯 API：使用者自備 Key，透過 `/pe api add` 與 `/pe api model` 設定'
     ];
     return interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });
 }

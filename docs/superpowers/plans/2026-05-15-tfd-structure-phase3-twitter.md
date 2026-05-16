@@ -653,6 +653,15 @@ git reset --hard baseline/pre-translation-refactor-2026-05-15
 
 Prefer `git revert` over destructive reset once work has been shared or deployed.
 
+## Standing Incident Checklist
+
+Add these checks to every TFD review pass before considering a change complete:
+
+- [ ] No outbound Discord payload contains an empty `ActionRow` or an action row with more than 5 child components. This specifically guards against `components[0].components[BASE_TYPE_BAD_LENGTH]: Must be between 1 and 5 in length`.
+- [ ] All webhook, bot fallback, and last-resort fallback paths use sanitized components before sending or editing Discord messages.
+- [ ] Search for `tfd.sys`, `tfd.sysError`, `tfd.sysWarn`, `tfd.log`, `tfd.warn`, and `tfd.error`; every runtime file using `tfd` must import `utils/tfd-logger` at module scope or intentionally use `tlog`.
+- [ ] If production reports `tfd is not defined`, trace the exact runtime file first, then add a syntax/load check for that file before committing.
+
 ## Self-Review
 
 - Spec coverage: This plan implements the inventory Phase 3 recommendation for Twitter state, container, media, interactions, and extractors.
