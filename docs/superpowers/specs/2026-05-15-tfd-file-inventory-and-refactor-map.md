@@ -199,7 +199,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `tfd-system/utils/embed-builder.js` | Legacy adapter for generic Discord embed builder wrapper. | adapter | shared/discord | `src/shared/discord/embed-builder.js` | done-adapter | Runtime extractor imports moved to shared path. |
 | `tfd-system/utils/http-client.js` | Legacy adapter for Axios HTTP client with config defaults. | adapter | shared/http | `src/shared/http/http-client.js` | done-adapter | Runtime extractor and Twitter imports moved to shared path. |
 | `tfd-system/utils/text-truncator.js` | Legacy adapter for Discord-safe text truncation. | adapter | shared/discord | `src/shared/discord/text-truncator.js` | done-adapter | Runtime Twitter imports moved to shared path. |
-| `tfd-system/utils/tunnel-url-provider.js` | Cloudflare tunnel URL and Twitter URL conversion helper. | utility | shared/web | `src/shared/web/tunnel-url-provider.js` | move | Could be feature/twitter if only Twitter remains. |
+| `tfd-system/utils/tunnel-url-provider.js` | Legacy adapter for Cloudflare tunnel URL and Twitter URL conversion helper. | adapter | shared/web | `src/shared/web/tunnel-url-provider.js` | done-adapter | No runtime consumers currently; old path remains compatible for future tunnel/proxy work. |
 | `tfd-system/utils/url-converter-logger.js` | Small logger for URL conversion decisions. | utility | shared/logging | `src/shared/logging/url-converter-logger.js` | merge | Could merge into logging utilities. |
 | `tfd-system/utils/url-stats.js` | URL repost stats persistence and lookup. | cache-store/service | shared/analytics | `src/shared/analytics/url-stats.js` | move | Used by Twitter V2 and message pipeline. |
 

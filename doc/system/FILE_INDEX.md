@@ -194,6 +194,12 @@ MessageCreate
 |------|------|
 | `http-client.js` | Axios HTTP client，含 timeout/retry/bot-block handling；舊 `tfd-system/utils/http-client.js` 僅保留 adapter |
 
+### Shared Web 模組 (`src/shared/web/`)
+
+| 路徑 | 功能 |
+|------|------|
+| `tunnel-url-provider.js` | Cloudflare Tunnel URL 狀態與 Twitter embed proxy URL helper；舊 `tfd-system/utils/tunnel-url-provider.js` 僅保留 adapter |
+
 ### Link Support 功能模組 (`src/features/link-support/`)
 
 | 路徑 | 功能 |
@@ -224,7 +230,7 @@ MessageCreate
 | `http-client.js` | 舊路徑 adapter，轉接至 `src/shared/http/http-client.js` |
 | `text-truncator.js` | 舊路徑 adapter，轉接至 `src/shared/discord/text-truncator.js` |
 | `translation-button-builder.js` | 翻譯按鈕建構器 |
-| `tunnel-url-provider.js` | Cloudflare Tunnel URL 提供器 |
+| `tunnel-url-provider.js` | 舊路徑 adapter，轉接至 `src/shared/web/tunnel-url-provider.js` |
 | `url-converter-logger.js` | URL 轉換記錄器 |
 | `url-stats.js` | URL 統計系統（N/M/O 計數：頻道/伺服器/全域） |
 
@@ -326,6 +332,7 @@ MessageCreate
 | `dom-parser-smoke.js` | Shared HTML DOM parser smoke test |
 | `embed-builder-smoke.js` | Shared Discord embed builder smoke test |
 | `http-client-smoke.js` | Shared HTTP client adapter and retry behavior smoke test |
+| `tunnel-url-provider-smoke.js` | Shared web tunnel URL provider adapter and cache smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---
