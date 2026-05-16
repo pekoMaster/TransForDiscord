@@ -4,7 +4,7 @@ const {
     getCachedTweetData,
     deriveStateFromComponents
 } = require('../../containers/v2-container-builder');
-const { lookupUrl } = require('../../../../../tfd-system/utils/url-stats');
+const { lookupUrl } = require('../../../../shared/analytics/url-stats');
 const { getMessageState, setMessageState } = require('../../state/v2-state-store');
 const { extractMarkerTextFromMessage } = require('./shared');
 const { getCachedV2Translation } = require('./translation-cache');

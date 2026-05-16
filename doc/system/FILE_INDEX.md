@@ -201,6 +201,12 @@ MessageCreate
 |------|------|
 | `tunnel-url-provider.js` | Cloudflare Tunnel URL 狀態與 Twitter embed proxy URL helper；舊 `tfd-system/utils/tunnel-url-provider.js` 僅保留 adapter |
 
+### Shared Analytics 模組 (`src/shared/analytics/`)
+
+| 路徑 | 功能 |
+|------|------|
+| `url-stats.js` | URL 重複貼文統計（channel/guild/total），舊 `tfd-system/utils/url-stats.js` 僅保留 adapter |
+
 ### Link Support 功能模組 (`src/features/link-support/`)
 
 | 路徑 | 功能 |
@@ -233,7 +239,7 @@ MessageCreate
 | `translation-button-builder.js` | 翻譯按鈕建構器 |
 | `tunnel-url-provider.js` | 舊路徑 adapter，轉接至 `src/shared/web/tunnel-url-provider.js` |
 | `url-converter-logger.js` | 舊路徑 adapter，轉接至 `src/shared/logging/url-converter-logger.js` |
-| `url-stats.js` | URL 統計系統（N/M/O 計數：頻道/伺服器/全域） |
+| `url-stats.js` | 舊路徑 adapter，轉接至 `src/shared/analytics/url-stats.js` |
 
 ### 設定 (`tfd-system/config/`)
 
@@ -330,6 +336,7 @@ MessageCreate
 | `text-truncator-smoke.js` | Shared Discord text truncator smoke test |
 | `tfd-logger-smoke.js` | Shared logging adapter smoke test |
 | `url-converter-logger-smoke.js` | Shared logging URL converter logger smoke test |
+| `url-stats-smoke.js` | Shared analytics URL stats adapter and persistence smoke test |
 | `crypto-helper-smoke.js` | Shared crypto adapter and key-path smoke test |
 | `dom-parser-smoke.js` | Shared HTML DOM parser smoke test |
 | `embed-builder-smoke.js` | Shared Discord embed builder smoke test |

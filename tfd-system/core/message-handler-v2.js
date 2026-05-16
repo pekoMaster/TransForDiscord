@@ -18,7 +18,7 @@ const { setMessageState: setTwitterV2MessageState } = require('../../utils/twitt
 const { sanitizeComponentsForSend } = require('../../src/shared/discord/component-sanitizer');
 
 // URL 統計（footer N/M/O 顯示用）
-const { recordUrl } = require('../utils/url-stats');
+const { recordUrl } = require('../../src/shared/analytics/url-stats');
 
 const db = require('../../db');
 

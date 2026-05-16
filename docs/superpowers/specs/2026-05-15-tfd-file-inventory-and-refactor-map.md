@@ -201,7 +201,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `tfd-system/utils/text-truncator.js` | Legacy adapter for Discord-safe text truncation. | adapter | shared/discord | `src/shared/discord/text-truncator.js` | done-adapter | Runtime Twitter imports moved to shared path. |
 | `tfd-system/utils/tunnel-url-provider.js` | Legacy adapter for Cloudflare tunnel URL and Twitter URL conversion helper. | adapter | shared/web | `src/shared/web/tunnel-url-provider.js` | done-adapter | No runtime consumers currently; old path remains compatible for future tunnel/proxy work. |
 | `tfd-system/utils/url-converter-logger.js` | Legacy adapter for URL conversion decision logger. | adapter | shared/logging | `src/shared/logging/url-converter-logger.js` | done-adapter | Runtime extractor imports moved to shared logging path. |
-| `tfd-system/utils/url-stats.js` | URL repost stats persistence and lookup. | cache-store/service | shared/analytics | `src/shared/analytics/url-stats.js` | move | Used by Twitter V2 and message pipeline. |
+| `tfd-system/utils/url-stats.js` | Legacy adapter for URL repost stats persistence and lookup. | adapter | shared/analytics | `src/shared/analytics/url-stats.js` | done-adapter | Runtime message and Twitter imports moved to shared analytics path. |
 
 ## Inventory: Extractors
 
