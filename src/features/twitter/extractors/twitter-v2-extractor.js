@@ -14,6 +14,7 @@ const tfd = require('../../../../utils/tfd-logger');
 const mediaClassifier = require('./v2/media-classifier');
 const videoLinks = require('./v2/video-links');
 const classicComponents = require('./v2/classic-components');
+const imageHelpers = require('./v2/images');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -1280,47 +1281,7 @@ class TFDTwitterExtractor {
      * 從推文中提取圖片
      */
     extractImagesFromTweet(tweet) {
-        const images = [];
-        try {
-            if (tweet.media && tweet.media.all && tweet.media.all.length > 0) {
-                // 先收集所有非影片的圖片
-                tweet.media.all.forEach(media => {
-                    if (media && media.type !== 'video' && media.type !== 'gif' && media.url) {
-                        // 將 ?name=orig 改為 ?name=large，降低 Discord 外鏈抓取失敗機率
-                        const optimized = { ...media, url: media.url.replace('?name=orig', '?name=large') };
-                        images.push(optimized);
-                    }
-                });
-
-                // 2026-04-11: 若沒有圖片但有影片，使用影片縮圖作為 embed 預覽圖
-                if (images.length === 0) {
-                    tweet.media.all.forEach(media => {
-                        if (media && (media.type === 'video' || media.type === 'gif') && media.thumbnail_url) {
-                            images.push({ ...media, url: media.thumbnail_url.replace('?name=orig', '?name=large') });
-                        }
-                    });
-                }
-            }
-
-            // 2026-04-12: 若沒有媒體但有卡片圖片（外部連結卡片），使用卡片圖片
-            if (images.length === 0 && tweet.card && tweet.card.image && tweet.card.image.url) {
-                const cardImageUrl = tweet.card.image.url;
-                // 將 ?name=small 或其他小尺寸改為 ?name=large，格式可能為 ?format=jpg&name=xxx
-                let optimizedUrl = cardImageUrl;
-                // 匹配 name=xxx 並替換為 name=large
-                optimizedUrl = optimizedUrl.replace(/([?&])name=\w+/g, '$1name=large');
-                images.push({
-                    type: 'card',
-                    url: optimizedUrl,
-                    width: tweet.card.image.width,
-                    height: tweet.card.image.height,
-                    alt: tweet.card.image.alt
-                });
-            }
-        } catch (error) {
-            // 忽略錯誤
-        }
-        return images;
+        return imageHelpers.extractImagesFromTweet(tweet);
     }
 
     /**
