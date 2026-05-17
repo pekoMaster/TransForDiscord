@@ -287,7 +287,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | Current path | Purpose | Type | Domain | Proposed target | Action | Notes |
 |---|---|---|---|---|---|---|
 | `utils/tfd-logger.js` | Legacy adapter for TFD logging helpers. | adapter | shared/logging | `src/shared/logging/tfd-logger.js` | done-adapter | Implementation moved; broad runtime import migration can happen in later slices. |
-| `utils/webhook-manager.js` | Webhook create/cache/send/edit and permission checks. | service | shared/webhook | `src/shared/webhook/webhook-manager.js` | move | Widely used; adapter first. |
+| `utils/webhook-manager.js` | Legacy adapter for webhook create/cache/send/edit and permission checks. | adapter | shared/webhook | `src/shared/webhook/webhook-manager.js` | done-adapter | Keeps current runtime imports stable. |
+| `src/shared/webhook/webhook-manager.js` | Webhook create/cache/send/edit and permission checks. | service | shared/webhook | `src/shared/webhook/webhook-manager.js` | keep | Canonical shared webhook implementation. |
 | `utils/crypto-helper.js` | Legacy adapter for AES-GCM encryption/decryption and key masking. | adapter | shared/crypto | `src/shared/crypto/crypto-helper.js` | done-adapter | Runtime imports moved where safe; fallback key path stays anchored to project `data/.encryption-key`. |
 | `utils/embed-helpers.js` | Legacy adapter for Discord message author/platform/url helpers. | adapter | shared/discord | `src/shared/discord/message-helpers.js` | done-adapter | Runtime imports moved to shared Discord message helpers. |
 | `utils/normalize-author.js` | Legacy adapter for extractor/message author normalization used by blacklist matching. | adapter | moderation | `src/features/moderation/normalize-author.js` | done-adapter | Runtime message pipeline imports moved to moderation feature path; embed.data author/footer compatibility added. |

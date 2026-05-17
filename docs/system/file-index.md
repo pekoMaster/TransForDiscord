@@ -239,6 +239,12 @@ MessageCreate
 |------|------|
 | `tunnel-url-provider.js` | Cloudflare Tunnel URL 狀態與 Twitter embed proxy URL helper；舊 `tfd-system/utils/tunnel-url-provider.js` 僅保留 adapter |
 
+### Shared Webhook 模組 (`src/shared/webhook/`)
+
+| 檔案 | 作用 |
+|------|------|
+| `webhook-manager.js` | Discord webhook send/edit/cache helper，`utils/webhook-manager.js` 保留 adapter |
+
 ### Shared Analytics 模組 (`src/shared/analytics/`)
 
 | 路徑 | 功能 |
@@ -348,7 +354,7 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `webhook-manager.js` | Webhook 管理器 ⭐ — 自訂名稱/頭像發送、閒置重命名、flags 傳遞 |
+| `webhook-manager.js` | 舊路徑 adapter，轉接至 `src/shared/webhook/webhook-manager.js` |
 | `spoiler-button-helper.js` | 舊路徑 adapter，轉接至 `src/shared/discord/spoiler-button-helper.js` |
 | `embed-helpers.js` | 舊路徑 adapter，轉接至 `src/shared/discord/message-helpers.js` |
 | `tfd-logger.js` | 舊路徑 adapter，轉接至 `src/shared/logging/tfd-logger.js` |
