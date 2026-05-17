@@ -247,7 +247,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `tfd-system/extractors/facebook-with-login.js` | Facebook logged-in browser extractor. | extractor | sites/facebook | `src/features/sites/facebook/strategies/with-login.js` | move | Strategy implementation. |
 | `tfd-system/extractors/facebookez.js` | FacebookEZ/fx style extractor. | extractor | sites/facebook | `src/features/sites/facebook/strategies/facebookez.js` | move | Strategy implementation. |
 | `tfd-system/extractors/instagram.js` | Instagram extractor. | extractor | sites/instagram | `src/features/sites/instagram/instagram-extractor.js` | move | Platform feature. |
-| `tfd-system/extractors/bahamut.js` | Bahamut extractor. | extractor | sites/bahamut | `src/features/sites/bahamut/bahamut-extractor.js` | move | Uses Bahamut auth helper. |
+| `tfd-system/extractors/bahamut.js` | Legacy adapter for Bahamut extractor. | adapter | sites/bahamut | `src/features/sites/bahamut/bahamut-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
+| `src/features/sites/bahamut/bahamut-extractor.js` | Bahamut extractor. | extractor | sites/bahamut | `src/features/sites/bahamut/bahamut-extractor.js` | keep | Canonical site extractor implementation. |
 | `tfd-system/extractors/4gamers.js` | Legacy adapter for 4Gamers news extractor. | adapter | sites/news | `src/features/sites/news/4gamers-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
 | `tfd-system/extractors/52poke.js` | Legacy adapter for PokeWiki extractor. | adapter | sites/wiki | `src/features/sites/wiki/52poke-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
 | `tfd-system/extractors/bilibili.js` | Legacy adapter for Bilibili extractor. | adapter | sites/video | `src/features/sites/video/bilibili-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |

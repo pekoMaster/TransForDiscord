@@ -114,7 +114,7 @@ MessageCreate
 | `index.js` | 擷取器管理器 — 統一註冊與路由 |
 | `4gamers.js` | Legacy adapter to `src/features/sites/news/4gamers-extractor.js` |
 | `52poke.js` | Legacy adapter to `src/features/sites/wiki/52poke-extractor.js` |
-| `bahamut.js` | 巴哈姆特 — 勇者小屋、哈啦區 |
+| `bahamut.js` | Legacy adapter to `src/features/sites/bahamut/bahamut-extractor.js` |
 | `bilibili.js` | Legacy adapter to `src/features/sites/video/bilibili-extractor.js` |
 | `cts.js` | Legacy adapter to `src/features/sites/news/cts-extractor.js` |
 | `dynamic.js` | 動態通用擷取器（fallback） |
@@ -195,6 +195,7 @@ MessageCreate
 | `shop/pchome-extractor.js` | PChome product extractor |
 | `video/bilibili-extractor.js` | Bilibili URL conversion extractor |
 | `wiki/52poke-extractor.js` | 52Poke wiki extractor |
+| `bahamut/bahamut-extractor.js` | Bahamut article and GNN extractor |
 
 ### Shared Discord 模組 (`src/shared/discord/`)
 
