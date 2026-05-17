@@ -1,8 +1,6 @@
 const { MessageFlags, TextDisplayBuilder, SeparatorBuilder } = require('discord.js');
-const {
-    buildV2Container,
-    deriveStateFromComponents
-} = require('../../containers/v2-container-builder');
+const { buildV2Container } = require('../../containers/v2-container-builder');
+const { deriveStateFromComponents } = require('../../state/v2-component-state');
 const { getCachedTweetData } = require('../../state/v2-tweet-cache');
 const { lookupUrl } = require('../../../../shared/analytics/url-stats');
 const { getMessageState, setMessageState } = require('../../state/v2-state-store');

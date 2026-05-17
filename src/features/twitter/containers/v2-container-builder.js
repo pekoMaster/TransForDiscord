@@ -14,6 +14,7 @@ const {
 
 const TextTruncator = require('../../../shared/discord/text-truncator');
 const { buildV2ActionRows } = require('./v2/action-rows');
+const { deriveStateFromComponents } = require('../state/v2-component-state');
 const {
     cacheTweetData,
     getCachedTweetData
@@ -153,40 +154,6 @@ function buildV2Container(tweet, originalURL, options = {}) {
     return container;
 }
 
-/**
- * 從 V2 訊息的按鈕狀態推導目前顯示狀態
- */
-function deriveStateFromComponents(components, tweetId) {
-    const state = {
-        isTranslated: false,
-        isQuoteShown: false,
-        isReplyShown: false,
-        isExpanded: false,
-    };
-
-    function findButtons(comps) {
-        if (!comps) return;
-        for (const comp of comps) {
-            const id = comp.customId || comp.custom_id;
-            if (id) {
-                if (id === `v2_original_${tweetId}`) state.isTranslated = true;
-                if (id === `v2_collapse_all_${tweetId}`) {
-                    state.isQuoteShown = true;
-                    state.isReplyShown = true;
-                    state.isExpanded = true;
-                }
-                // 相容舊格式（快取內仍有舊按鈕 ID 的情況）
-                if (id === `v2_hide_quote_${tweetId}`) state.isQuoteShown = true;
-                if (id === `v2_hide_reply_${tweetId}`) state.isReplyShown = true;
-                if (id === `v2_collapse_${tweetId}`) state.isExpanded = true;
-            }
-            if (comp.components) findButtons(comp.components);
-        }
-    }
-
-    findButtons(components);
-    return state;
-}
 
 module.exports = {
     buildV2Container,
