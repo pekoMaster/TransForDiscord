@@ -1,10 +1,10 @@
-const { MessageFlags, TextDisplayBuilder, SeparatorBuilder } = require('discord.js');
-const { buildV2Container } = require('../../containers/v2-container-builder');
+const { MessageFlags } = require('discord.js');
 const { getCachedTweetData } = require('../../state/v2-tweet-cache');
 const { lookupUrl } = require('../../../../shared/analytics/url-stats');
 const { getMessageState, setMessageState } = require('../../state/v2-state-store');
 const { buildFallbackState, resolveRenderState } = require('./render-state');
 const { hydrateTweetBundle } = require('./tweet-data');
+const { buildV2EditPayload } = require('./view-payload');
 
 async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, options = {}) {
     const { refreshData = false } = options;
@@ -44,33 +44,16 @@ async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, optio
         }
     } catch (_) {}
 
-    const container = buildV2Container(tweet, originalURL, {
-        isTranslated: newState.isTranslated,
-        translatedText: newState.translatedText || null,
-        translatedQuoteText: newState.translatedQuoteText || null,
-        translatedReplyText: newState.translatedReplyText || null,
-        isQuoteShown: newState.isQuoteShown,
-        isReplyShown: newState.isReplyShown,
-        isExpanded: newState.isExpanded,
+    const payload = buildV2EditPayload({
+        tweet,
+        originalURL,
         quoteData,
         replyData,
+        state: newState,
         urlStats
     });
 
-    if (newState.markerText) {
-        container.components = [
-            new TextDisplayBuilder().setContent(newState.markerText),
-            new SeparatorBuilder().setDivider(true),
-            ...container.components
-        ];
-    }
-
-    await interaction.editReply({
-        content: null,
-        embeds: [],
-        components: [container],
-        flags: MessageFlags.IsComponentsV2
-    });
+    await interaction.editReply(payload);
 
     setMessageState(interaction.message.id, newState);
     return true;
