@@ -36,4 +36,5 @@ orchestrator. Focused helper logic lives in `extractors/v2/`:
 | `response-builders.js` | Profile embed, passthrough response, and error response builders |
 | `tweet-fetcher.js` | fxtwitter first, vxtwitter fallback tweet fetch orchestration |
 | `tweet-info.js` | URL tweet ID, quote info, and reply reference parsing |
+| `video-mode-response.js` | GAS/HTML video mode response and basic embed construction |
 | `video-links.js` | Video URL extraction and Discord link label formatting |

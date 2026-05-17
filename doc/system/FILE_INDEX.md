@@ -160,6 +160,7 @@ MessageCreate
 | `extractors/v2/response-builders.js` | Profile Embed、passthrough、error response 建構 |
 | `extractors/v2/tweet-fetcher.js` | fxtwitter 優先、vxtwitter fallback 的推文抓取流程 |
 | `extractors/v2/tweet-info.js` | URL 推文 ID、引用推文資訊、回覆目標解析 |
+| `extractors/v2/video-mode-response.js` | Twitter V2 GAS/HTML video mode response and basic embed builder |
 | `extractors/v2/video-links.js` | 影片 URL 擷取與 Discord 連結文字格式 |
 | `containers/v2/action-rows.js` | Twitter V2 translate/expand/reload/report action row builder |
 | `state/v2-component-state.js` | Twitter V2 Discord component tree state derivation for translate/quote/reply/expand buttons |
@@ -379,6 +380,7 @@ MessageCreate
 | `twitter-v2-v1-transition-smoke.js` | Twitter V2 to classic V1 quote-collapse transition payload smoke test |
 | `twitter-v2-article-response-smoke.js` | Twitter V2 article response payload smoke test |
 | `twitter-v2-mixed-media-response-smoke.js` | Twitter V2 mixed-media response payload smoke test |
+| `twitter-v2-video-mode-response-smoke.js` | Twitter V2 GAS/HTML video mode response smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---

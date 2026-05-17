@@ -16,6 +16,7 @@ const videoLinks = require('./v2/video-links');
 const classicComponents = require('./v2/classic-components');
 const articleResponse = require('./v2/article-response');
 const mixedMediaResponse = require('./v2/mixed-media-response');
+const videoModeResponse = require('./v2/video-mode-response');
 const imageHelpers = require('./v2/images');
 const normalizer = require('./v2/normalizer');
 const tweetInfo = require('./v2/tweet-info');
@@ -455,36 +456,11 @@ class TFDTwitterExtractor {
      * 處理 Google Apps Script 影片播放模式
      */
     async handleGASVideoMode(tweet, originalURL, tweetType) {
-        try {
-            // 從 .env 讀取 GAS URL
-            const gasURL = process.env.GOOGLE_APP_SCRIPT_URL;
-            if (!gasURL) {
-                tfd.sysError('Enhanced-Twitter', '未配置 GOOGLE_APP_SCRIPT_URL 環境變數');
-                return null;
-            }
-
-            // 提取推文 ID
-            const tweetId = this.extractTweetId(originalURL);
-            if (!tweetId) {
-                tfd.sysError('Enhanced-Twitter', '無法提取推文 ID');
-                return null;
-            }
-
-            // 建構 GAS URL
-            const gasQueryURL = `${gasURL}?tweet_id=${tweetId}&type=${tweetType}&original_url=${encodeURIComponent(originalURL)}`;
-            // LOG removed for simplicity
-
-            return {
-                gasURL: gasQueryURL,
-                originalURL: originalURL,
-                tweetType: tweetType,
-                mode: 'gas_video'
-            };
-
-        } catch (error) {
-            tfd.sysError('Enhanced-Twitter', `GAS 模式處理錯誤: ${error}`);
-            return null;
-        }
+        return videoModeResponse.buildGASVideoModeResponse(tweet, originalURL, tweetType, {
+            getGasURL: () => process.env.GOOGLE_APP_SCRIPT_URL,
+            extractTweetId: (...args) => this.extractTweetId(...args),
+            logger: tfd
+        });
     }
 
     /**
@@ -498,91 +474,20 @@ class TFDTwitterExtractor {
      * 處理 HTML 影片播放模式
      */
     async handleHTMLVideoMode(tweet, originalURL, tweetType) {
-        try {
-            // 提取影片和圖片
-            const videos = MixedMediaHTMLBuilder.extractVideos(tweet);
-            const images = MixedMediaHTMLBuilder.extractImages(tweet);
-
-            // LOG removed for simplicity
-
-            // 建構推文資料
-            const tweetData = {
-                author: {
-                    name: tweet.author?.name || 'Unknown',
-                    screen_name: tweet.author?.screen_name || 'unknown'
-                },
-                text: tweet.text || '',
-                created_at: tweet.created_at
-            };
-
-            // 生成 HTML 內容
-            const htmlContent = this.htmlBuilder.buildHTML({
-                tweetData,
-                videos,
-                images,
-                originalURL,
-                siteName: 'Enhanced TFD'
-            });
-
-            // LOG removed for simplicity
-
-            // 建立一個基本的 embed 以符合處理流程要求
-            const basicEmbed = this.buildBasicEmbed(tweet, originalURL, tweetType);
-
-            // 返回 HTML 回應結果
-            return {
-                success: true,
-                htmlContent: htmlContent,
-                embed: basicEmbed, // 添加基本 embed 以符合處理流程
-                contentType: tweetType,
-                siteName: 'twitter',
-                isHTMLResponse: true, // 標記為 HTML 回應
-                originalURL: originalURL,
-                videosCount: videos.length,
-                imagesCount: images.length
-            };
-
-        } catch (error) {
-            tfd.sysError('Enhanced-Twitter', `HTML 影片播放模式處理失敗: ${error.message}`);
-            tfd.sysError('Twitter-V2', error.stack);
-
-            // 回退到一般混合媒體處理
-            // LOG removed for simplicity
-            return await this.handleMixedMediaTweetFallback(tweet, originalURL, tweetType);
-        }
+        return videoModeResponse.buildHTMLVideoModeResponse(tweet, originalURL, tweetType, {
+            extractVideos: (...args) => MixedMediaHTMLBuilder.extractVideos(...args),
+            extractImages: (...args) => MixedMediaHTMLBuilder.extractImages(...args),
+            buildHTML: (...args) => this.htmlBuilder.buildHTML(...args),
+            handleMixedMediaTweetFallback: (...args) => this.handleMixedMediaTweetFallback(...args),
+            logger: tfd
+        });
     }
 
     /**
      * 建立基本的嵌入式訊息 (用於 HTML 回應)
      */
     buildBasicEmbed(tweet, originalURL, tweetType) {
-        const embed = new EmbedBuilder();
-
-        // 設定 Author 資訊：用戶ID、頭像、個人頁面
-        if (tweet.author) {
-            embed.setAuthor({
-                name: `@${tweet.author.screen_name}`, // 用戶的實際ID
-                iconURL: tweet.author.profile_image_url_https || tweet.author.avatar_url, // 用戶頭像
-                url: `https://twitter.com/${tweet.author.screen_name}` // 用戶個人頁面
-            });
-
-            // 設定標題：只顯示用戶暱稱
-            const displayName = tweet.author.name || tweet.author.screen_name;
-            embed.setTitle(displayName);
-        }
-
-        // 基本 Embed 不設定 Description（因為無法判斷推文類型）
-
-        // 設定顏色和時間戳
-        embed.setColor(0x1DA1F2);
-        embed.setURL(originalURL);
-
-        if (tweet.created_at) {
-            const createdDate = new Date(tweet.created_at);
-            embed.setTimestamp(createdDate);
-        }
-
-        return embed;
+        return videoModeResponse.buildBasicEmbed(tweet, originalURL);
     }
 
     /**
