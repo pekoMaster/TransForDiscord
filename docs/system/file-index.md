@@ -113,9 +113,9 @@ MessageCreate
 |------|----------|
 | `index.js` | 擷取器管理器 — 統一註冊與路由 |
 | `4gamers.js` | Legacy adapter to `src/features/sites/news/4gamers-extractor.js` |
-| `52poke.js` | 神奇寶貝百科（52Poke Wiki） |
+| `52poke.js` | Legacy adapter to `src/features/sites/wiki/52poke-extractor.js` |
 | `bahamut.js` | 巴哈姆特 — 勇者小屋、哈啦區 |
-| `bilibili.js` | Bilibili — bilibili.com / b23.tv / vxbilibili |
+| `bilibili.js` | Legacy adapter to `src/features/sites/video/bilibili-extractor.js` |
 | `cts.js` | Legacy adapter to `src/features/sites/news/cts-extractor.js` |
 | `dynamic.js` | 動態通用擷取器（fallback） |
 | `facebook.js` | Facebook — Puppeteer 無頭抓取 |
@@ -124,14 +124,15 @@ MessageCreate
 | `facebook-with-login.js` | Facebook 登入版抓取 |
 | `facebookez.js` | Facebook/Instagram — 透過 facebed.com / EmbedEZ |
 | `instagram.js` | Instagram 貼文擷取 |
+| `hololive-shop.js` | Legacy adapter to `src/features/sites/shop/hololive-shop-extractor.js` |
 | `line-today.js` | Legacy adapter to `src/features/sites/news/line-today-extractor.js` |
-| `mobile01.js` | Mobile01 論壇（HTTP + cheerio） |
+| `mobile01.js` | Legacy adapter to `src/features/sites/forum/mobile01-extractor.js` |
 | `msn.js` | Legacy adapter to `src/features/sites/news/msn-extractor.js` |
-| `nikke.js` | 勝利女神：妮姬 官網公告 |
-| `pchome.js` | PChome 24h 商品頁 |
+| `nikke.js` | Legacy adapter to `src/features/sites/game/nikke-extractor.js` |
+| `pchome.js` | Legacy adapter to `src/features/sites/shop/pchome-extractor.js` |
 | `pixiv.js` | Pixiv 作品 — 多圖分頁、Ugoira 動圖 |
 | `pixiv-image-attachment-optimizer.js` | Pixiv 圖片附件優化器 |
-| `pornhub.js` | Pornhub 影片擷取 |
+| `pornhub.js` | Legacy adapter to `src/features/sites/adult/pornhub-extractor.js` |
 | `ptt.js` | PTT 文章 — 多圖分頁快取 |
 | `storm.js` | Legacy adapter to `src/features/sites/news/storm-extractor.js` |
 | `threads.js` | Threads — fixthreads.seria.moe OG meta + V2 Container |
@@ -140,7 +141,7 @@ MessageCreate
 | `twitter-image-attachment-optimizer.js` | Twitter 圖片附件優化器 |
 | `twitter-video-attachment-optimizer.js` | Twitter 影片 URL 轉附件 |
 | `udn.js` | Legacy adapter to `src/features/sites/news/udn-extractor.js` |
-| `xfastest.js` | XFastest 滄者極限 |
+| `xfastest.js` | Legacy adapter to `src/features/sites/forum/xfastest-extractor.js` |
 | `youtube.js` | Legacy adapter to `src/features/sites/video/youtube-extractor.js` |
 
 ### Twitter 功能模組 (`src/features/twitter/`)
@@ -186,6 +187,14 @@ MessageCreate
 | `news/msn-extractor.js` | MSN news extractor |
 | `news/storm-extractor.js` | Storm Media news extractor |
 | `news/udn-extractor.js` | UDN news extractor |
+| `adult/pornhub-extractor.js` | Pornhub video extractor |
+| `forum/mobile01-extractor.js` | Mobile01 forum extractor |
+| `forum/xfastest-extractor.js` | XFastest forum/news extractor |
+| `game/nikke-extractor.js` | NIKKE official notice extractor |
+| `shop/hololive-shop-extractor.js` | Hololive Shop product extractor |
+| `shop/pchome-extractor.js` | PChome product extractor |
+| `video/bilibili-extractor.js` | Bilibili URL conversion extractor |
+| `wiki/52poke-extractor.js` | 52Poke wiki extractor |
 
 ### Shared Discord 模組 (`src/shared/discord/`)
 
