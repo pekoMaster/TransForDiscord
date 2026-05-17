@@ -1,9 +1,9 @@
 const { MessageFlags } = require('discord.js');
-const { getMessageState, setMessageState } = require('../../state/v2-state-store');
 const { resolveRenderState } = require('./render-state');
 const { resolveTweetBundle } = require('./tweet-data');
 const { buildV2EditPayload } = require('./view-payload');
 const { resolveV2UrlStats } = require('./view-stats');
+const { getStoredViewState, setStoredViewState } = require('./view-message-state');
 
 async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, options = {}) {
     const { refreshData = false } = options;
@@ -19,7 +19,7 @@ async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, optio
     }
 
     const { tweet, originalURL, quoteData, replyData } = cached;
-    const storedState = getMessageState(interaction.message.id);
+    const storedState = getStoredViewState(interaction);
     const newState = resolveRenderState({
         interaction,
         tweetId,
@@ -45,7 +45,7 @@ async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, optio
 
     await interaction.editReply(payload);
 
-    setMessageState(interaction.message.id, newState);
+    setStoredViewState(interaction, newState);
     return true;
 }
 

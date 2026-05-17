@@ -1,11 +1,11 @@
 const { ActionRowBuilder } = require('discord.js');
 const { getCachedTweetData } = require('../../state/v2-tweet-cache');
-const { getMessageState } = require('../../state/v2-state-store');
 const tlog = require('../../../../../utils/tfd-logger');
 const { extractMarkerTextFromMessage, extractTweetId } = require('./shared');
 const { getCachedV2Translation } = require('./translation-cache');
 const { buildFallbackState } = require('./render-state');
 const { rebuildAndUpdate } = require('./view-updater');
+const { getStoredViewState } = require('./view-message-state');
 const { shouldTransitionV2QuoteToV1 } = require('../../extractors/v2/quote-display-policy');
 const mediaClassifier = require('../../extractors/v2/media-classifier');
 
@@ -34,7 +34,7 @@ async function handleV2Toggle(interaction, type) {
 
     const cachedTranslation = getCachedV2Translation(tweetId);
     if (cachedTranslation) {
-        const currentState = getMessageState(interaction.message.id) || buildFallbackState(interaction, tweetId, getCachedTweetData(tweetId));
+        const currentState = getStoredViewState(interaction) || buildFallbackState(interaction, tweetId, getCachedTweetData(tweetId));
         if (currentState.isTranslated) {
             overrides.isTranslated = true;
             overrides.translatedText = cachedTranslation.translatedText;
