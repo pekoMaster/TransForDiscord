@@ -52,6 +52,7 @@ Recommended actions:
 | `legacy-adapter` | Keep old path as a thin `module.exports = require(...)` bridge. |
 | `docs-only` | Documentation only; organize but no runtime risk. |
 | `delete-after-verify` | Candidate for removal after confirming no runtime dependency. |
+| `done-removed` | Removed after confirming no runtime dependency. |
 
 ## Target Dependency Direction
 
@@ -163,7 +164,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `scripts/ops/db-pull.sh` | Shell helper to pull DB from server. | script | ops | `scripts/ops/db-pull.sh` | keep | Implementation. |
 | `scripts/ops/db-push.sh` | Shell helper to push DB to server. | script | ops | `scripts/ops/db-push.sh` | keep | High-risk recovery implementation. |
 | `scripts/ops/setup-schedule.bat` | Windows scheduling helper. | script | ops | `scripts/ops/setup-schedule.bat` | keep | Implementation. |
-| `TFD_UNIFIED_SPEC.md` | Older unified architecture/spec notes. | doc | docs | `docs/archive/TFD_UNIFIED_SPEC.md` | docs-only | Archive or fold into new design. |
+| `TFD_UNIFIED_SPEC.md` | Older unified architecture/spec notes. | doc | docs | `docs/archive/TFD_UNIFIED_SPEC.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
 
 ## Inventory: App Commands and Events
 
@@ -185,7 +186,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `handlers/spoiler-button-interactions.js` | Anti-spoiler transformation and modal handling for normal messages. | interaction-handler | spoilers | `src/features/spoilers/interactions/spoiler-buttons.js` | split | Also contains spoiler rendering helpers. |
 | `handlers/twitter-all-interactions.js` | Twitter expand/collapse all for quote/reply/full text. | interaction-handler | twitter | `src/features/twitter/interactions/toggle-all.js` | move | Depends on translation/content caches. |
 | `handlers/twitter-expand-interactions.js` | Twitter full-text expand/collapse for classic embeds. | interaction-handler | twitter | `src/features/twitter/interactions/expand.js` | move | Uses cached content and translation state. |
-| `handlers/twitter-interactions.js` | Removed legacy owner-only Twitter posting workflow. | adapter | twitter/legacy | n/a | delete-after-verify | TFD does not provide Twitter posting. |
+| `handlers/twitter-interactions.js` | Removed legacy owner-only Twitter posting workflow. | adapter | twitter/legacy | n/a | done-removed | Removed or already absent after runtime reference search found no active internal dependency. |
 | `handlers/twitter-pagination-interactions.js` | Twitter media pagination and image merge/split controls. | interaction-handler | twitter | `src/features/twitter/interactions/media-pagination.js` | split | Media rendering logic should move to `media/`. |
 | `handlers/twitter-reload-interactions.js` | Classic Twitter embed reload flow. | interaction-handler | twitter | `src/features/twitter/interactions/reload.js` | move | Could share reload service with V2. |
 | `handlers/twitter-translate-interactions.js` | Classic Twitter translation button flow, cache/state, embed update. | interaction-handler | twitter/translation | `src/features/twitter/interactions/translation.js` | split | Handler still owns too much cache/state/UI mapping. |
@@ -278,7 +279,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `utils/abuse-detector.js` | Short/long-term abuse detection and auto-exclusion. | service | moderation | `src/features/moderation/abuse-detector.js` | move | Depends on DB and crypto. |
 | `utils/recall-limiter.js` | Legacy adapter for recall action cooldown limiter. | adapter | reports | `src/features/reports/recall-limiter.js` | done-adapter | Context actions and report button handler import the feature path directly. |
 | `src/features/reports/recall-limiter.js` | Recall action cooldown limiter. | utility | reports | `src/features/reports/recall-limiter.js` | keep | Shared by context actions and report button handler. |
-| `utils/blacklist-manager.js` | Legacy JSON blacklist manager. | cache-store/service | moderation/legacy | `src/features/moderation/legacy/json-blacklist-manager.js` | delete-after-verify | Confirm no runtime imports before deleting. |
+| `utils/blacklist-manager.js` | Legacy JSON blacklist manager. | cache-store/service | moderation/legacy | `src/features/moderation/legacy/json-blacklist-manager.js` | done-removed | Removed or already absent after runtime reference search found no active internal dependency. |
 | `utils/guild-blacklist-manager.js` | SQLite-backed guild blacklist manager. | service | moderation | `src/features/moderation/guild-blacklist-manager.js` | move | Used by commands/reports/message pipeline. |
 | `utils/spoiler-button-helper.js` | Legacy adapter for report/spoiler component helper. | adapter | shared/discord | `src/shared/discord/spoiler-button-helper.js` | done-adapter | Implementation moved to shared Discord; future split can separate report/spoiler semantics. |
 | `utils/bahamut-auth.js` | Legacy adapter for Bahamut cookie/session auth helper. | adapter | sites/bahamut | `src/features/sites/bahamut/bahamut-auth.js` | done-adapter | Runtime Bahamut extractor imports feature path directly. |
@@ -295,8 +296,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `utils/user-api-key-storage.js` | Encrypted user API keys and preferred provider in SQLite. | db-access/service | translation/identity | `src/features/translation/keys/user-api-key-storage.js` | move | Provider registry should be centralized. |
 | `utils/user-api-key-service.js` | Legacy API key service adapter. | adapter | translation/legacy | `src/features/translation/legacy/user-api-key-service-adapter.js` | legacy-adapter | Old path should re-export. |
 | `utils/ai-translator.js` | Legacy AI translator adapter to translation service. | adapter | translation/legacy | `src/features/translation/legacy/ai-translator-adapter.js` | legacy-adapter | Old path should re-export. |
-| `utils/gemini-translator.js` | Removed legacy Gemini helper for deleted Twitter posting flow. | adapter | translation/legacy | n/a | delete-after-verify | Translation now uses user-selected provider keys through `translation-service`. |
-| `utils/openrouter-translator.js` | Legacy OpenRouter translation helper. | provider | translation/legacy | `src/features/translation/legacy/openrouter-translator.js` | legacy-adapter/delete-after-verify | New provider exists under `utils/translation/providers`. |
+| `utils/gemini-translator.js` | Removed legacy Gemini helper for deleted Twitter posting flow. | adapter | translation/legacy | n/a | done-removed | Removed or already absent after runtime reference search found no active internal dependency. |
+| `utils/openrouter-translator.js` | Legacy OpenRouter translation helper. | provider | translation/legacy | `src/features/translation/legacy/openrouter-translator.js` | done-removed | Removed or already absent after runtime reference search found no active internal dependency. |
 | `utils/translator.js` | Google Translate + OpenCC translator singleton. | provider | translation/legacy | `src/features/translation/providers/google-translate.js` | move | Used by Gemini legacy fallback. |
 | `utils/translation-glossary.js` | Glossary preprocessing/postprocessing for translation. | service | translation/text | `src/features/translation/text/glossary.js` | move | Feature-owned. |
 | `utils/shared-translation-cache.js` | Provider-aware persistent translation cache. | cache-store | translation/cache | `src/features/translation/cache/shared-translation-cache.js` | move | Already refactored; move with adapter. |
@@ -328,21 +329,21 @@ Migration principle: create new files under `src/`, then turn old paths into com
 
 | Current path | Purpose | Type | Domain | Proposed target | Action | Notes |
 |---|---|---|---|---|---|---|
-| `doc/INTENT_APPLICATION.md` | Discord Message Content Intent application doc. | doc | docs | `docs/discord/intent-application.md` | docs-only | Normalize docs root later. |
-| `doc/PRIVACY_POLICY.md` | Privacy policy. | doc | legal | `docs/legal/privacy-policy.md` | docs-only | Keep public copy if web needs it. |
-| `doc/TERMS_OF_SERVICE.md` | Terms of service. | doc | legal | `docs/legal/terms-of-service.md` | docs-only | Keep public copy if web needs it. |
-| `doc/PUBLIC_RELEASE_REFACTOR.md` | Public release refactor notes. | doc | docs/archive | `docs/archive/public-release-refactor.md` | docs-only | Archive. |
-| `doc/TWITTER_TRANSLATE_AUTO_TRANSLATE_ON_EXPAND_2026-04-12.md` | Older Twitter translation auto-expand design. | doc | docs/archive/twitter | `docs/archive/twitter/translate-auto-expand.md` | docs-only | Archive or supersede. |
-| `doc/tfd-1-4-0-blacklist-plan.md` | Blacklist implementation plan. | doc | docs/archive/moderation | `docs/archive/moderation/tfd-1-4-0-blacklist-plan.md` | docs-only | Archive. |
-| `doc/system/FILE_INDEX.md` | Current file index. | doc | docs/system | `docs/system/file-index.md` | docs-only | Replace with generated inventory later. |
-| `doc/specs/ORACLE_CLOUD_SETUP_GUIDE.md` | Oracle Cloud setup guide. | doc | docs/deploy | `docs/deploy/oracle-cloud-setup-guide.md` | docs-only | Normalize path. |
-| `doc/specs/TFD_COST_MODEL_AND_PRICING_SPEC.md` | Cost/pricing spec. | doc | docs/product | `docs/product/cost-model-and-pricing.md` | docs-only | Product spec. |
-| `doc/specs/TFD_DATA_MODEL_AND_STATE_MACHINE_SPEC.md` | Data model/state machine spec. | doc | docs/product | `docs/product/data-model-and-state-machine.md` | docs-only | Product spec. |
-| `doc/specs/TFD_DISCORD_PRODUCT_FLOW_SPEC.md` | Discord product flow spec. | doc | docs/product | `docs/product/discord-product-flow.md` | docs-only | Product spec. |
-| `doc/specs/TFD_MODEL_PRICING_RESEARCH.md` | Model pricing research. | doc | docs/research | `docs/research/model-pricing.md` | docs-only | May need refresh before financial decisions. |
-| `doc/specs/TFD_ORACLE_DEPLOYMENT_PLAN.md` | Oracle deployment plan. | doc | docs/deploy | `docs/deploy/oracle-deployment-plan.md` | docs-only | Deployment plan. |
-| `doc/specs/TFD_TRANSLATION_MONETIZATION_PLAN.md` | Translation monetization plan. | doc | docs/product | `docs/product/translation-monetization-plan.md` | docs-only | Product plan. |
-| `doc/specs/TFD_WALLET_AND_BILLING_SPEC.md` | Wallet/billing spec. | doc | docs/product | `docs/product/wallet-and-billing.md` | docs-only | Product spec. |
+| `doc/INTENT_APPLICATION.md` | Discord Message Content Intent application doc. | doc | docs | `docs/discord/intent-application.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/PRIVACY_POLICY.md` | Privacy policy. | doc | legal | `docs/legal/privacy-policy.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/TERMS_OF_SERVICE.md` | Terms of service. | doc | legal | `docs/legal/terms-of-service.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/PUBLIC_RELEASE_REFACTOR.md` | Public release refactor notes. | doc | docs/archive | `docs/archive/public-release-refactor.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/TWITTER_TRANSLATE_AUTO_TRANSLATE_ON_EXPAND_2026-04-12.md` | Older Twitter translation auto-expand design. | doc | docs/archive/twitter | `docs/archive/twitter/translate-auto-expand.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/tfd-1-4-0-blacklist-plan.md` | Blacklist implementation plan. | doc | docs/archive/moderation | `docs/archive/moderation/tfd-1-4-0-blacklist-plan.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/system/FILE_INDEX.md` | Current file index. | doc | docs/system | `docs/system/file-index.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/specs/ORACLE_CLOUD_SETUP_GUIDE.md` | Oracle Cloud setup guide. | doc | docs/deploy | `docs/deploy/oracle-cloud-setup-guide.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/specs/TFD_COST_MODEL_AND_PRICING_SPEC.md` | Cost/pricing spec. | doc | docs/product | `docs/product/cost-model-and-pricing.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/specs/TFD_DATA_MODEL_AND_STATE_MACHINE_SPEC.md` | Data model/state machine spec. | doc | docs/product | `docs/product/data-model-and-state-machine.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/specs/TFD_DISCORD_PRODUCT_FLOW_SPEC.md` | Discord product flow spec. | doc | docs/product | `docs/product/discord-product-flow.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/specs/TFD_MODEL_PRICING_RESEARCH.md` | Model pricing research. | doc | docs/research | `docs/research/model-pricing.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/specs/TFD_ORACLE_DEPLOYMENT_PLAN.md` | Oracle deployment plan. | doc | docs/deploy | `docs/deploy/oracle-deployment-plan.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/specs/TFD_TRANSLATION_MONETIZATION_PLAN.md` | Translation monetization plan. | doc | docs/product | `docs/product/translation-monetization-plan.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
+| `doc/specs/TFD_WALLET_AND_BILLING_SPEC.md` | Wallet/billing spec. | doc | docs/product | `docs/product/wallet-and-billing.md` | done-adapter | Canonical content moved to target path; old path remains as a Markdown compatibility pointer. |
 | `docs/superpowers/plans/2026-05-15-translation-subsystem-refactor.md` | Existing translation refactor implementation plan. | doc | docs/plans | `docs/superpowers/plans/...` | keep | Keep as historical execution plan. |
 | `docs/superpowers/specs/2026-05-15-tfd-file-inventory-and-refactor-map.md` | This inventory/refactor map. | doc | docs/specs | `docs/superpowers/specs/...` | keep | Source of truth for next plan. |
 

@@ -1,14 +1,3 @@
-# TFD 錢包與扣點規格草案 v1
+# Moved: TFD Wallet And Billing Spec
 
-本文件已併入統一主規格：
-
-- `TFD_UNIFIED_SPEC.md`
-
-後續請以統一文件為準，不再於本檔單獨維護內容。
-
-本檔原先涵蓋的主題已搬移至統一文件中的以下章節：
-
-- 錢包與帳務規則
-- 計費單位
-- 訂單、金流與 webhook
-- 審計與追溯
+Canonical document: [docs/product/wallet-and-billing.md](../../docs/product/wallet-and-billing.md)
