@@ -95,6 +95,7 @@ Imported status:
 - V2 blacklist Level 1 warning and unsafe `result.embed.data` access: moved to `src/features/moderation/blacklist-result-decorator.js`; `message-handler-v2` now delegates Level 1/2 decoration.
 - `/pe blacklist list` Embed pagination: moved to `src/features/moderation/blacklist-list-presenter.js`; `commands/pe.js` delegates list rendering and pagination.
 - Twitter quote auto-expand and V1/V2 transition behavior: moved initial display policy to `src/features/twitter/extractors/v2/quote-display-policy.js`; extractor now applies V1/V2 default state, V1 expand can route to V2, and V2 collapse attempts V1 edit with bot-send fallback if Discord rejects Components V2 -> Embed edits.
+- Pixiv reload production error: add a focused bugfix task for `TypeError: cacheManager.deleteArtworkCache is not a function` from `[Pixiv-Reload]`; verify the Pixiv reload handler and cache manager API agree before moving Pixiv modules.
 
 ## Proposed Top-Level Structure
 
@@ -442,6 +443,7 @@ src/features/ptt/
 
 Plan:
 - Move caches and interaction handlers.
+- Fix the known Pixiv reload cache API mismatch: `[Pixiv-Reload] TypeError: cacheManager.deleteArtworkCache is not a function`.
 - Then move extractors.
 - Split large extractors after behavior-preserving relocation is stable.
 
@@ -529,6 +531,7 @@ Plan:
 
 ### Phase 4: Pixiv and PTT Domain Move
 
+- Fix the Pixiv reload cache manager mismatch before relocation: `cacheManager.deleteArtworkCache` is called by Pixiv reload but is not available on the loaded cache manager.
 - Move Pixiv cache/media/interactions/extractor.
 - Move PTT cache/interactions/extractor.
 - Convert old event files to adapters or route imports.
