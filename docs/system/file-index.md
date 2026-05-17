@@ -245,6 +245,12 @@ MessageCreate
 |------|------|
 | `url-stats.js` | URL 重複貼文統計（channel/guild/total），舊 `tfd-system/utils/url-stats.js` 僅保留 adapter |
 
+### Shared Rate Limit 模組 (`src/shared/rate-limit/`)
+
+| 檔案 | 作用 |
+|------|------|
+| `rate-limiter.js` | SQLite-backed per-user/guild URL rate limiter，`utils/rate-limiter.js` 保留 adapter |
+
 ### Link Support 功能模組 (`src/features/link-support/`)
 
 | 路徑 | 功能 |
@@ -305,7 +311,7 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `rate-limiter.js` | 速率限制器（SQLite 後端，含自動 GC） |
+| `rate-limiter.js` | 舊路徑 adapter，轉接至 `src/shared/rate-limit/rate-limiter.js` |
 | `abuse-detector.js` | 濫用偵測器（SQLite 後端，含自動 GC） |
 | `blacklist-manager.js` | Removed legacy global JSON blacklist manager; active runtime uses `guild-blacklist-manager.js` |
 | `crypto-helper.js` | 舊路徑 adapter，轉接至 `src/shared/crypto/crypto-helper.js` |
