@@ -162,6 +162,7 @@ MessageCreate
 | `containers/v2/action-rows.js` | Twitter V2 translate/expand/reload/report action row builder |
 | `state/v2-component-state.js` | Twitter V2 Discord component tree state derivation for translate/quote/reply/expand buttons |
 | `interactions/v2/` | Twitter V2 Container 翻譯、展開、重整、防爆雷等互動子模組 |
+| `interactions/v2/render-state.js` | Twitter V2 reload/expand/translate render state fallback and merge helper |
 | `state/v2-tweet-cache.js` | Twitter V2 tweet bundle runtime cache for rebuild/interaction flows |
 
 ### Shared Discord 模組 (`src/shared/discord/`)
@@ -362,6 +363,7 @@ MessageCreate
 | `twitter-v2-tweet-cache-smoke.js` | Twitter V2 tweet cache TTL and prune smoke test |
 | `twitter-v2-action-rows-smoke.js` | Twitter V2 action row button and row-length smoke test |
 | `twitter-v2-component-state-smoke.js` | Twitter V2 component tree state derivation smoke test |
+| `twitter-v2-render-state-smoke.js` | Twitter V2 render-state fallback and merge smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---

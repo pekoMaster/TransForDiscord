@@ -4,7 +4,8 @@ const { getMessageState } = require('../../state/v2-state-store');
 const tlog = require('../../../../../utils/tfd-logger');
 const { extractMarkerTextFromMessage, extractTweetId } = require('./shared');
 const { getCachedV2Translation } = require('./translation-cache');
-const { buildFallbackState, rebuildAndUpdate } = require('./view-updater');
+const { buildFallbackState } = require('./render-state');
+const { rebuildAndUpdate } = require('./view-updater');
 const { shouldTransitionV2QuoteToV1 } = require('../../extractors/v2/quote-display-policy');
 const mediaClassifier = require('../../extractors/v2/media-classifier');
 

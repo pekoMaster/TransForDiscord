@@ -1,30 +1,10 @@
 const { MessageFlags, TextDisplayBuilder, SeparatorBuilder } = require('discord.js');
 const { buildV2Container } = require('../../containers/v2-container-builder');
-const { deriveStateFromComponents } = require('../../state/v2-component-state');
 const { getCachedTweetData } = require('../../state/v2-tweet-cache');
 const { lookupUrl } = require('../../../../shared/analytics/url-stats');
 const { getMessageState, setMessageState } = require('../../state/v2-state-store');
-const { extractMarkerTextFromMessage } = require('./shared');
-const { getCachedV2Translation } = require('./translation-cache');
+const { buildFallbackState, resolveRenderState } = require('./render-state');
 const { hydrateTweetBundle } = require('./tweet-data');
-
-function buildFallbackState(interaction, tweetId, cached = null) {
-    const derived = deriveStateFromComponents(interaction.message.components, tweetId);
-    const cachedTranslation = getCachedV2Translation(tweetId);
-
-    return {
-        tweetId,
-        originalURL: cached?.originalURL || `https://twitter.com/i/status/${tweetId}`,
-        markerText: extractMarkerTextFromMessage(interaction.message),
-        isTranslated: Boolean(derived.isTranslated && cachedTranslation),
-        translatedText: cachedTranslation?.translatedText || null,
-        translatedQuoteText: cachedTranslation?.translatedQuoteText || null,
-        translatedReplyText: cachedTranslation?.translatedReplyText || null,
-        isExpanded: Boolean(derived.isExpanded),
-        isQuoteShown: Boolean(derived.isQuoteShown),
-        isReplyShown: Boolean(derived.isReplyShown)
-    };
-}
 
 async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, options = {}) {
     const { refreshData = false } = options;
@@ -47,14 +27,14 @@ async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, optio
     }
 
     const { tweet, originalURL, quoteData, replyData } = cached;
-    const storedState = getMessageState(interaction.message.id) || buildFallbackState(interaction, tweetId, cached);
-    const newState = {
-        ...storedState,
-        ...stateOverrides,
+    const storedState = getMessageState(interaction.message.id);
+    const newState = resolveRenderState({
+        interaction,
         tweetId,
-        originalURL,
-        markerText: stateOverrides.markerText !== undefined ? stateOverrides.markerText : storedState.markerText
-    };
+        cached,
+        storedState,
+        stateOverrides
+    });
 
     let urlStats = null;
     try {
