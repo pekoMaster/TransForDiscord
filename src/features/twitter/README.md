@@ -28,6 +28,7 @@ orchestrator. Focused helper logic lives in `extractors/v2/`:
 |------|----------------|
 | `article-response.js` | Article tweet classic embed response and action row construction |
 | `classic-components.js` | Classic embed pagination, translate, expand, and reload buttons |
+| `enhanced-embed.js` | Classic enhanced embed body, quote, footer, and image selection |
 | `images.js` | Extractor-specific image lists, multiple image URLs, card fallback, spoiler URL prefixing |
 | `media-classifier.js` | Reply/quote/media type checks and media counts |
 | `media-policy.js` | Multiple embed and GAS-mode display policy decisions |

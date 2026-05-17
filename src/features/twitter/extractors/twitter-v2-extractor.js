@@ -4,7 +4,7 @@
  * 支援回覆推文、引用轉推、多圖片分頁、影片重導向等功能
  */
 
-const { EmbedBuilder, ActionRowBuilder } = require('discord.js');
+const { ActionRowBuilder } = require('discord.js');
 const HTTPClient = require('../../../shared/http/http-client');
 const TwitterVideoAttachmentOptimizer = require('../media/video-attachment-optimizer');
 const MixedMediaHTMLBuilder = require('../../../../tfd-system/render/mixed-media-html-builder');
@@ -17,6 +17,7 @@ const classicComponents = require('./v2/classic-components');
 const articleResponse = require('./v2/article-response');
 const mixedMediaResponse = require('./v2/mixed-media-response');
 const videoModeResponse = require('./v2/video-mode-response');
+const enhancedEmbed = require('./v2/enhanced-embed');
 const imageHelpers = require('./v2/images');
 const normalizer = require('./v2/normalizer');
 const tweetInfo = require('./v2/tweet-info');
@@ -586,238 +587,19 @@ class TFDTwitterExtractor {
      * @param {Object} showQuote - 是否顯示引用原文 (預設 true 保持向後兼容)
      */
     buildEnhancedEmbed(tweet, originalURL, replyInfo, tweetType, quoteInfo, showQuote = true) {
-        const embed = new EmbedBuilder();
-        embed.setColor(0x1DA1F2);
-
-        // 設定 Author 資訊：用戶ID、頭像、個人頁面
-        try {
-            embed.setAuthor({
-                name: `@${tweet.author.screen_name}`, // 用戶的實際ID
-                iconURL: tweet.author.profile_image_url_https || tweet.author.avatar_url, // 用戶頭像
-                url: `https://twitter.com/${tweet.author.screen_name}` // 用戶個人頁面
-            });
-
-            // LOG removed for simplicity
-        } catch (error) {
-            // LOG removed for simplicity
-        }
-
-        // 設定標題：只顯示用戶暱稱
-        try {
-            const displayName = tweet.author.name || tweet.author.screen_name;
-            embed.setTitle(displayName); // 只顯示暱稱，不加括號和ID
-            embed.setURL(originalURL); // 點擊標題跳轉到推文
-
-            // LOG removed for simplicity
-        } catch (error) {
-            // LOG removed for simplicity
-        }
-
-        // 設定描述：顯示推文內容（智能截斷），但不顯示推文類型描述
-        // 📝 儲存截斷資訊供按鈕使用
-        let truncationResult = null;
-
-        try {
-            let description = '';
-
-            // 顯示推文內容（帶字數限制）
-            if (tweet.text) {
-                truncationResult = this.textTruncator.processTweetContent(tweet.text, '主推文');
-                description = truncationResult.text;
-                // LOG removed for simplicity
-            }
-
-            // 🔒 等級 2：內文防爆雷
-            const blacklistEntry = tweet._blacklistEntry;
-            if (blacklistEntry && blacklistEntry.level === 2 && description) {
-                description = `||${description}||`;
-            }
-
-            // 不再添加推文類型描述 (如 "@用戶 回覆了一篇推文")
-            // 推文類型資訊已移到 Footer 中顯示
-
-            if (description) {
-                embed.setDescription(description);
-            }
-        } catch (error) {
-            // LOG removed for simplicity
-        }
-
-        // 回覆推文處理：移除引用原文顯示，只顯示回覆者自己的內容
-        // (原文內容已被移除，回覆推文將不顯示被回覆的原文)
-        try {
-            if (replyInfo && replyInfo.tweet) {
-                // LOG removed for simplicity
-            } else if (replyInfo && replyInfo.username) {
-                // LOG removed for simplicity
-            }
-        } catch (error) {
-            // LOG removed for simplicity
-        }
-
-        // 如果有引用資訊且 showQuote 為 true，添加被引用推文 Field
-        try {
-            if (quoteInfo && quoteInfo.tweet && showQuote) {
-                const quoteTweet = quoteInfo.tweet;
-                const quoteUsername = quoteTweet.author.screen_name; // 用戶ID
-                const quoteDisplayName = quoteTweet.author.name || quoteTweet.author.screen_name; // 用戶暱稱
-
-                // 處理被引用推文內容 - 智能截斷並使用全形空白處理空白行
-                const rawQuoteContent = quoteTweet.text || '引用內容';
-                const quoteTruncationResult = this.textTruncator.processTweetContent(rawQuoteContent, '引用推文');
-                const truncatedQuoteContent = quoteTruncationResult.text;
-
-                // 將內容按行分割，每行都加上 > 前綴，空白行使用全形空白
-                const quotedContent = truncatedQuoteContent
-                    .split('\n')
-                    .map(line => {
-                        if (line.trim() === '') {
-                            return '> 　'; // 全形空白
-                        } else {
-                            return `> ${line}`;
-                        }
-                    })
-                    .join('\n');
-
-                // 🔧 添加被引用推文 Field - 新格式: [RT](引用原文): 暱稱 ([@用戶ID](個人頁面))
-                const fieldName = '\u200B'; // 零寬度空格
-                const quotedTweetURL = `https://twitter.com/${quoteUsername}/status/${quoteInfo.tweetId}`;
-                const authorProfileURL = `https://twitter.com/${quoteUsername}`;
-                const fieldValue = `> [RT](${quotedTweetURL}): ${quoteDisplayName} ([@${quoteUsername}](${authorProfileURL}))\n> 　\n${quotedContent}`;
-
-                embed.addFields({
-                    name: fieldName,
-                    value: fieldValue,
-                    inline: false
-                });
-
-                // LOG removed for simplicity
-            }
-        } catch (error) {
-            // LOG removed for simplicity
-        }
-
-        // 設定圖片（根據新的規則）
-        try {
-            this.setEmbedImages(embed, tweet, replyInfo, tweetType, quoteInfo);
-        } catch (error) {
-            // LOG removed for simplicity
-        }
-
-        // 設定時間戳
-        try {
-            if (tweet.created_at) {
-                embed.setTimestamp(new Date(tweet.created_at));
-            }
-        } catch (error) {
-            // LOG removed for simplicity
-        }
-
-        // 設定 Footer（包含推文類型標示）
-        try {
-            const stats = [];
-            if (tweet.likes) stats.push(`❤️ ${tweet.likes}`);
-            if (tweet.retweets) stats.push(`🔄 ${tweet.retweets}`);
-            if (tweet.replies) stats.push(`💬 ${tweet.replies}`);
-
-            // 決定推文類型標示
-            let tweetTypeLabel = '';
-            if (replyInfo && replyInfo.username) {
-                tweetTypeLabel = '回覆文章 ';
-                // LOG removed for simplicity
-            } else if (quoteInfo && quoteInfo.tweet) {
-                tweetTypeLabel = '轉推文章 ';
-                // LOG removed for simplicity
-            } else {
-                tweetTypeLabel = '';
-                // LOG removed for simplicity
-            }
-
-            // 🔒 處理黑名單 Footer
-            const blacklistEntry = tweet._blacklistEntry;
-            let footerText = '';
-
-            if (blacklistEntry && (blacklistEntry.level === 1 || blacklistEntry.level === 2)) {
-                // 等級 1 或 2：修改 Footer 警告
-                footerText = `${blacklistEntry.label}，觀看內文請自行斟酌`;
-            } else {
-                // 正常情況
-                if (stats.length > 0) {
-                    footerText = `${stats.join(' • ')} | ${tweetTypeLabel}Peko Embed`;
-                } else {
-                    footerText = `${tweetTypeLabel}Peko Embed`;
-                }
-            }
-
-            embed.setFooter({
-                text: footerText,
-                iconURL: 'https://abs.twimg.com/favicons/twitter.2.ico'
-            });
-        } catch (error) {
-            // LOG removed for simplicity
-        }
-
-        // 返回 embed 和 truncationResult（供展開按鈕使用）
-        return {
-            embed: embed,
-            truncationResult: truncationResult
-        };
+        return enhancedEmbed.buildEnhancedEmbed(tweet, originalURL, replyInfo, tweetType, quoteInfo, showQuote, {
+            textTruncator: this.textTruncator,
+            extractImagesFromTweet: (...args) => this.extractImagesFromTweet(...args)
+        });
     }
 
     /**
      * 設定嵌入式訊息圖片（根據新規則）
      */
     setEmbedImages(embed, tweet, replyInfo, tweetType, quoteInfo) {
-        // 新規則：
-        // 1. 回覆推文：只顯示回覆推文本身的圖片，完全不顯示被回覆原文的圖片
-        // 2. 引用轉推：優先顯示轉推者的圖片，被引用推文圖片在Field中
-        // 3. 非回覆/非引用推文：正常顯示推文圖片
-
-        const tweetImages = this.extractImagesFromTweet(tweet);
-        const replyImages = replyInfo && replyInfo.tweet ? this.extractImagesFromTweet(replyInfo.tweet) : [];
-        const quoteImages = quoteInfo && quoteInfo.tweet ? this.extractImagesFromTweet(quoteInfo.tweet) : [];
-
-        let primaryImage = null;
-
-        if (replyInfo && replyInfo.tweet) {
-            // 這是回覆推文 - 只顯示回覆推文本身的圖片，不顯示被回覆原文的圖片
-            if (tweetImages.length > 0) {
-                // 回覆推文有圖片，只顯示回覆推文的圖片
-                primaryImage = tweetImages[0].url;
-                // LOG removed for simplicity
-            }
-            // 移除：不再顯示被回覆原文的圖片
-        } else if (quoteInfo && quoteInfo.tweet) {
-            // 這是引用轉推
-            if (tweetImages.length > 0) {
-                // 轉推者有圖片，優先顯示
-                primaryImage = tweetImages[0].url;
-                // LOG removed for simplicity
-                if (quoteImages.length > 0) {
-                    // LOG removed for simplicity
-                }
-            } else if (quoteImages.length > 0) {
-                // 只有被引用推文有圖片
-                primaryImage = quoteImages[0].url;
-                // LOG removed for simplicity
-            }
-        } else {
-            // 非回覆/非引用推文，正常處理
-            if (tweetImages.length > 0) {
-                primaryImage = tweetImages[0].url;
-                // LOG removed for simplicity
-            }
-        }
-
-        if (primaryImage) {
-            // 🔒 等級 2：圖片防爆雷
-            const blacklistEntry = tweet._blacklistEntry;
-            if (blacklistEntry && blacklistEntry.level === 2) {
-                embed.setImage(`SPOILER_${primaryImage}`);
-            } else {
-                embed.setImage(primaryImage);
-            }
-        }
+        return enhancedEmbed.setEnhancedEmbedImages(embed, tweet, replyInfo, tweetType, quoteInfo, {
+            extractImagesFromTweet: (...args) => this.extractImagesFromTweet(...args)
+        });
     }
 
     /**

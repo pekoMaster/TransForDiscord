@@ -151,6 +151,7 @@ MessageCreate
 | `extractors/twitter-v2-extractor.js` | Twitter V2 擷取 orchestrator，保留舊 method 介面並委派到 `extractors/v2/` helpers |
 | `extractors/v2/article-response.js` | Twitter V2 article tweet classic response and action row builder |
 | `extractors/v2/classic-components.js` | Classic Embed 分頁、翻譯、展開、重整按鈕建構 |
+| `extractors/v2/enhanced-embed.js` | Twitter V2 classic enhanced embed body, quote, footer, and image selection builder |
 | `extractors/v2/images.js` | 圖片清單、多圖片 URL、卡片圖片 fallback、防爆雷 URL prefix |
 | `extractors/v2/media-classifier.js` | 回覆/引用/媒體類型判斷與圖片/影片數量 |
 | `extractors/v2/media-policy.js` | 多 Embed 與 GAS 模式顯示策略 |
@@ -381,6 +382,7 @@ MessageCreate
 | `twitter-v2-article-response-smoke.js` | Twitter V2 article response payload smoke test |
 | `twitter-v2-mixed-media-response-smoke.js` | Twitter V2 mixed-media response payload smoke test |
 | `twitter-v2-video-mode-response-smoke.js` | Twitter V2 GAS/HTML video mode response smoke test |
+| `twitter-v2-enhanced-embed-smoke.js` | Twitter V2 classic enhanced embed construction smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---
