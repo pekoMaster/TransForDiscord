@@ -149,6 +149,7 @@ MessageCreate
 | 路徑 | 功能 |
 |------|------|
 | `extractors/twitter-v2-extractor.js` | Twitter V2 擷取 orchestrator，保留舊 method 介面並委派到 `extractors/v2/` helpers |
+| `extractors/v2/article-response.js` | Twitter V2 article tweet classic response and action row builder |
 | `extractors/v2/classic-components.js` | Classic Embed 分頁、翻譯、展開、重整按鈕建構 |
 | `extractors/v2/images.js` | 圖片清單、多圖片 URL、卡片圖片 fallback、防爆雷 URL prefix |
 | `extractors/v2/media-classifier.js` | 回覆/引用/媒體類型判斷與圖片/影片數量 |
@@ -375,6 +376,7 @@ MessageCreate
 | `twitter-v2-view-updater-exports-smoke.js` | Twitter V2 view updater public export surface smoke test |
 | `twitter-v2-view-message-state-smoke.js` | Twitter V2 interaction message state bridge smoke test |
 | `twitter-v2-v1-transition-smoke.js` | Twitter V2 to classic V1 quote-collapse transition payload smoke test |
+| `twitter-v2-article-response-smoke.js` | Twitter V2 article response payload smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---
