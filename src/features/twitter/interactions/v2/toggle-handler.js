@@ -1,13 +1,13 @@
-const { ActionRowBuilder } = require('discord.js');
 const { getCachedTweetData } = require('../../state/v2-tweet-cache');
 const tlog = require('../../../../../utils/tfd-logger');
-const { extractMarkerTextFromMessage, extractTweetId } = require('./shared');
+const { extractTweetId } = require('./shared');
 const { getCachedV2Translation } = require('./translation-cache');
 const { buildFallbackState } = require('./render-state');
 const { rebuildAndUpdate } = require('./view-updater');
 const { getStoredViewState } = require('./view-message-state');
 const { shouldTransitionV2QuoteToV1 } = require('../../extractors/v2/quote-display-policy');
 const mediaClassifier = require('../../extractors/v2/media-classifier');
+const { transitionV2ToV1 } = require('./v1-transition');
 
 async function handleV2Toggle(interaction, type) {
     const tweetId = extractTweetId(interaction.customId);
@@ -45,64 +45,6 @@ async function handleV2Toggle(interaction, type) {
 
     await rebuildAndUpdate(interaction, tweetId, overrides);
     tlog.log('V2-展開', interaction, `${type} 切換: ${tweetId}`);
-}
-
-async function transitionV2ToV1(interaction, tweetId, cached) {
-    if (!cached?.tweet) return false;
-
-    const TFDTwitterExtractor = require('../../extractors/twitter-v2-extractor');
-    const extractor = new TFDTwitterExtractor();
-    const tweet = cached.tweet;
-    const originalURL = cached.originalURL || `https://twitter.com/i/status/${tweetId}`;
-    const tweetType = extractor.analyzeTweetType(tweet);
-    const quoteInfo = extractor.isQuoteTweet(tweet) ? extractor.getQuoteTweetInfo(tweet) : null;
-    const replyInfo = extractor.isReplyTweet(tweet) ? await extractor.getReplyTweetInfo(tweet) : null;
-    const embedResult = extractor.buildEnhancedEmbed(tweet, originalURL, replyInfo, tweetType, quoteInfo, false);
-
-    if (!embedResult?.embed) return false;
-
-    const components = extractor.buildPaginationButtons(tweet, tweetType) || [];
-    const toggleButtons = [];
-    const textContent = tweet.text || '';
-    if (textContent.trim().length >= 10) {
-        toggleButtons.push(extractor.buildTranslateButtonComponent(tweet.id, false));
-    }
-
-    const hasExpandable = Boolean(
-        quoteInfo?.tweet ||
-        replyInfo?.tweet ||
-        embedResult.truncationResult?.isTruncated
-    );
-    if (hasExpandable) {
-        toggleButtons.push(extractor.buildAllToggleButtonComponent(tweet.id, false));
-    }
-
-    toggleButtons.push(extractor.buildReloadButtonComponent(tweet.id));
-    if (toggleButtons.length > 0 && components.length < 5) {
-        components.push(new ActionRowBuilder().addComponents(...toggleButtons.slice(0, 5)));
-    }
-
-    const payload = {
-        content: extractMarkerTextFromMessage(interaction.message) || null,
-        embeds: [embedResult.embed],
-        components
-    };
-
-    try {
-        await interaction.editReply(payload);
-        return true;
-    } catch (editError) {
-        tlog.sysWarn('V2-Toggle', `V2->V1 edit fallback required for ${tweetId}: ${editError.message}`);
-    }
-
-    try {
-        await interaction.channel.send(payload);
-        await interaction.message.delete().catch(() => null);
-        return true;
-    } catch (sendError) {
-        tlog.sysError('V2-Toggle', `V2->V1 fallback send failed for ${tweetId}: ${sendError.message}`);
-        return false;
-    }
 }
 
 module.exports = {

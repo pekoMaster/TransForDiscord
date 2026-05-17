@@ -167,6 +167,7 @@ MessageCreate
 | `interactions/v2/view-payload.js` | Twitter V2 Components edit payload builder for view rebuild/update flows |
 | `interactions/v2/view-stats.js` | Twitter V2 optional URL repost stats lookup helper for rebuilt views |
 | `interactions/v2/tweet-data.js` | Twitter V2 tweet bundle hydration and cache-vs-refresh resolution helper |
+| `interactions/v2/v1-transition.js` | Twitter V2 quote-collapse transition back to classic V1 embed payload and fallback send flow |
 | `state/v2-tweet-cache.js` | Twitter V2 tweet bundle runtime cache for rebuild/interaction flows |
 
 ### Shared Discord 模組 (`src/shared/discord/`)
@@ -373,6 +374,7 @@ MessageCreate
 | `twitter-v2-view-stats-smoke.js` | Twitter V2 URL repost stats lookup smoke test |
 | `twitter-v2-view-updater-exports-smoke.js` | Twitter V2 view updater public export surface smoke test |
 | `twitter-v2-view-message-state-smoke.js` | Twitter V2 interaction message state bridge smoke test |
+| `twitter-v2-v1-transition-smoke.js` | Twitter V2 to classic V1 quote-collapse transition payload smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---

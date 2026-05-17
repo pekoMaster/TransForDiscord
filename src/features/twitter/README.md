@@ -16,7 +16,8 @@ buttons and modals. Detailed action logic lives in `interactions/v2/`:
 translation, expand/collapse toggles, reload, spoiler handling, shared cache,
 tweet hydration and cache-vs-refresh resolution, render-state preservation,
 interaction message state access, view payload construction, optional repost
-stats lookup, and view rebuild/update helpers.
+stats lookup, V2-to-classic V1 quote-collapse transition payloads, and view
+rebuild/update helpers.
 
 ## V2 Extractor Helpers
 
