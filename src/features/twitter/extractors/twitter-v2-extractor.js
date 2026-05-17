@@ -15,6 +15,7 @@ const mediaClassifier = require('./v2/media-classifier');
 const videoLinks = require('./v2/video-links');
 const classicComponents = require('./v2/classic-components');
 const articleResponse = require('./v2/article-response');
+const mixedMediaResponse = require('./v2/mixed-media-response');
 const imageHelpers = require('./v2/images');
 const normalizer = require('./v2/normalizer');
 const tweetInfo = require('./v2/tweet-info');
@@ -283,103 +284,24 @@ class TFDTwitterExtractor {
      * 處理混合媒體推文 (影片+圖片 或 多影片)
      */
     async handleMixedMediaTweet(tweet, originalURL, tweetType) {
-        // 處理混合媒體推文
-
-        try {
-            // 🔧 獲取回覆資訊（修復：混合媒體推文也需要檢查回覆）
-            let replyInfo = null;
-            if (this.isReplyTweet(tweet)) {
-                replyInfo = await this.getReplyTweetInfo(tweet);
-            }
-
-            // 🔧 獲取引用資訊
-            let quoteInfo = null;
-            if (this.isQuoteTweet(tweet)) {
-                quoteInfo = this.getQuoteTweetInfo(tweet);
-            }
-
-            // 🎬 嘗試影片附件優化
-            const videoOptimization = await this.videoOptimizer.processVideoOptimization(tweet, originalURL);
-
-            // 建立嵌入式訊息（傳入 replyInfo 和 quoteInfo）
-            const embedResult = this.buildEnhancedEmbed(tweet, originalURL, replyInfo, tweetType, quoteInfo, false);
-            const embed = embedResult.embed;
-
-            // 提取影片 URLs 用於外部發送
-            const videoUrls = this.extractVideoUrls(tweet);
-            let formattedVideoUrls = this.formatVideoUrls(videoUrls);
-
-            // 如果有影片附件優化，修改處理方式
-            if (videoOptimization && videoOptimization.hasVideoAttachment) {
-                // 移除第一個影片的連結（已作為附件）
-                if (formattedVideoUrls.length > 0) {
-                    formattedVideoUrls = formattedVideoUrls.slice(1);
-                }
-            }
-
-            // 建立分頁按鈕（如果是 video-with-images）
-            let components = this.buildPaginationButtons(tweet, tweetType);
-
-            // 🔧 整合所有切換按鈕到同一排（翻譯、引用、回覆）
-            const toggleButtons = [];
-
-            // 🌐 翻譯按鈕（最左側）- 只有文字內容足夠才顯示
-            const textContent = tweet.text || '';
-            if (textContent.trim().length >= 10) {
-                toggleButtons.push(this.buildTranslateButtonComponent(tweet.id, false));
-            }
-
-            // 單一展開按鈕（合併引用、回覆）
-            const hasExpandable = (quoteInfo && quoteInfo.tweet) || (replyInfo && replyInfo.tweet);
-            if (hasExpandable) {
-                toggleButtons.push(this.buildAllToggleButtonComponent(tweet.id, false));
-            }
-
-            // 🔄 重新整理按鈕
-            toggleButtons.push(this.buildReloadButtonComponent(tweet.id));
-
-            // 如果有任何切換按鈕，整合到同一個 ActionRow
-            if (toggleButtons.length > 0) {
-                const toggleRow = new ActionRowBuilder().addComponents(...toggleButtons);
-                if (components) {
-                    if (components.length < 5) {
-                        components.push(toggleRow);
-                    }
-                } else {
-                    components = [toggleRow];
-                }
-            }
-
-            // 🖼️ 提取圖片（如果有）
-            const images = this.extractMultipleImages(tweet);
-
-            const result = {
-                success: true,
-                embed: embed,
-                components: components,
-                siteName: 'twitter',
-                contentType: tweetType,
-                videoUrls: formattedVideoUrls, // 格式化的影片連結
-                multipleImages: images.length > 0 ? images : null, // 🆕 添加圖片陣列
-                mixedMedia: true, // 標記為混合媒體
-                originalText: tweet.text, // 保存原始文字用於翻譯
-                originalURL: originalURL, // 🆕 保存原始 URL（用於 embed URL 統一）
-                tweetId: tweet.id // 🆕 保存推文 ID
-            };
-
-            // 添加影片附件相關資訊
-            if (videoOptimization) {
-                result.videoAttachment = videoOptimization.videoAttachment;
-                result.videoAttachmentCleanup = videoOptimization.cleanup;
-                result.videoAttachmentInfo = videoOptimization.videoInfo;
-            }
-
-            return result;
-
-        } catch (error) {
-            tfd.sysError('Enhanced-Twitter', `混合媒體處理失敗: ${error.message}`);
-            return this.createErrorResponse(error.message, originalURL);
-        }
+        return mixedMediaResponse.buildMixedMediaTweetResponse(tweet, originalURL, tweetType, {
+            isReplyTweet: (...args) => this.isReplyTweet(...args),
+            getReplyTweetInfo: (...args) => this.getReplyTweetInfo(...args),
+            isQuoteTweet: (...args) => this.isQuoteTweet(...args),
+            getQuoteTweetInfo: (...args) => this.getQuoteTweetInfo(...args),
+            processVideoOptimization: (...args) => this.videoOptimizer.processVideoOptimization(...args),
+            buildEnhancedEmbed: (...args) => this.buildEnhancedEmbed(...args),
+            extractVideoUrls: (...args) => this.extractVideoUrls(...args),
+            formatVideoUrls: (...args) => this.formatVideoUrls(...args),
+            buildPaginationButtons: (...args) => this.buildPaginationButtons(...args),
+            buildTranslateButtonComponent: (...args) => this.buildTranslateButtonComponent(...args),
+            buildAllToggleButtonComponent: (...args) => this.buildAllToggleButtonComponent(...args),
+            buildReloadButtonComponent: (...args) => this.buildReloadButtonComponent(...args),
+            extractMultipleImages: (...args) => this.extractMultipleImages(...args),
+            addTranslateButtonToComponents: (...args) => this.addTranslateButtonToComponents(...args),
+            createErrorResponse: (...args) => this.createErrorResponse(...args),
+            logger: tfd
+        });
     }
 
     /**
@@ -667,31 +589,13 @@ class TFDTwitterExtractor {
      * HTML 模式失敗時的回退處理
      */
     async handleMixedMediaTweetFallback(tweet, originalURL, tweetType) {
-        // 建立嵌入式訊息
-        const embedResult = this.buildEnhancedEmbed(tweet, originalURL, null, tweetType, null);
-        const embed = embedResult.embed;
-
-        // 提取影片 URLs 用於外部發送
-        const videoUrls = this.extractVideoUrls(tweet);
-        const formattedVideoUrls = this.formatVideoUrls(videoUrls);
-
-        // 建立分頁按鈕
-        let components = this.buildPaginationButtons(tweet, tweetType);
-
-        // 🌐 添加翻譯按鈕
-        components = this.addTranslateButtonToComponents(components, tweet);
-
-        return {
-            success: true,
-            embed: embed,
-            components: components,
-            siteName: 'twitter',
-            contentType: tweetType,
-            videoUrls: formattedVideoUrls,
-            mixedMedia: true,
-            tweetId: tweet.id,
-            originalText: tweet.text // 保存原始文字用於翻譯
-        };
+        return mixedMediaResponse.buildMixedMediaTweetFallbackResponse(tweet, originalURL, tweetType, {
+            buildEnhancedEmbed: (...args) => this.buildEnhancedEmbed(...args),
+            extractVideoUrls: (...args) => this.extractVideoUrls(...args),
+            formatVideoUrls: (...args) => this.formatVideoUrls(...args),
+            buildPaginationButtons: (...args) => this.buildPaginationButtons(...args),
+            addTranslateButtonToComponents: (...args) => this.addTranslateButtonToComponents(...args)
+        });
     }
 
     /**

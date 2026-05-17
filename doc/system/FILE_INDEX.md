@@ -154,6 +154,7 @@ MessageCreate
 | `extractors/v2/images.js` | 圖片清單、多圖片 URL、卡片圖片 fallback、防爆雷 URL prefix |
 | `extractors/v2/media-classifier.js` | 回覆/引用/媒體類型判斷與圖片/影片數量 |
 | `extractors/v2/media-policy.js` | 多 Embed 與 GAS 模式顯示策略 |
+| `extractors/v2/mixed-media-response.js` | Twitter V2 mixed-media classic response and fallback response builder |
 | `extractors/v2/normalizer.js` | vxtwitter API 回應轉 fxtwitter 相容格式 |
 | `extractors/v2/quote-display-policy.js` | Twitter quote V1/V2 initial display and transition policy |
 | `extractors/v2/response-builders.js` | Profile Embed、passthrough、error response 建構 |
@@ -377,6 +378,7 @@ MessageCreate
 | `twitter-v2-view-message-state-smoke.js` | Twitter V2 interaction message state bridge smoke test |
 | `twitter-v2-v1-transition-smoke.js` | Twitter V2 to classic V1 quote-collapse transition payload smoke test |
 | `twitter-v2-article-response-smoke.js` | Twitter V2 article response payload smoke test |
+| `twitter-v2-mixed-media-response-smoke.js` | Twitter V2 mixed-media response payload smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---

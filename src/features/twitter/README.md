@@ -31,6 +31,7 @@ orchestrator. Focused helper logic lives in `extractors/v2/`:
 | `images.js` | Extractor-specific image lists, multiple image URLs, card fallback, spoiler URL prefixing |
 | `media-classifier.js` | Reply/quote/media type checks and media counts |
 | `media-policy.js` | Multiple embed and GAS-mode display policy decisions |
+| `mixed-media-response.js` | Mixed-media classic response and fallback response assembly |
 | `normalizer.js` | vxtwitter API response normalization into fxtwitter-compatible tweet data |
 | `response-builders.js` | Profile embed, passthrough response, and error response builders |
 | `tweet-fetcher.js` | fxtwitter first, vxtwitter fallback tweet fetch orchestration |
