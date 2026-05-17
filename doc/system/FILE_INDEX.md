@@ -352,8 +352,13 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `migrate-from-json.js` | 從舊版 JSON 遷移到 SQLite + 加密 API Key（含 `--dry-run`） |
+| `migrate-from-json.js` | Legacy wrapper for `scripts/migrations/migrate-from-json.js` |
 | `component-sanitizer-smoke.js` | Discord components 合法化 smoke test |
+| `migrations/migrate-from-json.js` | JSON to SQLite/API-key migration implementation |
+| `migrations/sync-blacklist-from-4.0.js` | One-off 4.0 blacklist JSON to TFD SQLite migration implementation |
+| `smoke/translation-smoke.js` | Deterministic translation subsystem smoke test implementation |
+| `translation-smoke.js` | Legacy wrapper for `scripts/smoke/translation-smoke.js` |
+| `sync-blacklist-from-4.0.js` | Legacy wrapper for `scripts/migrations/sync-blacklist-from-4.0.js` |
 | `message-helpers-smoke.js` | Shared Discord message helper smoke test |
 | `spoiler-button-helper-smoke.js` | Shared Discord 回報/防爆雷按鈕 helper smoke test |
 | `text-truncator-smoke.js` | Shared Discord text truncator smoke test |

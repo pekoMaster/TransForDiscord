@@ -194,9 +194,12 @@ Migration principle: create new files under `src/`, then turn old paths into com
 |---|---|---|---|---|---|---|
 | `db/index.js` | SQLite connection, schema init, prepared statements and DB API. | db-access | shared/db | `src/shared/db/index.js` | split | Split schema init, API groups, migrations. |
 | `db/schema.sql` | SQLite schema. | db-access | shared/db | `src/shared/db/schema.sql` | move | Keep old path adapter difficult for SQL; update loader. |
-| `scripts/migrate-from-json.js` | Migrates old JSON settings/API keys into SQLite. | script | migration | `scripts/migrations/migrate-from-json.js` | move | Depends on DB and crypto. |
-| `scripts/sync-blacklist-from-4.0.js` | Imports blacklist data from sibling `4.0` project data. | script | migration/moderation | `scripts/migrations/sync-blacklist-from-4.0.js` | move | Project-specific one-off; mark archive after use. |
-| `scripts/translation-smoke.js` | Deterministic smoke tests for translation subsystem. | script | translation/test | `scripts/smoke/translation-smoke.js` | move | Add to npm script later. |
+| `scripts/migrate-from-json.js` | Legacy wrapper for old JSON settings/API keys migration. | adapter | migration | `scripts/migrations/migrate-from-json.js` | done-adapter | Real script moved; old command still calls `main()`. |
+| `scripts/sync-blacklist-from-4.0.js` | Legacy wrapper for sibling `4.0` blacklist import. | adapter | migration/moderation | `scripts/migrations/sync-blacklist-from-4.0.js` | done-adapter | Real script moved; old command still calls `main()`. |
+| `scripts/translation-smoke.js` | Legacy wrapper for deterministic translation subsystem smoke tests. | adapter | translation/test | `scripts/smoke/translation-smoke.js` | done-adapter | Real smoke moved; old command still executes it. |
+| `scripts/migrations/migrate-from-json.js` | Migrates old JSON settings/API keys into SQLite. | script | migration | `scripts/migrations/migrate-from-json.js` | keep | Depends on DB and crypto. |
+| `scripts/migrations/sync-blacklist-from-4.0.js` | Imports blacklist data from sibling `4.0` project data. | script | migration/moderation | `scripts/migrations/sync-blacklist-from-4.0.js` | keep | Project-specific one-off; guarded behind `main()` for safe require. |
+| `scripts/smoke/translation-smoke.js` | Deterministic smoke tests for translation subsystem. | script | translation/test | `scripts/smoke/translation-smoke.js` | keep | Old `scripts/translation-smoke.js` remains as wrapper. |
 
 ## Inventory: Core TFD System
 
