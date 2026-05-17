@@ -123,7 +123,7 @@ MessageCreate
 | `facebook-smart.js` | Facebook 智慧選擇器 |
 | `facebook-with-login.js` | Facebook 登入版抓取 |
 | `facebookez.js` | Facebook/Instagram — 透過 facebed.com / EmbedEZ |
-| `instagram.js` | Instagram 貼文擷取 |
+| `instagram.js` | Legacy adapter to `src/features/sites/instagram/instagram-extractor.js` |
 | `hololive-shop.js` | Legacy adapter to `src/features/sites/shop/hololive-shop-extractor.js` |
 | `line-today.js` | Legacy adapter to `src/features/sites/news/line-today-extractor.js` |
 | `mobile01.js` | Legacy adapter to `src/features/sites/forum/mobile01-extractor.js` |
@@ -191,6 +191,7 @@ MessageCreate
 | `forum/mobile01-extractor.js` | Mobile01 forum extractor |
 | `forum/xfastest-extractor.js` | XFastest forum/news extractor |
 | `game/nikke-extractor.js` | NIKKE official notice extractor |
+| `instagram/instagram-extractor.js` | Instagram URL conversion and embed extractor |
 | `shop/hololive-shop-extractor.js` | Hololive Shop product extractor |
 | `shop/pchome-extractor.js` | PChome product extractor |
 | `video/bilibili-extractor.js` | Bilibili URL conversion extractor |
