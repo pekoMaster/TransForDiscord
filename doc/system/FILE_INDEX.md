@@ -159,6 +159,7 @@ MessageCreate
 | `extractors/v2/tweet-fetcher.js` | fxtwitter 優先、vxtwitter fallback 的推文抓取流程 |
 | `extractors/v2/tweet-info.js` | URL 推文 ID、引用推文資訊、回覆目標解析 |
 | `extractors/v2/video-links.js` | 影片 URL 擷取與 Discord 連結文字格式 |
+| `containers/v2/action-rows.js` | Twitter V2 translate/expand/reload/report action row builder |
 | `interactions/v2/` | Twitter V2 Container 翻譯、展開、重整、防爆雷等互動子模組 |
 | `state/v2-tweet-cache.js` | Twitter V2 tweet bundle runtime cache for rebuild/interaction flows |
 
@@ -358,6 +359,7 @@ MessageCreate
 | `tunnel-url-provider-smoke.js` | Shared web tunnel URL provider adapter and cache smoke test |
 | `twitter-quote-display-policy-smoke.js` | Twitter quote V1/V2 display policy smoke test |
 | `twitter-v2-tweet-cache-smoke.js` | Twitter V2 tweet cache TTL and prune smoke test |
+| `twitter-v2-action-rows-smoke.js` | Twitter V2 action row button and row-length smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---

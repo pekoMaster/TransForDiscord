@@ -9,12 +9,11 @@
 const {
     ContainerBuilder, SectionBuilder, TextDisplayBuilder,
     MediaGalleryBuilder, MediaGalleryItemBuilder,
-    ThumbnailBuilder, SeparatorBuilder,
-    ActionRowBuilder, ButtonBuilder, ButtonStyle
+    ThumbnailBuilder, SeparatorBuilder
 } = require('discord.js');
 
 const TextTruncator = require('../../../shared/discord/text-truncator');
-const { REPORT_BTN_PREFIX } = require('../../../shared/discord/spoiler-button-helper');
+const { buildV2ActionRows } = require('./v2/action-rows');
 const {
     cacheTweetData,
     getCachedTweetData
@@ -139,66 +138,16 @@ function buildV2Container(tweet, originalURL, options = {}) {
         new TextDisplayBuilder().setContent(footerText)
     );
 
-    // 6. 功能按鈕列
-    const buttons = [];
-
-    // 翻譯 / 原文 按鈕
-    const textContent = tweet.text || '';
-    if (textContent.trim().length >= 10) {
-        buttons.push(
-            new ButtonBuilder()
-                .setCustomId(isTranslated ? `v2_original_${tweet.id}` : `v2_translate_${tweet.id}`)
-                .setLabel(isTranslated ? '原文' : '翻譯')
-                .setStyle(ButtonStyle.Secondary)
-        );
-    }
-
-    // 統一展開/收回按鈕（引用、回覆、全文 共用一個）
-    const hasQuote = !!tweet.quote?.author;
-    const hasReply = !!tweet.replying_to;
+    // 6. Functional action rows
     const truncResult = truncator.truncateText(sourceText);
-    const hasTruncated = truncResult.isTruncated;
-    const hasExpandable = hasQuote || hasReply || hasTruncated;
-
-    if (hasExpandable) {
-        const isAllExpanded =
-            (!hasQuote || isQuoteShown) &&
-            (!hasReply || isReplyShown) &&
-            (!hasTruncated || isExpanded);
-        buttons.push(
-            new ButtonBuilder()
-                .setCustomId(isAllExpanded ? `v2_collapse_all_${tweet.id}` : `v2_expand_all_${tweet.id}`)
-                .setLabel(isAllExpanded ? '收回' : '展開')
-                .setStyle(ButtonStyle.Secondary)
-        );
-    }
-
-    // 工具按鈕（重整、防爆雷）合併到同一排
-    const utilButtons = [
-        new ButtonBuilder()
-            .setCustomId(`v2_reload_${tweet.id}`)
-            .setLabel('重整')
-            .setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder()
-            .setCustomId(REPORT_BTN_PREFIX + Date.now())
-            .setLabel('回報')
-            .setStyle(ButtonStyle.Secondary)
-    ];
-
-    const allButtons = [...buttons, ...utilButtons];
-
-    // Discord ActionRow 最多 5 個按鈕，超過時拆成兩排
-    if (allButtons.length <= 5) {
-        container.addActionRowComponents(
-            new ActionRowBuilder().addComponents(...allButtons)
-        );
-    } else {
-        container.addActionRowComponents(
-            new ActionRowBuilder().addComponents(...allButtons.slice(0, 5))
-        );
-        container.addActionRowComponents(
-            new ActionRowBuilder().addComponents(...allButtons.slice(5))
-        );
+    for (const row of buildV2ActionRows(tweet, {
+        isTranslated,
+        isQuoteShown,
+        isReplyShown,
+        isExpanded,
+        hasTruncated: truncResult.isTruncated
+    })) {
+        container.addActionRowComponents(row);
     }
 
     return container;
