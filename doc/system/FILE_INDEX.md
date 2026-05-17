@@ -352,6 +352,14 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
+| `ops/db-pull.bat` | Windows DB pull implementation used by scheduler |
+| `ops/db-pull.sh` | Bash DB pull implementation; reads root `.env` |
+| `ops/db-push.sh` | Bash DB push/restore implementation; high-risk manual recovery script |
+| `ops/setup-schedule.bat` | Windows scheduled task setup implementation |
+| `db-pull.bat` | Legacy root wrapper for `scripts/ops/db-pull.bat` |
+| `db-pull.sh` | Legacy root wrapper for `scripts/ops/db-pull.sh` |
+| `db-push.sh` | Legacy root wrapper for `scripts/ops/db-push.sh` |
+| `setup-schedule.bat` | Legacy root wrapper for `scripts/ops/setup-schedule.bat` |
 | `migrate-from-json.js` | Legacy wrapper for `scripts/migrations/migrate-from-json.js` |
 | `component-sanitizer-smoke.js` | Discord components 合法化 smoke test |
 | `migrations/migrate-from-json.js` | JSON to SQLite/API-key migration implementation |

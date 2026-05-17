@@ -155,10 +155,14 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `package.json` | NPM scripts and dependencies. | config | repo | root | keep | Add future scripts for inventory/checks. |
 | `package-lock.json` | Dependency lockfile. | config | repo | root | keep | Do not hand-edit. |
 | `deploy.js` | Registers Discord slash/context commands. | script | deploy/app | `scripts/deploy-commands.js` | move | Root wrapper optional. |
-| `db-pull.bat` | Windows helper to pull DB from server. | script | ops | `scripts/ops/db-pull.bat` | move | Keep root adapter if user uses it. |
-| `db-pull.sh` | Shell helper to pull DB from server. | script | ops | `scripts/ops/db-pull.sh` | move | Ops utility. |
-| `db-push.sh` | Shell helper to push DB to server. | script | ops | `scripts/ops/db-push.sh` | move | High-risk script; document clearly. |
-| `setup-schedule.bat` | Windows scheduling helper. | script | ops | `scripts/ops/setup-schedule.bat` | move | Ops utility. |
+| `db-pull.bat` | Legacy root wrapper for Windows DB pull. | adapter | ops | `scripts/ops/db-pull.bat` | done-adapter | Root command remains; real implementation reads root paths through `ROOT_DIR`. |
+| `db-pull.sh` | Legacy root wrapper for shell DB pull. | adapter | ops | `scripts/ops/db-pull.sh` | done-adapter | Root command remains; real implementation reads root `.env`. |
+| `db-push.sh` | Legacy root wrapper for shell DB push/restore. | adapter | ops | `scripts/ops/db-push.sh` | done-adapter | High-risk command remains available through wrapper; not executed during refactor. |
+| `setup-schedule.bat` | Legacy root wrapper for Windows scheduling helper. | adapter | ops | `scripts/ops/setup-schedule.bat` | done-adapter | Schedules root `db-pull.bat` wrapper for path stability. |
+| `scripts/ops/db-pull.bat` | Windows helper to pull DB from server. | script | ops | `scripts/ops/db-pull.bat` | keep | Implementation. |
+| `scripts/ops/db-pull.sh` | Shell helper to pull DB from server. | script | ops | `scripts/ops/db-pull.sh` | keep | Implementation. |
+| `scripts/ops/db-push.sh` | Shell helper to push DB to server. | script | ops | `scripts/ops/db-push.sh` | keep | High-risk recovery implementation. |
+| `scripts/ops/setup-schedule.bat` | Windows scheduling helper. | script | ops | `scripts/ops/setup-schedule.bat` | keep | Implementation. |
 | `TFD_UNIFIED_SPEC.md` | Older unified architecture/spec notes. | doc | docs | `docs/archive/TFD_UNIFIED_SPEC.md` | docs-only | Archive or fold into new design. |
 
 ## Inventory: App Commands and Events
