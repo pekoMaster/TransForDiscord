@@ -39,6 +39,23 @@ async function hydrateTweetBundle(tweetId, originalURL = null) {
     return hydrated;
 }
 
+async function resolveTweetBundle(tweetId, {
+    refreshData = false,
+    getCached = getCachedTweetData,
+    hydrate = hydrateTweetBundle
+} = {}) {
+    let cached = getCached(tweetId);
+    if (!cached || refreshData) {
+        try {
+            cached = await hydrate(tweetId, cached?.originalURL);
+        } catch (_) {
+            cached = null;
+        }
+    }
+    return cached;
+}
+
 module.exports = {
-    hydrateTweetBundle
+    hydrateTweetBundle,
+    resolveTweetBundle
 };

@@ -164,6 +164,7 @@ MessageCreate
 | `interactions/v2/` | Twitter V2 Container 翻譯、展開、重整、防爆雷等互動子模組 |
 | `interactions/v2/render-state.js` | Twitter V2 reload/expand/translate render state fallback and merge helper |
 | `interactions/v2/view-payload.js` | Twitter V2 Components edit payload builder for view rebuild/update flows |
+| `interactions/v2/tweet-data.js` | Twitter V2 tweet bundle hydration and cache-vs-refresh resolution helper |
 | `state/v2-tweet-cache.js` | Twitter V2 tweet bundle runtime cache for rebuild/interaction flows |
 
 ### Shared Discord 模組 (`src/shared/discord/`)
@@ -362,6 +363,7 @@ MessageCreate
 | `tunnel-url-provider-smoke.js` | Shared web tunnel URL provider adapter and cache smoke test |
 | `twitter-quote-display-policy-smoke.js` | Twitter quote V1/V2 display policy smoke test |
 | `twitter-v2-tweet-cache-smoke.js` | Twitter V2 tweet cache TTL and prune smoke test |
+| `twitter-v2-tweet-bundle-resolution-smoke.js` | Twitter V2 cache-vs-refresh tweet bundle resolution smoke test |
 | `twitter-v2-action-rows-smoke.js` | Twitter V2 action row button and row-length smoke test |
 | `twitter-v2-component-state-smoke.js` | Twitter V2 component tree state derivation smoke test |
 | `twitter-v2-render-state-smoke.js` | Twitter V2 render-state fallback and merge smoke test |

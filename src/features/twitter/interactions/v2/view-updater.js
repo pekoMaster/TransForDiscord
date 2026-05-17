@@ -1,22 +1,14 @@
 const { MessageFlags } = require('discord.js');
-const { getCachedTweetData } = require('../../state/v2-tweet-cache');
 const { lookupUrl } = require('../../../../shared/analytics/url-stats');
 const { getMessageState, setMessageState } = require('../../state/v2-state-store');
 const { buildFallbackState, resolveRenderState } = require('./render-state');
-const { hydrateTweetBundle } = require('./tweet-data');
+const { resolveTweetBundle } = require('./tweet-data');
 const { buildV2EditPayload } = require('./view-payload');
 
 async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, options = {}) {
     const { refreshData = false } = options;
 
-    let cached = getCachedTweetData(tweetId);
-    if (!cached || refreshData) {
-        try {
-            cached = await hydrateTweetBundle(tweetId, cached?.originalURL);
-        } catch (_) {
-            cached = null;
-        }
-    }
+    const cached = await resolveTweetBundle(tweetId, { refreshData });
 
     if (!cached) {
         await interaction.followUp({
