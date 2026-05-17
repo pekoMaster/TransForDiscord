@@ -164,6 +164,7 @@ MessageCreate
 | `interactions/v2/` | Twitter V2 Container 翻譯、展開、重整、防爆雷等互動子模組 |
 | `interactions/v2/render-state.js` | Twitter V2 reload/expand/translate render state fallback and merge helper |
 | `interactions/v2/view-payload.js` | Twitter V2 Components edit payload builder for view rebuild/update flows |
+| `interactions/v2/view-stats.js` | Twitter V2 optional URL repost stats lookup helper for rebuilt views |
 | `interactions/v2/tweet-data.js` | Twitter V2 tweet bundle hydration and cache-vs-refresh resolution helper |
 | `state/v2-tweet-cache.js` | Twitter V2 tweet bundle runtime cache for rebuild/interaction flows |
 
@@ -368,6 +369,7 @@ MessageCreate
 | `twitter-v2-component-state-smoke.js` | Twitter V2 component tree state derivation smoke test |
 | `twitter-v2-render-state-smoke.js` | Twitter V2 render-state fallback and merge smoke test |
 | `twitter-v2-view-payload-smoke.js` | Twitter V2 Components edit payload smoke test |
+| `twitter-v2-view-stats-smoke.js` | Twitter V2 URL repost stats lookup smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---

@@ -1,9 +1,9 @@
 const { MessageFlags } = require('discord.js');
-const { lookupUrl } = require('../../../../shared/analytics/url-stats');
 const { getMessageState, setMessageState } = require('../../state/v2-state-store');
 const { buildFallbackState, resolveRenderState } = require('./render-state');
 const { resolveTweetBundle } = require('./tweet-data');
 const { buildV2EditPayload } = require('./view-payload');
+const { resolveV2UrlStats } = require('./view-stats');
 
 async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, options = {}) {
     const { refreshData = false } = options;
@@ -28,13 +28,11 @@ async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, optio
         stateOverrides
     });
 
-    let urlStats = null;
-    try {
-        const tweetUrl = originalURL || `https://twitter.com/i/status/${tweetId}`;
-        if (interaction.guildId && interaction.channelId) {
-            urlStats = lookupUrl(tweetUrl, interaction.guildId, interaction.channelId);
-        }
-    } catch (_) {}
+    const urlStats = resolveV2UrlStats({
+        interaction,
+        tweetId,
+        originalURL
+    });
 
     const payload = buildV2EditPayload({
         tweet,

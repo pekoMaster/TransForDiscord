@@ -15,7 +15,8 @@ remain as compatibility adapters during the project-wide restructure.
 buttons and modals. Detailed action logic lives in `interactions/v2/`:
 translation, expand/collapse toggles, reload, spoiler handling, shared cache,
 tweet hydration and cache-vs-refresh resolution, render-state preservation,
-view payload construction, and view rebuild/update helpers.
+view payload construction, optional repost stats lookup, and view rebuild/update
+helpers.
 
 ## V2 Extractor Helpers
 
