@@ -370,6 +370,7 @@ MessageCreate
 | `twitter-v2-render-state-smoke.js` | Twitter V2 render-state fallback and merge smoke test |
 | `twitter-v2-view-payload-smoke.js` | Twitter V2 Components edit payload smoke test |
 | `twitter-v2-view-stats-smoke.js` | Twitter V2 URL repost stats lookup smoke test |
+| `twitter-v2-view-updater-exports-smoke.js` | Twitter V2 view updater public export surface smoke test |
 | `link-support-smoke.js` | `/pe linksup` domain registry 與 DB override smoke test |
 
 ---

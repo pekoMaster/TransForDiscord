@@ -1,6 +1,6 @@
 const { MessageFlags } = require('discord.js');
 const { getMessageState, setMessageState } = require('../../state/v2-state-store');
-const { buildFallbackState, resolveRenderState } = require('./render-state');
+const { resolveRenderState } = require('./render-state');
 const { resolveTweetBundle } = require('./tweet-data');
 const { buildV2EditPayload } = require('./view-payload');
 const { resolveV2UrlStats } = require('./view-stats');
@@ -50,6 +50,5 @@ async function rebuildAndUpdate(interaction, tweetId, stateOverrides = {}, optio
 }
 
 module.exports = {
-    buildFallbackState,
     rebuildAndUpdate
 };
