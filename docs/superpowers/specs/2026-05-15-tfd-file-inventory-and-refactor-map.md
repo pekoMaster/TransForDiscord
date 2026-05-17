@@ -262,7 +262,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `tfd-system/extractors/storm.js` | Storm Media extractor. | extractor | sites/news | `src/features/sites/news/storm-extractor.js` | move | News domain. |
 | `tfd-system/extractors/udn.js` | UDN news extractor. | extractor | sites/news | `src/features/sites/news/udn-extractor.js` | move | News domain. |
 | `tfd-system/extractors/xfastest.js` | XFastest extractor. | extractor | sites/forum | `src/features/sites/forum/xfastest-extractor.js` | move | Forum domain. |
-| `tfd-system/extractors/youtube.js` | YouTube extractor. | extractor | sites/video | `src/features/sites/video/youtube-extractor.js` | move | Small extractor. |
+| `tfd-system/extractors/youtube.js` | Legacy adapter for YouTube extractor. | adapter | sites/video | `src/features/sites/video/youtube-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
+| `src/features/sites/video/youtube-extractor.js` | YouTube extractor. | extractor | sites/video | `src/features/sites/video/youtube-extractor.js` | keep | Small extractor moved into site feature tree. |
 
 ## Inventory: Utilities and Feature Helpers
 

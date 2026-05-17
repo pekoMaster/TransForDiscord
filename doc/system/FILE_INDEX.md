@@ -140,7 +140,7 @@ MessageCreate
 | `twitter-video-attachment-optimizer.js` | Twitter 影片 URL 轉附件 |
 | `udn.js` | UDN 聯合新聞 |
 | `xfastest.js` | XFastest 滄者極限 |
-| `youtube.js` | YouTube — /live/ 轉換、短網址解析 |
+| `youtube.js` | Legacy adapter to `src/features/sites/video/youtube-extractor.js` |
 
 ### Twitter 功能模組 (`src/features/twitter/`)
 
@@ -173,6 +173,12 @@ MessageCreate
 | `interactions/v2/tweet-data.js` | Twitter V2 tweet bundle hydration and cache-vs-refresh resolution helper |
 | `interactions/v2/v1-transition.js` | Twitter V2 quote-collapse transition back to classic V1 embed payload and fallback send flow |
 | `state/v2-tweet-cache.js` | Twitter V2 tweet bundle runtime cache for rebuild/interaction flows |
+
+### Site Extractors (`src/features/sites/`)
+
+| Module | Purpose |
+|------|------|
+| `video/youtube-extractor.js` | YouTube `/live/{videoId}` to `/watch?v={videoId}` URL conversion extractor |
 
 ### Shared Discord 模組 (`src/shared/discord/`)
 
