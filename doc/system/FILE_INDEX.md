@@ -327,7 +327,8 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `bahamut-auth.js` | 巴哈姆特認證管理（Cookie） |
+| `bahamut-auth.js` | Legacy adapter for `src/features/sites/bahamut/bahamut-auth.js` |
+| `src/features/sites/bahamut/bahamut-auth.js` | 巴哈姆特認證管理（Cookie），Cookie cache 固定寫入專案根 `data/` |
 | `lightpanda-client.js` | Legacy adapter for `src/shared/browser/lightpanda-client.js` |
 | `playwright-semantic-browser.js` | Legacy adapter for `src/shared/browser/playwright-semantic-browser.js` |
 | `src/shared/browser/lightpanda-client.js` | Lightpanda CDP shared browser helper implementation |
