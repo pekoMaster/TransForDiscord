@@ -248,20 +248,26 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `tfd-system/extractors/facebookez.js` | FacebookEZ/fx style extractor. | extractor | sites/facebook | `src/features/sites/facebook/strategies/facebookez.js` | move | Strategy implementation. |
 | `tfd-system/extractors/instagram.js` | Instagram extractor. | extractor | sites/instagram | `src/features/sites/instagram/instagram-extractor.js` | move | Platform feature. |
 | `tfd-system/extractors/bahamut.js` | Bahamut extractor. | extractor | sites/bahamut | `src/features/sites/bahamut/bahamut-extractor.js` | move | Uses Bahamut auth helper. |
-| `tfd-system/extractors/4gamers.js` | 4Gamers news extractor. | extractor | sites/news | `src/features/sites/news/4gamers-extractor.js` | move | News domain. |
+| `tfd-system/extractors/4gamers.js` | Legacy adapter for 4Gamers news extractor. | adapter | sites/news | `src/features/sites/news/4gamers-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
 | `tfd-system/extractors/52poke.js` | PokeWiki extractor. | extractor | sites/wiki | `src/features/sites/wiki/52poke-extractor.js` | move | Wiki domain. |
 | `tfd-system/extractors/bilibili.js` | Bilibili extractor. | extractor | sites/video | `src/features/sites/video/bilibili-extractor.js` | move | Video platform. |
-| `tfd-system/extractors/cts.js` | CTS news extractor. | extractor | sites/news | `src/features/sites/news/cts-extractor.js` | move | News domain. |
+| `tfd-system/extractors/cts.js` | Legacy adapter for CTS news extractor. | adapter | sites/news | `src/features/sites/news/cts-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
 | `tfd-system/extractors/dynamic.js` | Generic dynamic-page extractor via semantic browser. | extractor | core/extraction | `src/core/extraction/dynamic-extractor.js` | move | Shared fallback extractor. |
 | `tfd-system/extractors/hololive-shop.js` | Hololive shop extractor. | extractor | sites/shop | `src/features/sites/shop/hololive-shop-extractor.js` | move | Shop domain. |
-| `tfd-system/extractors/line-today.js` | LINE TODAY news extractor. | extractor | sites/news | `src/features/sites/news/line-today-extractor.js` | move | News domain. |
+| `tfd-system/extractors/line-today.js` | Legacy adapter for LINE TODAY news extractor. | adapter | sites/news | `src/features/sites/news/line-today-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
 | `tfd-system/extractors/mobile01.js` | Mobile01 extractor. | extractor | sites/forum | `src/features/sites/forum/mobile01-extractor.js` | move | Forum domain. |
-| `tfd-system/extractors/msn.js` | MSN news extractor. | extractor | sites/news | `src/features/sites/news/msn-extractor.js` | move | News domain. |
+| `tfd-system/extractors/msn.js` | Legacy adapter for MSN news extractor. | adapter | sites/news | `src/features/sites/news/msn-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
 | `tfd-system/extractors/nikke.js` | NIKKE news extractor. | extractor | sites/game | `src/features/sites/game/nikke-extractor.js` | move | Game/news domain. |
 | `tfd-system/extractors/pchome.js` | PChome product extractor. | extractor | sites/shop | `src/features/sites/shop/pchome-extractor.js` | move | Shop domain. |
 | `tfd-system/extractors/pornhub.js` | Pornhub extractor. | extractor | sites/adult | `src/features/sites/adult/pornhub-extractor.js` | move | Keep isolated. |
-| `tfd-system/extractors/storm.js` | Storm Media extractor. | extractor | sites/news | `src/features/sites/news/storm-extractor.js` | move | News domain. |
-| `tfd-system/extractors/udn.js` | UDN news extractor. | extractor | sites/news | `src/features/sites/news/udn-extractor.js` | move | News domain. |
+| `tfd-system/extractors/storm.js` | Legacy adapter for Storm Media extractor. | adapter | sites/news | `src/features/sites/news/storm-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
+| `tfd-system/extractors/udn.js` | Legacy adapter for UDN news extractor. | adapter | sites/news | `src/features/sites/news/udn-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
+| `src/features/sites/news/4gamers-extractor.js` | 4Gamers news extractor. | extractor | sites/news | `src/features/sites/news/4gamers-extractor.js` | keep | Canonical news extractor implementation. |
+| `src/features/sites/news/cts-extractor.js` | CTS news extractor. | extractor | sites/news | `src/features/sites/news/cts-extractor.js` | keep | Canonical news extractor implementation. |
+| `src/features/sites/news/line-today-extractor.js` | LINE TODAY news extractor. | extractor | sites/news | `src/features/sites/news/line-today-extractor.js` | keep | Canonical news extractor implementation. |
+| `src/features/sites/news/msn-extractor.js` | MSN news extractor. | extractor | sites/news | `src/features/sites/news/msn-extractor.js` | keep | Canonical news extractor implementation. |
+| `src/features/sites/news/storm-extractor.js` | Storm Media extractor. | extractor | sites/news | `src/features/sites/news/storm-extractor.js` | keep | Canonical news extractor implementation. |
+| `src/features/sites/news/udn-extractor.js` | UDN news extractor. | extractor | sites/news | `src/features/sites/news/udn-extractor.js` | keep | Canonical news extractor implementation. |
 | `tfd-system/extractors/xfastest.js` | XFastest extractor. | extractor | sites/forum | `src/features/sites/forum/xfastest-extractor.js` | move | Forum domain. |
 | `tfd-system/extractors/youtube.js` | Legacy adapter for YouTube extractor. | adapter | sites/video | `src/features/sites/video/youtube-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
 | `src/features/sites/video/youtube-extractor.js` | YouTube extractor. | extractor | sites/video | `src/features/sites/video/youtube-extractor.js` | keep | Small extractor moved into site feature tree. |

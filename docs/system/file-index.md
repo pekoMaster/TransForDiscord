@@ -112,11 +112,11 @@ MessageCreate
 | 檔案 | 支援站台 |
 |------|----------|
 | `index.js` | 擷取器管理器 — 統一註冊與路由 |
-| `4gamers.js` | 4Gamers 遊戲新聞 |
+| `4gamers.js` | Legacy adapter to `src/features/sites/news/4gamers-extractor.js` |
 | `52poke.js` | 神奇寶貝百科（52Poke Wiki） |
 | `bahamut.js` | 巴哈姆特 — 勇者小屋、哈啦區 |
 | `bilibili.js` | Bilibili — bilibili.com / b23.tv / vxbilibili |
-| `cts.js` | 華視新聞（Nuxt SSR JSON 解析） |
+| `cts.js` | Legacy adapter to `src/features/sites/news/cts-extractor.js` |
 | `dynamic.js` | 動態通用擷取器（fallback） |
 | `facebook.js` | Facebook — Puppeteer 無頭抓取 |
 | `facebook-mbasic.js` | Facebook mbasic 版（輕量 fallback） |
@@ -124,21 +124,22 @@ MessageCreate
 | `facebook-with-login.js` | Facebook 登入版抓取 |
 | `facebookez.js` | Facebook/Instagram — 透過 facebed.com / EmbedEZ |
 | `instagram.js` | Instagram 貼文擷取 |
-| `line-today.js` | LINE TODAY 新聞 |
+| `line-today.js` | Legacy adapter to `src/features/sites/news/line-today-extractor.js` |
 | `mobile01.js` | Mobile01 論壇（HTTP + cheerio） |
-| `msn.js` | MSN 新聞（CAPI API） |
+| `msn.js` | Legacy adapter to `src/features/sites/news/msn-extractor.js` |
 | `nikke.js` | 勝利女神：妮姬 官網公告 |
 | `pchome.js` | PChome 24h 商品頁 |
 | `pixiv.js` | Pixiv 作品 — 多圖分頁、Ugoira 動圖 |
 | `pixiv-image-attachment-optimizer.js` | Pixiv 圖片附件優化器 |
 | `pornhub.js` | Pornhub 影片擷取 |
 | `ptt.js` | PTT 文章 — 多圖分頁快取 |
+| `storm.js` | Legacy adapter to `src/features/sites/news/storm-extractor.js` |
 | `threads.js` | Threads — fixthreads.seria.moe OG meta + V2 Container |
 | `twitter-legacy.js` | Twitter/X — V1 傳統 Embed 版 |
 | `twitter-v2.js` | Twitter/X — V2 Components 版 ⭐ |
 | `twitter-image-attachment-optimizer.js` | Twitter 圖片附件優化器 |
 | `twitter-video-attachment-optimizer.js` | Twitter 影片 URL 轉附件 |
-| `udn.js` | UDN 聯合新聞 |
+| `udn.js` | Legacy adapter to `src/features/sites/news/udn-extractor.js` |
 | `xfastest.js` | XFastest 滄者極限 |
 | `youtube.js` | Legacy adapter to `src/features/sites/video/youtube-extractor.js` |
 
@@ -179,6 +180,12 @@ MessageCreate
 | Module | Purpose |
 |------|------|
 | `video/youtube-extractor.js` | YouTube `/live/{videoId}` to `/watch?v={videoId}` URL conversion extractor |
+| `news/4gamers-extractor.js` | 4Gamers news extractor |
+| `news/cts-extractor.js` | CTS news extractor |
+| `news/line-today-extractor.js` | LINE TODAY news extractor |
+| `news/msn-extractor.js` | MSN news extractor |
+| `news/storm-extractor.js` | Storm Media news extractor |
+| `news/udn-extractor.js` | UDN news extractor |
 
 ### Shared Discord 模組 (`src/shared/discord/`)
 
