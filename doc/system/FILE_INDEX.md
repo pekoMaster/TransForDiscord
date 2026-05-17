@@ -286,6 +286,8 @@ MessageCreate
 | `blacklist-manager.js` | 黑名單管理器（PTT/Twitter 等） |
 | `crypto-helper.js` | 舊路徑 adapter，轉接至 `src/shared/crypto/crypto-helper.js` |
 | `normalize-author.js` | 舊路徑 adapter，轉接至 `src/features/moderation/normalize-author.js` |
+| `recall-limiter.js` | 舊路徑 adapter，轉接至 `src/features/reports/recall-limiter.js` |
+| `src/features/reports/recall-limiter.js` | 回報/Context Action 共用的收回訊息冷卻限制器 |
 
 ### 翻譯系統
 

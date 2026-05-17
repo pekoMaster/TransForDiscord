@@ -26,7 +26,7 @@ const db = require('../db');
 const { buildSpoilerComponents, sendSpoilerAndCleanup } = require('./spoiler-button-interactions');
 const { getInstance: getGBM } = require('../utils/guild-blacklist-manager');
 const { resolveAuthorId, detectPlatformFromUrl, extractUrlFromMessage } = require('../src/shared/discord/message-helpers');
-const { checkRecallLimit } = require('../utils/recall-limiter');
+const { checkRecallLimit } = require('../src/features/reports/recall-limiter');
 
 const BTN_EXPIRE_MS = 86_400_000;
 const SUBMENU_EXPIRE_MS = 60_000;
