@@ -326,8 +326,10 @@ MessageCreate
 | 檔案 | 功能 |
 |------|------|
 | `bahamut-auth.js` | 巴哈姆特認證管理（Cookie） |
-| `lightpanda-client.js` | Lightpanda CDP 無頭瀏覽器客戶端（Docker） |
-| `playwright-semantic-browser.js` | Playwright 語意瀏覽器 |
+| `lightpanda-client.js` | Legacy adapter for `src/shared/browser/lightpanda-client.js` |
+| `playwright-semantic-browser.js` | Legacy adapter for `src/shared/browser/playwright-semantic-browser.js` |
+| `src/shared/browser/lightpanda-client.js` | Lightpanda CDP shared browser helper implementation |
+| `src/shared/browser/playwright-semantic-browser.js` | Playwright semantic shared browser helper implementation |
 | `pixiv-ugoira-mp4-processor.js` | Pixiv Ugoira 動圖轉 MP4 |
 
 ### 用戶 API Key

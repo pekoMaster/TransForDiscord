@@ -17,7 +17,7 @@ const path = require('path');
 
 let LightpandaClient = null;
 try {
-    LightpandaClient = require('../../utils/lightpanda-client');
+    LightpandaClient = require('../../src/shared/browser/lightpanda-client');
 } catch (e) {
     LightpandaClient = null;
 }

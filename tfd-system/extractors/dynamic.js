@@ -9,7 +9,7 @@
  * - 其他 SPA (Single Page Application)
  */
 
-const PlaywrightSemanticBrowser = require('../../utils/playwright-semantic-browser');
+const PlaywrightSemanticBrowser = require('../../src/shared/browser/playwright-semantic-browser');
 const path = require('path');
 const tfd = require('../../utils/tfd-logger');
 
