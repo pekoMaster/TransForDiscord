@@ -271,6 +271,7 @@ MessageCreate
 | `blacklist-list-presenter.js` | `/pe blacklist list` Embed 分頁呈現與按鈕 collector |
 | `blacklist-result-decorator.js` | 黑名單 Level 1/2 顯示套用，支援傳統 embed 與 V2 Container |
 | `abuse-detector.js` | URL abuse detection and auto-exclusion helper，`utils/abuse-detector.js` 保留 adapter |
+| `guild-blacklist-manager.js` | SQLite-backed guild blacklist CRUD and reports helper，`utils/guild-blacklist-manager.js` 保留 adapter |
 | `normalize-author.js` | 黑名單比對用作者正規化，支援 plain embed 與 Discord EmbedBuilder `data` 結構；舊 `utils/normalize-author.js` 僅保留 adapter |
 
 ### 正規表達式 (`tfd-system/regex/`)
@@ -320,6 +321,7 @@ MessageCreate
 |------|------|
 | `rate-limiter.js` | 舊路徑 adapter，轉接至 `src/shared/rate-limit/rate-limiter.js` |
 | `abuse-detector.js` | 舊路徑 adapter，轉接至 `src/features/moderation/abuse-detector.js` |
+| `guild-blacklist-manager.js` | 舊路徑 adapter，轉接至 `src/features/moderation/guild-blacklist-manager.js` |
 | `blacklist-manager.js` | Removed legacy global JSON blacklist manager; active runtime uses `guild-blacklist-manager.js` |
 | `crypto-helper.js` | 舊路徑 adapter，轉接至 `src/shared/crypto/crypto-helper.js` |
 | `normalize-author.js` | 舊路徑 adapter，轉接至 `src/features/moderation/normalize-author.js` |
