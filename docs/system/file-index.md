@@ -82,14 +82,14 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `content-translation-interactions.js` | 內容翻譯按鈕互動（Twitter/Facebook 等） |
+| `content-translation-interactions.js` | 舊路徑 adapter，轉接至 `src/features/translation/cache/content-cache.js` |
 | `pixiv-reload-interactions.js` | Pixiv 重新載入按鈕（切換 Proxy） |
 | `spoiler-button-interactions.js` | 通用防爆雷按鈕 + Modal（V2 Components 版） |
-| `twitter-all-interactions.js` | Twitter 全文展開/收起按鈕 |
-| `twitter-expand-interactions.js` | Twitter 單則展開/收起按鈕 |
+| `twitter-all-interactions.js` | 舊路徑 adapter，轉接至 `src/features/twitter/interactions/toggle-all.js` |
+| `twitter-expand-interactions.js` | 舊路徑 adapter，轉接至 `src/features/twitter/interactions/expand.js` |
 | `twitter-pagination-interactions.js` | Twitter 多圖分頁按鈕 |
 | `twitter-quote-interactions.js` | Twitter 引用/回覆展開按鈕 |
-| `twitter-reload-interactions.js` | Twitter 重新載入按鈕（V1 重抓） |
+| `twitter-reload-interactions.js` | 舊路徑 adapter，轉接至 `src/features/twitter/interactions/reload.js` |
 | `twitter-translate-interactions.js` | Twitter AI 翻譯按鈕切換 |
 | `twitter-v2-container-builder.js` | Twitter V2 Container 建構器（Discord Components V2） |
 | `twitter-v2-interactions.js` | Twitter V2 Container 互動（翻譯/展開/引用/防爆雷） |
