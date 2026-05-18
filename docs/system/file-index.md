@@ -119,10 +119,10 @@ MessageCreate
 | `cts.js` | Legacy adapter to `src/features/sites/news/cts-extractor.js` |
 | `dynamic.js` | 動態通用擷取器（fallback） |
 | `facebook.js` | Facebook — Puppeteer 無頭抓取 |
-| `facebook-mbasic.js` | Facebook mbasic 版（輕量 fallback） |
+| `facebook-mbasic.js` | 舊路徑 adapter，轉接至 `src/features/sites/facebook/strategies/mbasic.js` |
 | `facebook-smart.js` | Facebook 智慧選擇器 |
-| `facebook-with-login.js` | Facebook 登入版抓取 |
-| `facebookez.js` | Facebook/Instagram — 透過 facebed.com / EmbedEZ |
+| `facebook-with-login.js` | 舊路徑 adapter，轉接至 `src/features/sites/facebook/strategies/with-login.js` |
+| `facebookez.js` | 舊路徑 adapter，轉接至 `src/features/sites/facebook/strategies/facebookez.js` |
 | `instagram.js` | Legacy adapter to `src/features/sites/instagram/instagram-extractor.js` |
 | `hololive-shop.js` | Legacy adapter to `src/features/sites/shop/hololive-shop-extractor.js` |
 | `line-today.js` | Legacy adapter to `src/features/sites/news/line-today-extractor.js` |
