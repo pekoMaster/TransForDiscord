@@ -21,30 +21,7 @@ const patterns = {
         story: /https?:\/\/(?:www\.)?instagram\.com\/stories\/([A-Za-z0-9._-]+)\/(\d+)/i
     },
 
-    facebook: {
-        // 修正：支援包含任意字符的貼文 URL (包括中文、emoji等)
-        // 格式：facebook.com/{用戶名}/posts/{任意內容}/{貼文ID}/
-        post: /https?:\/\/(?:www\.|m\.)?facebook\.com\/[^\/]+\/posts\/[^\/]+\/(\d+)/i,
-        // 簡單格式：facebook.com/{用戶名}/posts/{貼文ID}
-        postSimple: /https?:\/\/(?:www\.|m\.)?facebook\.com\/[^\/]+\/posts\/([A-Za-z0-9_-]+)(?:\/)?$/i,
-        video: /https?:\/\/(?:www\.|m\.)?facebook\.com\/watch\/\?v=(\d+)/i,
-        watch: /https?:\/\/(?:www\.|m\.)?facebook\.com\/watch\/\?v=(\d+)/i,
-        reel: /https?:\/\/(?:www\.|m\.)?facebook\.com\/reel\/(\d+)/i,
-        photo: /https?:\/\/(?:www\.|m\.)?facebook\.com\/photo\.php\?fbid=(\d+)/i,
-        photoNew: /https?:\/\/(?:www\.|m\.)?facebook\.com\/photo\?fbid=([A-Za-z0-9_-]+)/i,
-        story: /https?:\/\/(?:www\.|m\.)?facebook\.com\/story\.php\?story_fbid=([A-Za-z0-9_-]+)/i,
-        share: /https?:\/\/(?:www\.|m\.)?facebook\.com\/share\/p\/([A-Za-z0-9_-]+)/i,
-        shareVideo: /https?:\/\/(?:www\.|m\.)?facebook\.com\/share\/v\/([A-Za-z0-9_-]+)/i,
-        shareR: /https?:\/\/(?:www\.|m\.)?facebook\.com\/share\/r\/([A-Za-z0-9_-]+)/i,
-        shareGeneric: /https?:\/\/(?:www\.|m\.)?facebook\.com\/share\/([A-Za-z0-9_-]+)/i,
-        // 修正：支援多種社團 URL 格式
-        groupsPost: /https?:\/\/(?:www\.|m\.)?facebook\.com\/groups\/([A-Za-z0-9_-]+)\/posts\/([A-Za-z0-9_-]+)/i,
-        groupsPermalink: /https?:\/\/(?:www\.|m\.)?facebook\.com\/groups\/([A-Za-z0-9_-]+)\/permalink\/(\d+)/i,
-        groups: /https?:\/\/(?:www\.|m\.)?facebook\.com\/groups\/([A-Za-z0-9_-]+)(?:\/)?(?:\?([^#\s]*))?/i,
-        generic: /https?:\/\/(?:www\.|m\.)?facebook\.com\/(.+)/i
-    },
-
-    // tiktok, plurk, bluesky: 已移除 (2026-04-12) - 無對應 extractor，匹配後會報錯
+    // tiktok, plurk, bluesky: 已移除 - 無對應 extractor，避免誤判
 
     // 社群網站
     ptt: {

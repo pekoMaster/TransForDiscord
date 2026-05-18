@@ -526,64 +526,6 @@ class TFDMessageHandler {
     }
 
     /**
-     * 發送多圖片 Facebook 回應 (多嵌入式訊息方式)
-     * @param {Object} message
-     * @param {Object} result
-     */
-    async sendFacebookWithMultipleEmbeds(message, result) {
-        try {
-            // 🔥 最多顯示 4 張圖片
-            const totalImages = result.multipleImages.length;
-            const imagesToShow = result.multipleImages.slice(0, 4);
-
-            // 準備多個嵌入式訊息
-            const embeds = [];
-            const originalURL = result.data.facebedURL || result.data.originalURL;
-
-            // 🔥 第一個嵌入式訊息包含完整內容但不含圖片
-            const mainEmbed = result.embed;
-            mainEmbed.setURL(originalURL);
-            // 移除嵌入圖片（如果有的話）
-            mainEmbed.setImage(null);
-
-            // 🔥 添加圖片統計資訊
-            mainEmbed.addFields({
-                name: '🖼️ 圖片資訊',
-                value: `顯示 ${imagesToShow.length} 張圖片${totalImages > 4 ? ` (共 ${totalImages} 張，請至原網址觀看)` : ''}`,
-                inline: false
-            });
-
-            embeds.push(mainEmbed);
-
-            // 🔥 為每張圖片創建單獨的嵌入式訊息（只顯示前 4 張）
-            for (let i = 0; i < imagesToShow.length; i++) {
-                const imageUrl = imagesToShow[i];
-                const imageEmbed = new EmbedBuilder()
-                    .setURL(originalURL)
-                    .setImage(imageUrl);
-                embeds.push(imageEmbed);
-            }
-
-            // 🌐 使用 Webhook 發送多個嵌入式訊息
-            await this.sendViaWebhook(message, {
-                embeds: embeds
-            });
-
-            this.log(`Facebook 多嵌入式訊息發送成功 (${embeds.length} 個嵌入式訊息)`);
-
-        } catch (error) {
-            this.log(`發送 Facebook 多嵌入式訊息失敗: ${error.message}`);
-            // 回退到一般回應
-            await this.messageSender(
-                message,
-                this.getSiteIcon(result.siteName),
-                result.embed,
-                'Peko Embed'
-            );
-        }
-    }
-
-    /**
      * 發送帶翻頁按鈕的 Pixiv 作品
      * @param {Object} message
      * @param {Object} result
@@ -1537,11 +1479,6 @@ class TFDMessageHandler {
                             } else if (result.siteName === 'threads' && result.multipleImages) {
                                 // 發送多圖片的 Threads 回應（多嵌入式訊息 gallery）
                                 await this.sendThreadsWithMultipleEmbeds(message, result);
-                                await this.embedSuppresser(message);
-                            } else if (result.siteName === 'facebook' && result.multipleImages) {
-                                // 發送多圖片的 Facebook 回應 (≤4張圖，使用多嵌入式訊息)
-                                await this.sendFacebookWithMultipleEmbeds(message, result);
-                                // 立即抑制原始預覽
                                 await this.embedSuppresser(message);
                             } else if ((result.siteName === 'ptt' || result.siteName === 'pttweb') && message._pttSpoilerMode) {
                                 // 🔒 PTT 防爆雷模式：內文和圖片防爆雷，標題不變

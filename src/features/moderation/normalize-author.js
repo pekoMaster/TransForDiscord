@@ -95,14 +95,6 @@ const normalizers = {
             return { author: authorName.replace(/^@/, ''), uid: null };
         }
         return {};
-    },
-
-    facebook(result) {
-        const authorName = getEmbedAuthorName(result.embed);
-        if (authorName) {
-            return { author: authorName, uid: null };
-        }
-        return {};
     }
 };
 

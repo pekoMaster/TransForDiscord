@@ -64,9 +64,8 @@ class URLMatcher {
      */
     cleanURLParameters(url) {
         try {
-            // 特殊處理：某些網站需要保留完整 URL（如 Facebook）
+            // 特殊處理：某些網站需要保留完整 URL
             const keepFullUrl = [
-                'facebook.com',
                 'bahamut.com',
                 'mobile01.com',
                 'pornhub.com'  // Pornhub 使用查詢參數 (viewkey)
@@ -138,8 +137,8 @@ class URLMatcher {
         // 遍歷所有模式
         for (const [siteName, sitePatterns] of Object.entries(this.patterns)) {
             for (const [patternName, pattern] of Object.entries(sitePatterns)) {
-                // 對於某些網站（如 Facebook、Bahamut、Mobile01、Pornhub），需要保留查詢參數進行匹配
-                const urlToMatch = ((siteName === 'facebook' || siteName === 'bahamut' || siteName === 'mobile01' || siteName === 'pornhub') && url.includes('?')) ? url : cleanURL;
+                // 對於某些網站（如 Bahamut、Mobile01、Pornhub），需要保留查詢參數進行匹配
+                const urlToMatch = ((siteName === 'bahamut' || siteName === 'mobile01' || siteName === 'pornhub') && url.includes('?')) ? url : cleanURL;
                 const match = urlToMatch.match(pattern);
                 if (match) {
                     return {
@@ -208,21 +207,6 @@ class URLMatcher {
                 live: (m) => ({ roomId: m[1] }),
                 shortUrl: (m) => ({ shortCode: m[1] }),
                 mobileShortUrl: (m) => ({ bvid: m[1] })
-            },
-            facebook: {
-                post: (m) => ({ postId: m[1] }),
-                video: (m) => ({ videoId: m[1] }),
-                watch: (m) => ({ videoId: m[1] }),
-                reel: (m) => ({ reelId: m[1] }),
-                photo: (m) => ({ photoId: m[1] }),
-                photoNew: (m) => ({ photoId: m[1] }),
-                share: (m) => ({ shareId: m[1] }),
-                shareVideo: (m) => ({ shareVideoId: m[1] }),
-                shareR: (m) => ({ shareRId: m[1] }),
-                groupsPost: (m) => ({ groupId: m[1], postId: m[2] }),
-                groupsPermalink: (m) => ({ groupId: m[1], permalinkId: m[2] }),
-                groups: (m) => ({ groupId: m[1], query: m[2] || null }),
-                generic: (m) => ({ path: m[1] })
             },
             pchome: {
                 product: (m) => ({ productId: m[1] }),

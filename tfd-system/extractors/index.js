@@ -5,7 +5,6 @@
 
 const TwitterExtractor = require('./twitter-v2');
 const InstagramExtractor = require('./instagram');
-// Facebook 系列已移除（需 puppeteer/playwright，VPS 無法運行）
 const PTTExtractor = require('./ptt');
 const BahamutExtractor = require('./bahamut');
 const PixivExtractor = require('./pixiv');

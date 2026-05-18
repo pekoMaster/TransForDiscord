@@ -6,8 +6,7 @@ const PLATFORM_PATTERNS = [
     ['youtu.be', 'youtube'],
     ['instagram.com', 'instagram'],
     ['threads.net', 'threads'],
-    ['ptt.cc', 'ptt'],
-    ['facebook.com', 'facebook']
+    ['ptt.cc', 'ptt']
 ];
 
 function resolveAuthorId(message) {

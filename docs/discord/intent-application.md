@@ -9,11 +9,11 @@
 
 **英文（建議貼到表單）：**
 
-> TFD (TransForDiscord) is a URL preview bot for Discord. When a user posts a link from supported platforms — Twitter/X, Pixiv, PTT, Threads, Facebook, etc. — TFD detects the URL inside message content and replaces the default Discord embed with a richer preview that supports multi-image pagination, AI translation, spoiler buttons, and webhook-based delivery (so the preview appears posted by the original user).
+> TFD (TransForDiscord) is a URL preview bot for Discord. When a user posts a link from supported platforms — Twitter/X, Pixiv, PTT, Threads, etc. — TFD detects the URL inside message content and replaces the default Discord embed with a richer preview that supports multi-image pagination, AI translation, spoiler buttons, and webhook-based delivery (so the preview appears posted by the original user).
 
 **中文：**
 
-TFD 是 Discord 上的 URL 預覽機器人。當使用者貼出 Twitter/X、Pixiv、PTT、Threads、Facebook 等支援平台的連結時，TFD 會偵測訊息內容中的 URL，並用更豐富的預覽（含多圖分頁、AI 翻譯、防爆雷按鈕、以原作者身份發送等）取代 Discord 預設的簡單 embed。
+TFD 是 Discord 上的 URL 預覽機器人。當使用者貼出 Twitter/X、Pixiv、PTT、Threads 等支援平台的連結時，TFD 會偵測訊息內容中的 URL，並用更豐富的預覽（含多圖分頁、AI 翻譯、防爆雷按鈕、以原作者身份發送等）取代 Discord 預設的簡單 embed。
 
 ---
 

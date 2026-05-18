@@ -29,15 +29,5 @@
   "rateLimit": {
     "requestsPerMinute": 30,
     "requestsPerUser": 5
-  },
-  "facebookPreview": {
-    "enabled": true,
-    "preferFullText": true,
-    "allowBrowserFallback": true,
-    "enableLegacyFallbacks": true,
-    "enableGoogleScriptFallback": true,
-    "requestTimeoutMs": 8000,
-    "maxContentLength": 280,
-    "debugLog": false
   }
 }

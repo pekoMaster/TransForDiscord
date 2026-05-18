@@ -118,11 +118,6 @@ MessageCreate
 | `bilibili.js` | Legacy adapter to `src/features/sites/video/bilibili-extractor.js` |
 | `cts.js` | Legacy adapter to `src/features/sites/news/cts-extractor.js` |
 | `dynamic.js` | 舊路徑 adapter，轉接至 `src/core/extraction/dynamic-extractor.js` |
-| `facebook.js` | 已關閉的 Facebook 殘留 extractor，待清除 |
-| `facebook-mbasic.js` | 已關閉的 Facebook mbasic adapter，待清除 |
-| `facebook-smart.js` | 已關閉的 Facebook strategy router，待清除 |
-| `facebook-with-login.js` | 已關閉的 Facebook login adapter，待清除 |
-| `facebookez.js` | 已關閉的 FacebookEZ adapter，待清除 |
 | `instagram.js` | Legacy adapter to `src/features/sites/instagram/instagram-extractor.js` |
 | `hololive-shop.js` | Legacy adapter to `src/features/sites/shop/hololive-shop-extractor.js` |
 | `line-today.js` | Legacy adapter to `src/features/sites/news/line-today-extractor.js` |

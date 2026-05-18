@@ -9,7 +9,7 @@ class URLConverterLogger {
     static PLATFORM_LABELS = {
         'twitter': 'X', 'x': 'X',
         'pixiv': 'Pixiv', 'bilibili': 'Bilibili', 'instagram': 'IG',
-        'youtube': 'YT', 'facebook': 'FB', 'iwara': 'Iwara', 'ptt': 'PTT',
+        'youtube': 'YT', 'iwara': 'Iwara', 'ptt': 'PTT',
         'threads': 'Threads', 'bahamut': 'Bahamut', 'bahamut-gnn': 'GNN',
         'pornhub': 'PH', 'nikke': 'Nikke', '4gamers': '4Gamers',
         'cts': 'CTS', 'udn': 'UDN', 'xfastest': 'XFastest',

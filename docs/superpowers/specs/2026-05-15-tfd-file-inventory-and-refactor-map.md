@@ -258,14 +258,14 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `tfd-system/extractors/pixiv-image-attachment-optimizer.js` | Legacy adapter for Pixiv image attachment optimizer. | adapter | pixiv/media | `src/features/pixiv/media/image-attachment-optimizer.js` | done-adapter | Preserves message-handler import path. |
 | `tfd-system/extractors/ptt.js` | PTT article extractor, cache integration, long text/pagination helpers. | extractor | ptt | `src/features/ptt/extractors/ptt-extractor.js` | split | Large; article parsing/rendering/cache should separate. |
 | `tfd-system/extractors/threads.js` | Threads extractor with OG/browser fallback and V2 components. | extractor | sites/threads | `src/features/sites/threads/threads-extractor.js` | split | Browser fallback could use shared browser service. |
-| `tfd-system/extractors/facebook.js` | Disabled Facebook extractor with Puppeteer/Playwright fallbacks. | disabled | sites/facebook | n/a | remove-pending | Facebook support is closed; remove or archive in focused cleanup. |
-| `tfd-system/extractors/facebook-smart.js` | Disabled Facebook strategy router across normal/mbasic/login/browser. | disabled | sites/facebook | n/a | remove-pending | Facebook support is closed; remove or archive in focused cleanup. |
-| `src/features/sites/facebook/strategies/mbasic.js` | Disabled Facebook mbasic fallback extractor. | disabled | sites/facebook | n/a | remove-pending | Facebook support is closed; remove or archive in focused cleanup. |
-| `src/features/sites/facebook/strategies/with-login.js` | Disabled Facebook logged-in browser extractor. | disabled | sites/facebook | n/a | remove-pending | Facebook support is closed; remove or archive in focused cleanup. |
-| `src/features/sites/facebook/strategies/facebookez.js` | Disabled FacebookEZ/fx style extractor. | disabled | sites/facebook | n/a | remove-pending | Facebook support is closed; remove or archive in focused cleanup. |
-| `tfd-system/extractors/facebook-mbasic.js` | Disabled legacy adapter for Facebook mbasic fallback extractor. | disabled-adapter | sites/facebook | n/a | remove-pending | Facebook support is closed; remove or archive in focused cleanup. |
-| `tfd-system/extractors/facebook-with-login.js` | Disabled legacy adapter for Facebook logged-in browser extractor. | disabled-adapter | sites/facebook | n/a | remove-pending | Facebook support is closed; remove or archive in focused cleanup. |
-| `tfd-system/extractors/facebookez.js` | Disabled legacy adapter for FacebookEZ/fx style extractor. | disabled-adapter | sites/facebook | n/a | remove-pending | Facebook support is closed; remove or archive in focused cleanup. |
+| `tfd-system/extractors/facebook.js` | Removed disabled Facebook extractor with Puppeteer/Playwright fallbacks. | removed | sites/facebook | n/a | done-removed | Facebook support is closed. |
+| `tfd-system/extractors/facebook-smart.js` | Removed disabled Facebook strategy router across normal/mbasic/login/browser. | removed | sites/facebook | n/a | done-removed | Facebook support is closed. |
+| `src/features/sites/facebook/strategies/mbasic.js` | Removed disabled Facebook mbasic fallback extractor. | removed | sites/facebook | n/a | done-removed | Facebook support is closed. |
+| `src/features/sites/facebook/strategies/with-login.js` | Removed disabled Facebook logged-in browser extractor. | removed | sites/facebook | n/a | done-removed | Facebook support is closed. |
+| `src/features/sites/facebook/strategies/facebookez.js` | Removed disabled FacebookEZ/fx style extractor. | removed | sites/facebook | n/a | done-removed | Facebook support is closed. |
+| `tfd-system/extractors/facebook-mbasic.js` | Removed disabled legacy adapter for Facebook mbasic fallback extractor. | removed | sites/facebook | n/a | done-removed | Facebook support is closed. |
+| `tfd-system/extractors/facebook-with-login.js` | Removed disabled legacy adapter for Facebook logged-in browser extractor. | removed | sites/facebook | n/a | done-removed | Facebook support is closed. |
+| `tfd-system/extractors/facebookez.js` | Removed disabled legacy adapter for FacebookEZ/fx style extractor. | removed | sites/facebook | n/a | done-removed | Facebook support is closed. |
 | `tfd-system/extractors/instagram.js` | Legacy adapter for Instagram extractor. | adapter | sites/instagram | `src/features/sites/instagram/instagram-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
 | `src/features/sites/instagram/instagram-extractor.js` | Instagram extractor. | extractor | sites/instagram | `src/features/sites/instagram/instagram-extractor.js` | keep | Canonical site extractor implementation. |
 | `tfd-system/extractors/bahamut.js` | Legacy adapter for Bahamut extractor. | adapter | sites/bahamut | `src/features/sites/bahamut/bahamut-extractor.js` | done-adapter | Keeps extractor manager old-path import stable. |
@@ -555,7 +555,6 @@ Target:
 
 ```txt
 src/features/sites/
-  facebook/
   instagram/
   threads/
   news/
