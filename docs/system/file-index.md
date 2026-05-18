@@ -131,15 +131,15 @@ MessageCreate
 | `nikke.js` | Legacy adapter to `src/features/sites/game/nikke-extractor.js` |
 | `pchome.js` | Legacy adapter to `src/features/sites/shop/pchome-extractor.js` |
 | `pixiv.js` | Pixiv 作品 — 多圖分頁、Ugoira 動圖 |
-| `pixiv-image-attachment-optimizer.js` | Pixiv 圖片附件優化器 |
+| `pixiv-image-attachment-optimizer.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/media/image-attachment-optimizer.js` |
 | `pornhub.js` | Legacy adapter to `src/features/sites/adult/pornhub-extractor.js` |
 | `ptt.js` | PTT 文章 — 多圖分頁快取 |
 | `storm.js` | Legacy adapter to `src/features/sites/news/storm-extractor.js` |
 | `threads.js` | Threads — fixthreads.seria.moe OG meta + V2 Container |
 | `twitter-legacy.js` | Twitter/X — V1 傳統 Embed 版 |
 | `twitter-v2.js` | Twitter/X — V2 Components 版 ⭐ |
-| `twitter-image-attachment-optimizer.js` | Twitter 圖片附件優化器 |
-| `twitter-video-attachment-optimizer.js` | Twitter 影片 URL 轉附件 |
+| `twitter-image-attachment-optimizer.js` | 舊路徑 adapter，轉接至 `src/features/twitter/media/image-attachment-optimizer.js` |
+| `twitter-video-attachment-optimizer.js` | 舊路徑 adapter，轉接至 `src/features/twitter/media/video-attachment-optimizer.js` |
 | `udn.js` | Legacy adapter to `src/features/sites/news/udn-extractor.js` |
 | `xfastest.js` | Legacy adapter to `src/features/sites/forum/xfastest-extractor.js` |
 | `youtube.js` | Legacy adapter to `src/features/sites/video/youtube-extractor.js` |
