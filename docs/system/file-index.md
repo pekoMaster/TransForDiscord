@@ -348,17 +348,26 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `translation/translation-service.js` | 統一翻譯服務入口（Classic Twitter / Twitter V2 共用 provider、key、prompt、錯誤格式） |
+| `translation/service/translation-service.js` | 統一翻譯服務入口（Classic Twitter / Twitter V2 共用 provider、key、prompt、錯誤格式） |
 | `translation/cache/shared-translation-cache.js` | Provider-aware cross-channel translation cache implementation |
-| `translation/text-bundle.js` | 主推文 / 引用 / 回覆文字 bundle 組合與拆分 |
-| `translation/key-resolver.js` | 翻譯 provider 選擇與 API Key 解析 |
-| `translation/providers/` | Gemini / OpenRouter / OpenAI / Claude provider adapters |
+| `translation/errors.js` | Normalized translation error helper |
+| `translation/keys/key-resolver.js` | Provider selection and API key resolution helper |
+| `translation/text/glossary.js` | Translation glossary preprocessing/postprocessing helper |
+| `translation/text/prompt-builder.js` | VTuber-focused translation prompt builder |
+| `translation/text/text-bundle.js` | Main/quote/reply text bundle helper |
+| `translation/providers/` | Gemini / OpenRouter / OpenAI / Claude / Google provider adapters |
+| `translation/providers/provider-registry.js` | Translation provider registry |
+| `translation/providers/gemini-provider.js` | Gemini provider implementation |
+| `translation/providers/openrouter-provider.js` | OpenRouter provider implementation |
+| `translation/providers/openai-provider.js` | OpenAI provider implementation |
+| `translation/providers/claude-provider.js` | Claude provider implementation |
+| `translation/providers/google-translate-provider.js` | Google Translate + OpenCC provider implementation |
 | `ai-translator.js` | Legacy adapter，保留舊 exports 並轉接 translation-service |
 | `deepl-translator.js` | DeepL 翻譯器 |
 | `openrouter-translator.js` | Removed unused legacy adapter; active provider code remains under `src/features/translation/legacy/` and `utils/translation/providers/` |
-| `translator.js` | Google Translate API 翻譯器 |
+| `translator.js` | Legacy adapter，轉接至 `src/features/translation/providers/google-translate-provider.js` |
 | `shared-translation-cache.js` | Legacy adapter，轉接至 `src/features/translation/cache/shared-translation-cache.js` |
-| `translation-glossary.js` | 翻譯術語表（DeepL 詞彙修正） |
+| `translation-glossary.js` | Legacy adapter，轉接至 `src/features/translation/text/glossary.js` |
 
 ### 快取系統
 
