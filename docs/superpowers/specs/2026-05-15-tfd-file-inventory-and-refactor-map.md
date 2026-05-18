@@ -174,7 +174,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `commands/pe.js` | `/pe` command: API keys, model selection, log channel, owner, blacklist settings. | command | app/moderation/translation | `src/app/commands/pe-command.js` | split | Split API-key subcommands from guild/moderation settings later. |
 | `commands/tfd-context-actions.js` | Message context actions for delete/spoiler/report flows. | command | app/reports/spoilers | `src/app/commands/context-actions.js` | split | Contains command definition plus interaction-like behavior. |
 | `events/interactionCreate.js` | Central interaction router for commands, modals, buttons, selects. | event-router | app | `src/app/events/interaction-create.js` | split | Move prefix routing to feature routers. |
-| `events/pixiv-pagination-interactions.js` | Pixiv pagination buttons and memory cache. | interaction-handler | pixiv | `src/features/pixiv/interactions/pagination.js` | move | Should not live in `events/`. |
+| `src/features/pixiv/interactions/pagination.js` | Canonical Pixiv pagination buttons and memory cache. | interaction-handler | pixiv | `src/features/pixiv/interactions/pagination.js` | keep | Owns Pixiv pagination button behavior. |
+| `events/pixiv-pagination-interactions.js` | Legacy adapter for Pixiv pagination buttons. | adapter | pixiv | `src/features/pixiv/interactions/pagination.js` | done-adapter | Preserves interactionCreate old require path. |
 | `events/ptt-pagination-interactions.js` | PTT pagination, reload, expand/collapse and memory cache. | interaction-handler | ptt | `src/features/ptt/interactions/pagination.js` | split | Contains multiple PTT interaction types. |
 
 ## Inventory: Interaction Handlers
@@ -183,7 +184,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 |---|---|---|---|---|---|---|
 | `src/features/translation/cache/content-cache.js` | Canonical short-lived content text cache for translation buttons. | cache-store | translation/twitter | `src/features/translation/cache/content-cache.js` | keep | Used by Twitter classic/V2 translation flows. |
 | `handlers/content-translation-interactions.js` | Legacy adapter for content translation cache. | adapter | translation/twitter | `src/features/translation/cache/content-cache.js` | done-adapter | Old name suggests handler but now only preserves require compatibility. |
-| `handlers/pixiv-reload-interactions.js` | Pixiv reload interaction and webhook edit. | interaction-handler | pixiv | `src/features/pixiv/interactions/reload.js` | move | Depends on Pixiv extractor/cache/webhook. |
+| `src/features/pixiv/interactions/reload.js` | Canonical Pixiv reload interaction and webhook edit. | interaction-handler | pixiv | `src/features/pixiv/interactions/reload.js` | keep | Depends on Pixiv extractor/cache/webhook. |
+| `handlers/pixiv-reload-interactions.js` | Legacy adapter for Pixiv reload interaction. | adapter | pixiv | `src/features/pixiv/interactions/reload.js` | done-adapter | Preserves interactionCreate old require path. |
 | `handlers/report-button-interactions.js` | Report button tree: spoiler, recall, blacklist, admin approval, modals/selects. | interaction-handler | reports/moderation | `src/features/reports/interactions/report-router.js` | split | Large file; split router/actions/modals/admin. |
 | `handlers/spoiler-button-interactions.js` | Anti-spoiler transformation and modal handling for normal messages. | interaction-handler | spoilers | `src/features/spoilers/interactions/spoiler-buttons.js` | split | Also contains spoiler rendering helpers. |
 | `src/features/twitter/interactions/toggle-all.js` | Canonical Twitter expand/collapse all for quote/reply/full text. | interaction-handler | twitter | `src/features/twitter/interactions/toggle-all.js` | keep | Depends on translation/content caches. |

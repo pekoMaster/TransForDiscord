@@ -70,7 +70,7 @@ MessageCreate
 | 檔案 | 功能 |
 |------|------|
 | `interactionCreate.js` | **互動總路由** — 所有按鈕/斜線指令/Modal 進入點 |
-| `pixiv-pagination-interactions.js` | Pixiv 多圖翻頁按鈕處理（含記憶體快取） |
+| `pixiv-pagination-interactions.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/interactions/pagination.js` |
 | `ptt-pagination-interactions.js` | PTT 多圖翻頁按鈕處理 |
 
 ---
@@ -83,7 +83,7 @@ MessageCreate
 | 檔案 | 功能 |
 |------|------|
 | `content-translation-interactions.js` | 舊路徑 adapter，轉接至 `src/features/translation/cache/content-cache.js` |
-| `pixiv-reload-interactions.js` | Pixiv 重新載入按鈕（切換 Proxy） |
+| `pixiv-reload-interactions.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/interactions/reload.js` |
 | `spoiler-button-interactions.js` | 通用防爆雷按鈕 + Modal（V2 Components 版） |
 | `twitter-all-interactions.js` | 舊路徑 adapter，轉接至 `src/features/twitter/interactions/toggle-all.js` |
 | `twitter-expand-interactions.js` | 舊路徑 adapter，轉接至 `src/features/twitter/interactions/expand.js` |
