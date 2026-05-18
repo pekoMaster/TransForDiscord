@@ -152,7 +152,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `CLAUDE.md` | Developer guide and working notes. | doc | docs | `docs/CLAUDE.md` or root | keep | Root visibility is useful; update after restructure. |
 | `Dockerfile` | Container build entry. | config | deploy | root | keep | Deployment-facing root file. |
 | `ecosystem.config.js` | PM2 process config. | config | deploy | root | keep | Deployment-facing root file. |
-| `index.js` | Main bot entrypoint, Discord client, startup GC, Express stats endpoint. | entrypoint | app | `src/app/bootstrap/bot.js` | move + legacy-adapter | Keep root `index.js` as launcher. |
+| `src/app/bootstrap/bot.js` | Main bot bootstrap, Discord client, startup GC, Express stats endpoint. | entrypoint | app | `src/app/bootstrap/bot.js` | keep | Canonical bot bootstrap implementation. |
+| `index.js` | Legacy package entry adapter for bot bootstrap. | adapter | app | `src/app/bootstrap/bot.js` | done-adapter | Keeps `package.json` main/start and PM2 entrypoints compatible. |
 | `package.json` | NPM scripts and dependencies. | config | repo | root | keep | Add future scripts for inventory/checks. |
 | `package-lock.json` | Dependency lockfile. | config | repo | root | keep | Do not hand-edit. |
 | `scripts/deploy-commands.js` | Canonical Discord slash/context command deployment script. | script | deploy/app | `scripts/deploy-commands.js` | keep | Do not run during refactor verification. |

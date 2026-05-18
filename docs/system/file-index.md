@@ -11,6 +11,7 @@
 ### Bot 啟動流程
 ```
 index.js
+  → src/app/bootstrap/bot.js
   ├── 初始化 Discord Client（Guilds, GuildMessages, MessageContent, GuildWebhooks）
   ├── 建立 TFDMessageHandler（tfd-system/core/message-handler-v2.js）
   ├── 綁定事件：
@@ -50,7 +51,8 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `index.js` | Bot 主程式入口，初始化所有系統 |
+| `index.js` | 舊路徑 adapter，轉接至 `src/app/bootstrap/bot.js` |
+| `src/app/bootstrap/bot.js` | Bot 主程式入口，初始化 Discord client、事件、Express stats API |
 | `deploy.js` | Discord 斜線指令部署 wrapper，保留 `node deploy.js` 並轉接至 `scripts/deploy-commands.js` |
 | `ecosystem.config.js` | PM2 部署配置（進程名 `transfordiscord`） |
 | `package.json` | 依賴與專案定義 |
