@@ -310,7 +310,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `src/shared/browser/playwright-semantic-browser.js` | Playwright semantic browser helper. | service | shared/browser | `src/shared/browser/playwright-semantic-browser.js` | keep | Shared browser helper implementation. |
 | `utils/pixiv-cache-manager.js` | Legacy adapter for Pixiv JSON cache manager. | adapter | pixiv | `src/features/pixiv/cache/pixiv-cache-manager.js` | done-adapter | Keeps reload and pagination imports stable. |
 | `src/features/pixiv/cache/pixiv-cache-manager.js` | Pixiv JSON cache manager. | cache-store | pixiv | `src/features/pixiv/cache/pixiv-cache-manager.js` | keep | Canonical Pixiv cache implementation; includes reload cache deletion API. |
-| `utils/pixiv-r18-cache-manager.js` | Pixiv R18 cache and attachment manager. | cache-store/service | pixiv | `src/features/pixiv/cache/r18-cache-manager.js` | move | Feature-owned. |
+| `utils/pixiv-r18-cache-manager.js` | Legacy adapter for Pixiv R18 cache and attachment manager. | adapter | pixiv | `src/features/pixiv/cache/r18-cache-manager.js` | done-adapter | Keeps message-handler R18 paths stable. |
+| `src/features/pixiv/cache/r18-cache-manager.js` | Pixiv R18 cache and attachment manager. | cache-store/service | pixiv | `src/features/pixiv/cache/r18-cache-manager.js` | keep | Canonical Pixiv R18 cache implementation. |
 | `utils/pixiv-ugoira-mp4-processor.js` | Pixiv ugoira to MP4 processing. | service | pixiv/media | `src/features/pixiv/media/ugoira-mp4-processor.js` | move | Feature-owned. |
 | `utils/ptt-cache-manager.js` | PTT article/image cache manager. | cache-store | ptt | `src/features/ptt/cache/ptt-cache-manager.js` | move | Feature-owned. |
 | `utils/twitter-v2-state-store.js` | Legacy adapter for Twitter V2 message state store. | adapter | twitter | `src/features/twitter/state/v2-state-store.js` | done-adapter | Runtime message pipeline keeps old import stable. |
