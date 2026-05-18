@@ -312,7 +312,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `utils/pixiv-r18-cache-manager.js` | Pixiv R18 cache and attachment manager. | cache-store/service | pixiv | `src/features/pixiv/cache/r18-cache-manager.js` | move | Feature-owned. |
 | `utils/pixiv-ugoira-mp4-processor.js` | Pixiv ugoira to MP4 processing. | service | pixiv/media | `src/features/pixiv/media/ugoira-mp4-processor.js` | move | Feature-owned. |
 | `utils/ptt-cache-manager.js` | PTT article/image cache manager. | cache-store | ptt | `src/features/ptt/cache/ptt-cache-manager.js` | move | Feature-owned. |
-| `utils/twitter-v2-state-store.js` | Runtime state store for Twitter V2 messages. | state-store | twitter | `src/features/twitter/state/v2-state-store.js` | move | Feature-owned. |
+| `utils/twitter-v2-state-store.js` | Legacy adapter for Twitter V2 message state store. | adapter | twitter | `src/features/twitter/state/v2-state-store.js` | done-adapter | Runtime message pipeline keeps old import stable. |
+| `src/features/twitter/state/v2-state-store.js` | Runtime state store for Twitter V2 messages. | state-store | twitter | `src/features/twitter/state/v2-state-store.js` | keep | Canonical Twitter V2 state store implementation. |
 | `utils/user-api-key-storage.js` | Encrypted user API keys and preferred provider in SQLite. | db-access/service | translation/identity | `src/features/translation/keys/user-api-key-storage.js` | move | Provider registry should be centralized. |
 | `utils/user-api-key-service.js` | Legacy API key service adapter. | adapter | translation/legacy | `src/features/translation/legacy/user-api-key-service-adapter.js` | legacy-adapter | Old path should re-export. |
 | `utils/ai-translator.js` | Legacy AI translator adapter to translation service. | adapter | translation/legacy | `src/features/translation/legacy/ai-translator-adapter.js` | legacy-adapter | Old path should re-export. |
