@@ -136,7 +136,7 @@ MessageCreate
 | `ptt.js` | PTT 文章 — 多圖分頁快取 |
 | `storm.js` | Legacy adapter to `src/features/sites/news/storm-extractor.js` |
 | `threads.js` | Threads — fixthreads.seria.moe OG meta + V2 Container |
-| `twitter-legacy.js` | Twitter/X — V1 傳統 Embed 版 |
+| `twitter-legacy.js` | 舊路徑 adapter，轉接至 `src/features/twitter/extractors/twitter-legacy-extractor.js` |
 | `twitter-v2.js` | Twitter/X — V2 Components 版 ⭐ |
 | `twitter-image-attachment-optimizer.js` | 舊路徑 adapter，轉接至 `src/features/twitter/media/image-attachment-optimizer.js` |
 | `twitter-video-attachment-optimizer.js` | 舊路徑 adapter，轉接至 `src/features/twitter/media/video-attachment-optimizer.js` |
