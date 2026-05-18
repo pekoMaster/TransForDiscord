@@ -328,12 +328,7 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `config-loader.js` | Config loader/accessor，集中讀取與 reload 目前的 `tfd-system/config/tfd-config.json` |
-
-### 設定資料 (`tfd-system/config/`)
-
-| 檔案 | 功能 |
-|------|------|
+| `config-loader.js` | Config loader/accessor，集中讀取與 reload `src/core/config/tfd-config.json` |
 | `pekoembed-config.json` | pekoembed 系統全域設定 |
 | `supported-sites.json` | 支援站台清單 |
 | `tfd-config.json` | TFD 系統設定資料；runtime 透過 `src/core/config/config-loader.js` 讀取 |

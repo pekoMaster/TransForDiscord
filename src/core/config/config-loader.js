@@ -1,11 +1,15 @@
 const path = require('path');
 
-function getProjectRoot() {
-    return path.join(__dirname, '..', '..', '..');
+function getTfdConfigPath() {
+    return path.join(__dirname, 'tfd-config.json');
 }
 
-function getTfdConfigPath() {
-    return path.join(getProjectRoot(), 'tfd-system', 'config', 'tfd-config.json');
+function getPekoembedConfigPath() {
+    return path.join(__dirname, 'pekoembed-config.json');
+}
+
+function getSupportedSitesConfigPath() {
+    return path.join(__dirname, 'supported-sites.json');
 }
 
 function loadJson(configPath) {
@@ -28,6 +32,8 @@ function reloadTfdConfig() {
 
 module.exports = {
     getTfdConfigPath,
+    getPekoembedConfigPath,
+    getSupportedSitesConfigPath,
     loadTfdConfig,
     reloadTfdConfig
 };

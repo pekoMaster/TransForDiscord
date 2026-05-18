@@ -84,7 +84,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 
 | 要做什麼 | 先讀 | 原因 |
 |----------|------|------|
-| 新增/改 extractor | `tfd-system/config/supported-sites.json` + `tfd-system/extractors/index.js` | 站台註冊表 + 載入邏輯 |
+| 新增/改 extractor | `src/core/config/supported-sites.json` + `tfd-system/extractors/index.js` | 站台註冊表 + 載入邏輯 |
 | 改 URL 匹配規則 | `tfd-system/regex/patterns.js` + `matcher.js` | 所有 regex 定義 |
 | 改互動（按鈕/Modal） | `events/interactionCreate.js` | prefix 路由表，確認不衝突 |
 | 改黑名單邏輯 | `utils/guild-blacklist-manager.js` → `db/index.js` → `src/shared/db/schema.sql` | Manager → DB API → Schema 三層 |

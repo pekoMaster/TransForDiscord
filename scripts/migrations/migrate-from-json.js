@@ -4,7 +4,7 @@
  * 從舊版 JSON 檔案遷移到新版 SQLite + 加密 API Key
  *
  * 來源：
- *   - tfd-system/config/tfd-config.json   → guild_settings, guild_blocked_channels, guild_excluded_users
+ *   - src/core/config/tfd-config.json     → guild_settings, guild_blocked_channels, guild_excluded_users
  *   - data/user-api-keys.json             → user_api_keys（加密）
  *
  * 注意：
@@ -24,9 +24,10 @@ const path = require('path');
 
 const db = require('../../db');
 const { encrypt } = require('../../src/shared/crypto/crypto-helper.js');
+const { getTfdConfigPath } = require('../../src/core/config/config-loader');
 
 const ROOT = path.join(__dirname, '..', '..');
-const CONFIG_PATH = path.join(ROOT, 'tfd-system', 'config', 'tfd-config.json');
+const CONFIG_PATH = getTfdConfigPath();
 const API_KEYS_PATH = path.join(ROOT, 'data', 'user-api-keys.json');
 const LEGACY_GLOBAL_GUILD = '__legacy_global__';
 
