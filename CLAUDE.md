@@ -62,7 +62,7 @@ ssh root@64.118.148.130 "cd /root/TransForDiscord && node deploy.js"
 
 SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 
-- **Schema 定義**：`db/schema.sql`
+- **Schema 定義**：`src/shared/db/schema.sql`
 - **API 層**：`db/index.js` — 所有外部存取必須透過此模組的 API 物件
 - **禁止**：直接 `db.getDB().prepare(...)` 寫 ad-hoc SQL，必須在 `db/index.js` 加 prepared statement
 
@@ -87,14 +87,14 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | 新增/改 extractor | `tfd-system/config/supported-sites.json` + `tfd-system/extractors/index.js` | 站台註冊表 + 載入邏輯 |
 | 改 URL 匹配規則 | `tfd-system/regex/patterns.js` + `matcher.js` | 所有 regex 定義 |
 | 改互動（按鈕/Modal） | `events/interactionCreate.js` | prefix 路由表，確認不衝突 |
-| 改黑名單邏輯 | `utils/guild-blacklist-manager.js` → `db/index.js` → `db/schema.sql` | Manager → DB API → Schema 三層 |
+| 改黑名單邏輯 | `utils/guild-blacklist-manager.js` → `db/index.js` → `src/shared/db/schema.sql` | Manager → DB API → Schema 三層 |
 | 改回報流程 | `handlers/report-button-interactions.js` | 完整的 button→modal→admin 鏈 |
 | 改翻譯功能 | `src/features/translation/` | 統一翻譯 domain；舊 `utils/*` 路徑為 adapter |
 | 改 Twitter/X | `src/features/twitter/` | Twitter domain；沒有發推功能；舊 `handlers/twitter-*`、`utils/twitter-v2-state-store.js`、`tfd-system/extractors/twitter-*` 路徑為 adapter |
 | 改 Twitter V2 互動 | `src/features/twitter/interactions/v2/` | `v2-router.js` 只做分派；翻譯/展開/重整/防爆雷在 v2 子模組 |
 | 改 Twitter V2 擷取 helper | `src/features/twitter/extractors/v2/` | `twitter-v2-extractor.js` 保留相容 method；純 helper 優先放在 v2 子模組 |
 | 改 webhook 行為 | `utils/webhook-manager.js` + `src/shared/discord/component-sanitizer.js` | Webhook 建立/快取/討論串邏輯；送出前 components 必須合法化 |
-| 改支援網域開關 | `src/features/link-support/` + `commands/pe.js` + `db/schema.sql` | `/pe linksup` per-guild domain on/off，domain registry → DB → command 三層 |
+| 改支援網域開關 | `src/features/link-support/` + `commands/pe.js` + `src/shared/db/schema.sql` | `/pe linksup` per-guild domain on/off，domain registry → DB → command 三層 |
 | 改 Discord 訊息元件 | `src/shared/discord/` | 按鈕附加、作者/URL/平台解析；舊 `utils/spoiler-button-helper.js`、`utils/embed-helpers.js` 為 adapter |
 
 ## 命名規則

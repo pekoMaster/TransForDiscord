@@ -426,7 +426,7 @@ MessageCreate
 | 檔案 | 功能 |
 |------|------|
 | `index.js` | SQLite 統一介面（better-sqlite3，WAL 模式）— rate_limits、abuse_log、url_stats、guild_settings、user_api_keys、guild_link_domains |
-| `schema.sql` | 資料庫 Schema 定義 |
+| `src/shared/db/schema.sql` | 資料庫 Schema canonical 定義，`db/index.js` 讀取此路徑 |
 
 ---
 

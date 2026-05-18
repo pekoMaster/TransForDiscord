@@ -205,7 +205,7 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | Current path | Purpose | Type | Domain | Proposed target | Action | Notes |
 |---|---|---|---|---|---|---|
 | `db/index.js` | SQLite connection, schema init, prepared statements and DB API. | db-access | shared/db | `src/shared/db/index.js` | split | Split schema init, API groups, migrations. |
-| `db/schema.sql` | SQLite schema. | db-access | shared/db | `src/shared/db/schema.sql` | move | Keep old path adapter difficult for SQL; update loader. |
+| `src/shared/db/schema.sql` | Canonical SQLite schema. | db-access | shared/db | `src/shared/db/schema.sql` | keep | Loaded by `db/index.js`; SQL file has no legacy adapter. |
 | `scripts/migrate-from-json.js` | Legacy wrapper for old JSON settings/API keys migration. | adapter | migration | `scripts/migrations/migrate-from-json.js` | done-adapter | Real script moved; old command still calls `main()`. |
 | `scripts/sync-blacklist-from-4.0.js` | Legacy wrapper for sibling `4.0` blacklist import. | adapter | migration/moderation | `scripts/migrations/sync-blacklist-from-4.0.js` | done-adapter | Real script moved; old command still calls `main()`. |
 | `scripts/translation-smoke.js` | Legacy wrapper for deterministic translation subsystem smoke tests. | adapter | translation/test | `scripts/smoke/translation-smoke.js` | done-adapter | Real smoke moved; old command still executes it. |

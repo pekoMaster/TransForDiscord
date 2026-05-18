@@ -14,7 +14,7 @@ const Database = require('better-sqlite3');
 const tlog = require('../utils/tfd-logger');
 
 const DB_PATH = path.join(__dirname, '..', 'data', 'tfd.db');
-const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
+const SCHEMA_PATH = path.join(__dirname, '..', 'src', 'shared', 'db', 'schema.sql');
 
 let db = null;
 const stmts = {};
