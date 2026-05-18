@@ -394,7 +394,7 @@ MessageCreate
 | 檔案 | 功能 |
 |------|------|
 | `user-api-key-service.js` | Legacy API Key service adapter，轉接 translation/key-resolver |
-| `user-api-key-storage.js` | 用戶 API Key 儲存層（SQLite + 加密） |
+| `user-api-key-storage.js` | Legacy adapter，轉接至 `src/features/translation/keys/user-api-key-storage.js` |
 
 ---
 
