@@ -32,7 +32,7 @@ index.js
   - `twitter_reload_*` → `handlers/twitter-reload-interactions.js`
   - `twitter_page_*` → `handlers/twitter-pagination-interactions.js`
   - `pixiv_*` → `events/pixiv-pagination-interactions.js`
-  - `ptt_*` → `events/ptt-pagination-interactions.js`
+  - `ptt_*` → `src/features/ptt/interactions/pagination.js`
 
 ### 訊息處理流程
 ```
@@ -73,7 +73,7 @@ MessageCreate
 |------|------|
 | `interactionCreate.js` | **互動總路由** — 所有按鈕/斜線指令/Modal 進入點 |
 | `pixiv-pagination-interactions.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/interactions/pagination.js` |
-| `ptt-pagination-interactions.js` | PTT 多圖翻頁按鈕處理 |
+| `ptt-pagination-interactions.js` | 舊路徑 adapter，轉接至 `src/features/ptt/interactions/pagination.js` |
 
 ---
 
@@ -284,6 +284,7 @@ MessageCreate
 | 檔案 | 作用 |
 |------|------|
 | `cache/ptt-cache-manager.js` | PTT article/image disk cache manager，`utils/ptt-cache-manager.js` 保留 adapter |
+| `interactions/pagination.js` | PTT pagination/reload/expand/collapse interaction handler，`events/ptt-pagination-interactions.js` 保留 adapter |
 
 ### URL 路由核心 (`src/core/routing/`)
 

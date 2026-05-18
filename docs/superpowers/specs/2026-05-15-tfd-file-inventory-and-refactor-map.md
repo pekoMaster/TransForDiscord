@@ -177,7 +177,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `events/interactionCreate.js` | Central interaction router for commands, modals, buttons, selects. | event-router | app | `src/app/events/interaction-create.js` | split | Move prefix routing to feature routers. |
 | `src/features/pixiv/interactions/pagination.js` | Canonical Pixiv pagination buttons and memory cache. | interaction-handler | pixiv | `src/features/pixiv/interactions/pagination.js` | keep | Owns Pixiv pagination button behavior. |
 | `events/pixiv-pagination-interactions.js` | Legacy adapter for Pixiv pagination buttons. | adapter | pixiv | `src/features/pixiv/interactions/pagination.js` | done-adapter | Preserves interactionCreate old require path. |
-| `events/ptt-pagination-interactions.js` | PTT pagination, reload, expand/collapse and memory cache. | interaction-handler | ptt | `src/features/ptt/interactions/pagination.js` | split | Contains multiple PTT interaction types. |
+| `src/features/ptt/interactions/pagination.js` | PTT pagination, reload, expand/collapse and memory cache. | interaction-handler | ptt | `src/features/ptt/interactions/pagination.js` | keep | Canonical PTT interaction handler. |
+| `events/ptt-pagination-interactions.js` | Legacy adapter for PTT pagination interactions. | adapter | ptt | `src/features/ptt/interactions/pagination.js` | done-adapter | Preserves old event path. |
 
 ## Inventory: Interaction Handlers
 

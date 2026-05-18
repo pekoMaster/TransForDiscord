@@ -149,7 +149,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | Button | `twitter_page_` | twitter-pagination-interactions |
 | Button | `pixiv_reload_` | pixiv-reload-interactions（必須在 pixiv_ 之前） |
 | Button | `pixiv_*` | pixiv-pagination-interactions |
-| Button | `ptt_*` | ptt-pagination-interactions |
+| Button | `ptt_*` | src/features/ptt/interactions/pagination |
 
 新增 customId prefix 時必須確認不與現有 prefix 衝突。
 

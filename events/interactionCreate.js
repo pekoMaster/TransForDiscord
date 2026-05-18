@@ -156,7 +156,7 @@ async function execute(interaction, client) {
 
         // ── PTT 分頁 ──
         if (customId.startsWith('ptt_')) {
-            const handler = require('./ptt-pagination-interactions.js');
+            const handler = require('../src/features/ptt/interactions/pagination.js');
             return await handler.execute(interaction);
         }
 
