@@ -218,8 +218,10 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `tfd-system/core/message-handler-v2.js` | Main message pipeline: URL handling, render/send/edit, feature branching. | service | core/message | `src/core/message/message-handler.js` | split | Highest-risk file; decompose last. |
 | `tfd-system/regex/matcher.js` | URL matcher class using patterns. | service | core/routing | `src/core/routing/url-matcher.js` | move | Clear responsibility. |
 | `tfd-system/regex/patterns.js` | URL regex patterns. | config | core/routing | `src/core/routing/url-patterns.js` | move | Could be generated from supported-sites metadata later. |
-| `tfd-system/render/html-video-renderer.js` | HTML video page renderer. | renderer | core/rendering | `src/core/rendering/html-video-renderer.js` | move | Shared by Twitter mixed media. |
-| `tfd-system/render/mixed-media-html-builder.js` | Mixed media HTML builder. | renderer | core/rendering | `src/core/rendering/mixed-media-html-builder.js` | move | Uses HTMLVideoRenderer. |
+| `src/core/rendering/html-video-renderer.js` | Canonical HTML video page renderer. | renderer | core/rendering | `src/core/rendering/html-video-renderer.js` | keep | Shared by Twitter mixed media. |
+| `src/core/rendering/mixed-media-html-builder.js` | Canonical mixed media HTML builder. | renderer | core/rendering | `src/core/rendering/mixed-media-html-builder.js` | keep | Uses HTMLVideoRenderer. |
+| `tfd-system/render/html-video-renderer.js` | Legacy adapter for HTML video page renderer. | adapter | core/rendering | `src/core/rendering/html-video-renderer.js` | done-adapter | Preserves old render import path. |
+| `tfd-system/render/mixed-media-html-builder.js` | Legacy adapter for mixed media HTML builder. | adapter | core/rendering | `src/core/rendering/mixed-media-html-builder.js` | done-adapter | Preserves old render import path. |
 | `tfd-system/utils/dom-parser.js` | Legacy adapter for Cheerio DOM extraction helper. | adapter | shared/html | `src/shared/html/dom-parser.js` | done-adapter | Runtime extractor imports moved to shared path. |
 | `tfd-system/utils/embed-builder.js` | Legacy adapter for generic Discord embed builder wrapper. | adapter | shared/discord | `src/shared/discord/embed-builder.js` | done-adapter | Runtime extractor imports moved to shared path. |
 | `tfd-system/utils/http-client.js` | Legacy adapter for Axios HTTP client with config defaults. | adapter | shared/http | `src/shared/http/http-client.js` | done-adapter | Runtime extractor and Twitter imports moved to shared path. |

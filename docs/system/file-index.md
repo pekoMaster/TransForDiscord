@@ -295,12 +295,19 @@ MessageCreate
 | `matcher.js` | URL 比對器 — 判斷 URL 屬於哪個站台 |
 | `patterns.js` | 正規表達式模式定義 |
 
-### 渲染器 (`tfd-system/render/`)
+### 渲染核心 (`src/core/rendering/`)
 
 | 檔案 | 功能 |
 |------|------|
-| `html-video-renderer.js` | HTML 影片渲染器（FxEmbed 技術嵌入式播放） |
-| `mixed-media-html-builder.js` | 混合媒體 HTML 建構器（影片+圖片組合頁面） |
+| `html-video-renderer.js` | HTML 影片渲染器 canonical 實作（FxEmbed 技術嵌入式播放） |
+| `mixed-media-html-builder.js` | 混合媒體 HTML 建構器 canonical 實作（影片+圖片組合頁面） |
+
+### 渲染器相容層 (`tfd-system/render/`)
+
+| 檔案 | 功能 |
+|------|------|
+| `html-video-renderer.js` | 舊路徑 adapter，轉接至 `src/core/rendering/html-video-renderer.js` |
+| `mixed-media-html-builder.js` | 舊路徑 adapter，轉接至 `src/core/rendering/mixed-media-html-builder.js` |
 
 ### 工具 (`tfd-system/utils/`)
 
