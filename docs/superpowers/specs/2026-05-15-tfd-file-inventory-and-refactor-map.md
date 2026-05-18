@@ -78,7 +78,7 @@ handlers -> random utils by relative path
 Known current violations or smell:
 - `tfd-system/extractors/twitter-v2.js` reaches into `handlers/twitter-v2-container-builder`.
 - `tfd-system/core/message-handler-v2.js` imports handlers and many feature utilities directly.
-- `events/interactionCreate.js` contains the routing table inline instead of delegating to feature routers.
+- `src/app/events/interaction-create.js` contains the routing table inline instead of delegating to feature routers.
 - `utils/` contains feature-owned modules for translation, Pixiv, PTT, Twitter state, moderation, browser, webhook, auth, and cache.
 
 ## Imported Fix Requirements
@@ -174,7 +174,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 |---|---|---|---|---|---|---|
 | `commands/pe.js` | `/pe` command: API keys, model selection, log channel, owner, blacklist settings. | command | app/moderation/translation | `src/app/commands/pe-command.js` | split | Split API-key subcommands from guild/moderation settings later. |
 | `commands/tfd-context-actions.js` | Message context actions for delete/spoiler/report flows. | command | app/reports/spoilers | `src/app/commands/context-actions.js` | split | Contains command definition plus interaction-like behavior. |
-| `events/interactionCreate.js` | Central interaction router for commands, modals, buttons, selects. | event-router | app | `src/app/events/interaction-create.js` | split | Move prefix routing to feature routers. |
+| `src/app/events/interaction-create.js` | Central interaction router for commands, modals, buttons, selects. | event-router | app | `src/app/events/interaction-create.js` | keep | Canonical router; still loads command modules from root `commands/`. |
+| `events/interactionCreate.js` | Legacy adapter for central interaction router. | adapter | app | `src/app/events/interaction-create.js` | done-adapter | Preserves old event path. |
 | `src/features/pixiv/interactions/pagination.js` | Canonical Pixiv pagination buttons and memory cache. | interaction-handler | pixiv | `src/features/pixiv/interactions/pagination.js` | keep | Owns Pixiv pagination button behavior. |
 | `events/pixiv-pagination-interactions.js` | Legacy adapter for Pixiv pagination buttons. | adapter | pixiv | `src/features/pixiv/interactions/pagination.js` | done-adapter | Preserves interactionCreate old require path. |
 | `src/features/ptt/interactions/pagination.js` | PTT pagination, reload, expand/collapse and memory cache. | interaction-handler | ptt | `src/features/ptt/interactions/pagination.js` | keep | Canonical PTT interaction handler. |

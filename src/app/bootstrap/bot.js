@@ -2,7 +2,7 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, Events } = require('discord.js');
 const express = require('express');
 const TFDMessageHandler = require('../../../tfd-system/core/message-handler-v2.js');
-const interactionCreate = require('../../../events/interactionCreate.js');
+const interactionCreate = require('../events/interaction-create.js');
 const tfd = require('../../shared/logging/tfd-logger');
 
 const client = new Client({

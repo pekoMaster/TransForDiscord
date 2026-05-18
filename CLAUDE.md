@@ -22,7 +22,7 @@ message-handler-v2.js ← 核心路由，匹配 URL → 呼叫 extractor → 組
 
 使用者點按鈕/選單
   ↓
-interactionCreate.js ← prefix 路由分流
+src/app/events/interaction-create.js ← prefix 路由分流
   ├── commands/pe.js                 /pe 斜線指令（設定、API Key、黑名單）
   ├── commands/tfd-context-actions.js 右鍵選單「PekoEmbed 操作」
   ├── handlers/report-button-interactions.js 回報系統（按鈕/Modal/Select）
@@ -86,7 +86,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 |----------|------|------|
 | 新增/改 extractor | `src/core/config/supported-sites.json` + `tfd-system/extractors/index.js` | 站台註冊表 + 載入邏輯 |
 | 改 URL 匹配規則 | `tfd-system/regex/patterns.js` + `matcher.js` | 所有 regex 定義 |
-| 改互動（按鈕/Modal） | `events/interactionCreate.js` | prefix 路由表，確認不衝突 |
+| 改互動（按鈕/Modal） | `src/app/events/interaction-create.js` | prefix 路由表，確認不衝突 |
 | 改黑名單邏輯 | `utils/guild-blacklist-manager.js` → `db/index.js` → `src/shared/db/schema.sql` | Manager → DB API → Schema 三層 |
 | 改回報流程 | `handlers/report-button-interactions.js` | 完整的 button→modal→admin 鏈 |
 | 改翻譯功能 | `src/features/translation/` | 統一翻譯 domain；舊 `utils/*` 路徑為 adapter |

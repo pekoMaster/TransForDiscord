@@ -23,15 +23,15 @@ index.js
 ```
 
 ### 互動路由
-- 所有按鈕/斜線指令互動進入 `events/interactionCreate.js`
+- 所有按鈕/斜線指令互動進入 `src/app/events/interaction-create.js`
 - 路由規則：
-  - `v2_*` → `handlers/twitter-v2-interactions.js`
+  - `v2_*` → `src/features/twitter/interactions/v2-router.js`
   - `spoiler_btn` / `spoiler_modal_*` → `handlers/spoiler-button-interactions.js`
-  - `twitter_expand_*` / `twitter_collapse_*` → `handlers/twitter-expand-interactions.js`
-  - `twitter_translate_*` / `twitter_original_*` → `handlers/twitter-translate-interactions.js`
-  - `twitter_reload_*` → `handlers/twitter-reload-interactions.js`
-  - `twitter_page_*` → `handlers/twitter-pagination-interactions.js`
-  - `pixiv_*` → `events/pixiv-pagination-interactions.js`
+  - `twitter_expand_*` / `twitter_collapse_*` → `src/features/twitter/interactions/expand.js`
+  - `twitter_translate_*` / `twitter_original_*` → `src/features/twitter/interactions/translation.js`
+  - `twitter_reload_*` → `src/features/twitter/interactions/reload.js`
+  - `twitter_page_*` → `src/features/twitter/interactions/media-pagination.js`
+  - `pixiv_*` → `src/features/pixiv/interactions/pagination.js`
   - `ptt_*` → `src/features/ptt/interactions/pagination.js`
 
 ### 訊息處理流程
@@ -53,6 +53,7 @@ MessageCreate
 |------|------|
 | `index.js` | 舊路徑 adapter，轉接至 `src/app/bootstrap/bot.js` |
 | `src/app/bootstrap/bot.js` | Bot 主程式入口，初始化 Discord client、事件、Express stats API |
+| `src/app/events/interaction-create.js` | 互動總路由，處理斜線指令、context menu、Modal、button、select menu |
 | `deploy.js` | Discord 斜線指令部署 wrapper，保留 `node deploy.js` 並轉接至 `scripts/deploy-commands.js` |
 | `ecosystem.config.js` | PM2 部署配置（進程名 `transfordiscord`） |
 | `package.json` | 依賴與專案定義 |
@@ -71,7 +72,7 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `interactionCreate.js` | **互動總路由** — 所有按鈕/斜線指令/Modal 進入點 |
+| `interactionCreate.js` | 舊路徑 adapter，轉接至 `src/app/events/interaction-create.js` |
 | `pixiv-pagination-interactions.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/interactions/pagination.js` |
 | `ptt-pagination-interactions.js` | 舊路徑 adapter，轉接至 `src/features/ptt/interactions/pagination.js` |
 
@@ -79,7 +80,7 @@ MessageCreate
 
 ## 🔗 互動處理器 (`handlers/`)
 
-> Twitter/X 主路徑：`src/features/twitter/`。舊的 `handlers/twitter-*` 目前保留為相容 adapter，讓 `events/interactionCreate.js` 與舊文件先維持穩定。
+> Twitter/X 主路徑：`src/features/twitter/`。舊的 `handlers/twitter-*` 目前保留為相容 adapter；互動總路由已移至 `src/app/events/interaction-create.js`。
 > Twitter V2 互動細節在 `src/features/twitter/interactions/v2/`；`v2-router.js` 現在只負責分派 `v2_*` 按鈕與 modal。
 
 | 檔案 | 功能 |
