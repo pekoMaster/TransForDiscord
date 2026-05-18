@@ -4,7 +4,7 @@
  */
 
 const axios = require('axios');
-const config = require('../../../tfd-system/config/tfd-config.json');
+const { loadTfdConfig } = require('../../core/config/config-loader');
 const tfd = require('../logging/tfd-logger');
 
 /**
@@ -22,6 +22,7 @@ const EXPECTED_BOT_BLOCK_STATUSES = new Set([400, 401, 403, 404, 429, 451, 999])
 
 class HTTPClient {
     constructor() {
+        const config = loadTfdConfig();
         this.timeout = config.settings.timeout;
         this.userAgent = config.settings.userAgent;
         this.maxRetries = config.settings.maxRetries;

@@ -329,13 +329,19 @@ MessageCreate
 | `url-converter-logger.js` | 舊路徑 adapter，轉接至 `src/shared/logging/url-converter-logger.js` |
 | `url-stats.js` | 舊路徑 adapter，轉接至 `src/shared/analytics/url-stats.js` |
 
-### 設定 (`tfd-system/config/`)
+### 設定核心 (`src/core/config/`)
+
+| 檔案 | 功能 |
+|------|------|
+| `config-loader.js` | Config loader/accessor，集中讀取與 reload 目前的 `tfd-system/config/tfd-config.json` |
+
+### 設定資料 (`tfd-system/config/`)
 
 | 檔案 | 功能 |
 |------|------|
 | `pekoembed-config.json` | pekoembed 系統全域設定 |
 | `supported-sites.json` | 支援站台清單 |
-| `tfd-config.json` | TFD 系統設定（排除頻道、使用者等） |
+| `tfd-config.json` | TFD 系統設定資料；runtime 透過 `src/core/config/config-loader.js` 讀取 |
 
 ---
 

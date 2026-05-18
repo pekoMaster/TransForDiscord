@@ -4,7 +4,7 @@
  */
 
 const LinkProcessor = require('./link-processor');
-const config = require('../config/tfd-config.json');
+const { loadTfdConfig, reloadTfdConfig } = require('../../src/core/config/config-loader');
 const { EmbedBuilder, AttachmentBuilder, MessageFlags, TextDisplayBuilder, SeparatorBuilder } = require('discord.js');
 const { cacheContent } = require('../../handlers/content-translation-interactions.js');
 const axios = require('axios');
@@ -26,7 +26,7 @@ const db = require('../../db');
 class TFDMessageHandler {
     constructor() {
         this.linkProcessor = new LinkProcessor();
-        this.config = config;
+        this.config = loadTfdConfig();
         this.processedMessages = new Set();
         this.iconURL = 'https://pekoembed.canaria.cc/pic/canaria.png'; // 原版 TFD 圖標
     }
@@ -1924,8 +1924,7 @@ class TFDMessageHandler {
      */
     reloadConfig() {
         try {
-            delete require.cache[require.resolve('../config/tfd-config.json')];
-            this.config = require('../config/tfd-config.json');
+            this.config = reloadTfdConfig();
             this.linkProcessor.reloadConfig();
             tlog.sys('TFD', '配置已重新載入');
             return true;

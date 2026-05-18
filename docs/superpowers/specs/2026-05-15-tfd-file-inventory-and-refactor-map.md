@@ -218,9 +218,10 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | Current path | Purpose | Type | Domain | Proposed target | Action | Notes |
 |---|---|---|---|---|---|---|
 | `tfd-system/index.js` | PekoEmbed system initializer/health/dependency checks. | service | core/app | `src/core/system/pekoembed-system.js` | move | Singleton export can remain via adapter. |
-| `tfd-system/config/pekoembed-config.json` | PekoEmbed feature config. | config | core/config | `src/core/config/pekoembed-config.json` | move | Merge with config loader later. |
-| `tfd-system/config/supported-sites.json` | Supported site registry. | config | core/config | `src/core/config/supported-sites.json` | move | Could become extractor registry metadata. |
-| `tfd-system/config/tfd-config.json` | Runtime config for HTTP/timeouts/rendering. | config | core/config | `src/core/config/tfd-config.json` | move | Add config accessor instead of direct JSON imports. |
+| `src/core/config/config-loader.js` | Runtime config loader/accessor for current JSON config files. | service | core/config | `src/core/config/config-loader.js` | keep | Transitional layer before moving JSON config files. |
+| `tfd-system/config/pekoembed-config.json` | PekoEmbed feature config. | config | core/config | `src/core/config/pekoembed-config.json` | move | Move only after config loader covers all active reads. |
+| `tfd-system/config/supported-sites.json` | Supported site registry. | config | core/config | `src/core/config/supported-sites.json` | move | Validate JSON/encoding before moving; could become extractor registry metadata. |
+| `tfd-system/config/tfd-config.json` | Runtime config data for HTTP/timeouts/rendering. | config | core/config | `src/core/config/tfd-config.json` | move | Active runtime reads now go through `src/core/config/config-loader.js`; file move remains pending. |
 | `tfd-system/core/link-processor.js` | URL matching, extractor dispatch, abuse/stat recording. | service | core/routing | `src/core/routing/link-processor.js` | split | Move abuse/stat side effects behind services. |
 | `tfd-system/core/message-handler-v2.js` | Main message pipeline: URL handling, render/send/edit, feature branching. | service | core/message | `src/core/message/message-handler.js` | split | Highest-risk file; decompose last. |
 | `src/core/routing/url-matcher.js` | Canonical URL matcher class using patterns. | service | core/routing | `src/core/routing/url-matcher.js` | keep | Clear responsibility. |

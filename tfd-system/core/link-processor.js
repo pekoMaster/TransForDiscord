@@ -5,7 +5,7 @@
 
 const URLMatcher = require('../regex/matcher');
 const ExtractorManager = require('../extractors');
-const config = require('../config/tfd-config.json');
+const { loadTfdConfig, reloadTfdConfig } = require('../../src/core/config/config-loader');
 const linkSupport = require('../../src/features/link-support/link-support-service');
 const tfd = require('../../utils/tfd-logger');
 
@@ -13,7 +13,7 @@ class LinkProcessor {
     constructor() {
         this.urlMatcher = new URLMatcher();
         this.extractorManager = new ExtractorManager();
-        this.config = config;
+        this.config = loadTfdConfig();
         this.processedCache = new Map(); // 簡單的處理快取
         this.rateLimitMap = new Map(); // 速率限制
     }
@@ -242,8 +242,7 @@ class LinkProcessor {
      */
     reloadConfig() {
         try {
-            delete require.cache[require.resolve('../config/tfd-config.json')];
-            this.config = require('../config/tfd-config.json');
+            this.config = reloadTfdConfig();
             tfd.sys('TFD-LinkProcessor', '配置已重新載入');
             return true;
         } catch (error) {

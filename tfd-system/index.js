@@ -3,13 +3,13 @@
  * 連結預覽增強系統
  */
 
-const config = require('./config/tfd-config.json');
+const { loadTfdConfig, reloadTfdConfig } = require('../src/core/config/config-loader');
 const tfd = require('../utils/tfd-logger');
 
 class TFDSystem {
     constructor() {
         this.messageHandler = null; // 延遲初始化，避免重複載入提取器
-        this.config = config;
+        this.config = loadTfdConfig();
         this.initialized = false;
         this.stats = {
             startTime: new Date(),
@@ -183,8 +183,7 @@ class TFDSystem {
      */
     reloadConfig() {
         try {
-            delete require.cache[require.resolve('./config/tfd-config.json')];
-            this.config = require('./config/tfd-config.json');
+            this.config = reloadTfdConfig();
             if (this.messageHandler) this.messageHandler.reloadConfig();
             tfd.sys('TFD', '🔄 配置已重新載入');
             return true;

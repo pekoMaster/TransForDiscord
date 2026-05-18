@@ -1,9 +1,10 @@
 const assert = require('assert');
 
-const config = require('../tfd-system/config/tfd-config.json');
+const { loadTfdConfig } = require('../src/core/config/config-loader');
 const SharedHTTPClient = require('../src/shared/http/http-client');
 const LegacyHTTPClient = require('../tfd-system/utils/http-client');
 
+const config = loadTfdConfig();
 assert.strictEqual(LegacyHTTPClient, SharedHTTPClient);
 
 const client = new SharedHTTPClient();

@@ -26,6 +26,7 @@ const mediaPolicy = require('./v2/media-policy');
 const tweetFetcher = require('./v2/tweet-fetcher');
 const { getQuoteDisplayPolicy } = require('./v2/quote-display-policy');
 const { cacheTweetData } = require('../state/v2-tweet-cache');
+const { loadTfdConfig } = require('../../../core/config/config-loader');
 
 // 延遲載入 V2 Container Builder（僅影片推文使用，模組可能不存在）
 let _v2ContainerBuilder = null;
@@ -52,7 +53,7 @@ class TFDTwitterExtractor {
 
         // 2026-04-11: 自家 Vercel embed 影片 URL，取代 vxtwitter
         try {
-            const config = require('../../../../tfd-system/config/tfd-config.json');
+            const config = loadTfdConfig();
             this.vercelEmbedBaseUrl = config.features?.twitterEmbedProxy?.vercelEmbedBaseUrl || '';
         } catch {
             this.vercelEmbedBaseUrl = '';
