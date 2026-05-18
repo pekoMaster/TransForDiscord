@@ -51,7 +51,7 @@ MessageCreate
 | 檔案 | 功能 |
 |------|------|
 | `index.js` | Bot 主程式入口，初始化所有系統 |
-| `deploy.js` | Discord 斜線指令部署腳本（`node deploy.js`） |
+| `deploy.js` | Discord 斜線指令部署 wrapper，保留 `node deploy.js` 並轉接至 `scripts/deploy-commands.js` |
 | `ecosystem.config.js` | PM2 部署配置（進程名 `transfordiscord`） |
 | `package.json` | 依賴與專案定義 |
 

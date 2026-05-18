@@ -155,7 +155,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `index.js` | Main bot entrypoint, Discord client, startup GC, Express stats endpoint. | entrypoint | app | `src/app/bootstrap/bot.js` | move + legacy-adapter | Keep root `index.js` as launcher. |
 | `package.json` | NPM scripts and dependencies. | config | repo | root | keep | Add future scripts for inventory/checks. |
 | `package-lock.json` | Dependency lockfile. | config | repo | root | keep | Do not hand-edit. |
-| `deploy.js` | Registers Discord slash/context commands. | script | deploy/app | `scripts/deploy-commands.js` | move | Root wrapper optional. |
+| `scripts/deploy-commands.js` | Canonical Discord slash/context command deployment script. | script | deploy/app | `scripts/deploy-commands.js` | keep | Do not run during refactor verification. |
+| `deploy.js` | Root compatibility wrapper for command deployment script. | adapter | deploy/app | `scripts/deploy-commands.js` | done-adapter | Preserves `node deploy.js` usage. |
 | `db-pull.bat` | Legacy root wrapper for Windows DB pull. | adapter | ops | `scripts/ops/db-pull.bat` | done-adapter | Root command remains; real implementation reads root paths through `ROOT_DIR`. |
 | `db-pull.sh` | Legacy root wrapper for shell DB pull. | adapter | ops | `scripts/ops/db-pull.sh` | done-adapter | Root command remains; real implementation reads root `.env`. |
 | `db-push.sh` | Legacy root wrapper for shell DB push/restore. | adapter | ops | `scripts/ops/db-push.sh` | done-adapter | High-risk command remains available through wrapper; not executed during refactor. |
