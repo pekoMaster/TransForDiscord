@@ -280,6 +280,7 @@ MessageCreate
 |------|------|
 | `cache/pixiv-cache-manager.js` | Pixiv disk JSON cache manager with reload cache deletion API，`utils/pixiv-cache-manager.js` 保留 adapter |
 | `cache/r18-cache-manager.js` | Pixiv R18 attachment cache manager，`utils/pixiv-r18-cache-manager.js` 保留 adapter |
+| `media/ugoira-mp4-processor.js` | Pixiv Ugoira MP4 conversion helper，`utils/pixiv-ugoira-mp4-processor.js` 保留 adapter |
 
 ### 正規表達式 (`tfd-system/regex/`)
 
@@ -379,7 +380,7 @@ MessageCreate
 | `playwright-semantic-browser.js` | Legacy adapter for `src/shared/browser/playwright-semantic-browser.js` |
 | `src/shared/browser/lightpanda-client.js` | Lightpanda CDP shared browser helper implementation |
 | `src/shared/browser/playwright-semantic-browser.js` | Playwright semantic shared browser helper implementation |
-| `pixiv-ugoira-mp4-processor.js` | Pixiv Ugoira 動圖轉 MP4 |
+| `pixiv-ugoira-mp4-processor.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/media/ugoira-mp4-processor.js` |
 
 ### 用戶 API Key
 
