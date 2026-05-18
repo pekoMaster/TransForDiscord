@@ -220,8 +220,10 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `tfd-system/config/tfd-config.json` | Runtime config for HTTP/timeouts/rendering. | config | core/config | `src/core/config/tfd-config.json` | move | Add config accessor instead of direct JSON imports. |
 | `tfd-system/core/link-processor.js` | URL matching, extractor dispatch, abuse/stat recording. | service | core/routing | `src/core/routing/link-processor.js` | split | Move abuse/stat side effects behind services. |
 | `tfd-system/core/message-handler-v2.js` | Main message pipeline: URL handling, render/send/edit, feature branching. | service | core/message | `src/core/message/message-handler.js` | split | Highest-risk file; decompose last. |
-| `tfd-system/regex/matcher.js` | URL matcher class using patterns. | service | core/routing | `src/core/routing/url-matcher.js` | move | Clear responsibility. |
-| `tfd-system/regex/patterns.js` | URL regex patterns. | config | core/routing | `src/core/routing/url-patterns.js` | move | Could be generated from supported-sites metadata later. |
+| `src/core/routing/url-matcher.js` | Canonical URL matcher class using patterns. | service | core/routing | `src/core/routing/url-matcher.js` | keep | Clear responsibility. |
+| `src/core/routing/url-patterns.js` | Canonical URL regex patterns. | config | core/routing | `src/core/routing/url-patterns.js` | keep | Could be generated from supported-sites metadata later. |
+| `tfd-system/regex/matcher.js` | Legacy adapter for URL matcher class. | adapter | core/routing | `src/core/routing/url-matcher.js` | done-adapter | Preserves link-processor import path. |
+| `tfd-system/regex/patterns.js` | Legacy adapter for URL regex patterns. | adapter | core/routing | `src/core/routing/url-patterns.js` | done-adapter | Preserves old regex import path. |
 | `src/core/rendering/html-video-renderer.js` | Canonical HTML video page renderer. | renderer | core/rendering | `src/core/rendering/html-video-renderer.js` | keep | Shared by Twitter mixed media. |
 | `src/core/rendering/mixed-media-html-builder.js` | Canonical mixed media HTML builder. | renderer | core/rendering | `src/core/rendering/mixed-media-html-builder.js` | keep | Uses HTMLVideoRenderer. |
 | `tfd-system/render/html-video-renderer.js` | Legacy adapter for HTML video page renderer. | adapter | core/rendering | `src/core/rendering/html-video-renderer.js` | done-adapter | Preserves old render import path. |

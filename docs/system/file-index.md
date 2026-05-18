@@ -288,12 +288,19 @@ MessageCreate
 |------|------|
 | `cache/ptt-cache-manager.js` | PTT article/image disk cache manager，`utils/ptt-cache-manager.js` 保留 adapter |
 
-### 正規表達式 (`tfd-system/regex/`)
+### URL 路由核心 (`src/core/routing/`)
 
 | 檔案 | 功能 |
 |------|------|
-| `matcher.js` | URL 比對器 — 判斷 URL 屬於哪個站台 |
-| `patterns.js` | 正規表達式模式定義 |
+| `url-matcher.js` | URL 比對器 canonical 實作，判斷 URL 屬於哪個站台 |
+| `url-patterns.js` | URL 正規表達式模式 canonical 定義 |
+
+### URL 路由相容層 (`tfd-system/regex/`)
+
+| 檔案 | 功能 |
+|------|------|
+| `matcher.js` | 舊路徑 adapter，轉接至 `src/core/routing/url-matcher.js` |
+| `patterns.js` | 舊路徑 adapter，轉接至 `src/core/routing/url-patterns.js` |
 
 ### 渲染核心 (`src/core/rendering/`)
 
