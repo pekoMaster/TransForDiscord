@@ -173,6 +173,11 @@ MessageCreate
 | `interactions/v2/tweet-data.js` | Twitter V2 tweet bundle hydration and cache-vs-refresh resolution helper |
 | `interactions/v2/v1-transition.js` | Twitter V2 quote-collapse transition back to classic V1 embed payload and fallback send flow |
 | `state/v2-tweet-cache.js` | Twitter V2 tweet bundle runtime cache for rebuild/interaction flows |
+| `interactions/media-pagination.js` | Twitter classic media pagination and merge/split interaction handler |
+| `interactions/translation.js` | Twitter classic translation/original toggle interaction handler |
+| `interactions/v2-router.js` | Twitter V2 interaction router，分派 translate/toggle/reload/spoiler flows |
+
+> `handlers/twitter-pagination-interactions.js`, `handlers/twitter-translate-interactions.js`, and `handlers/twitter-v2-interactions.js` are legacy adapters to the canonical files above.
 
 ### Site Extractors (`src/features/sites/`)
 
