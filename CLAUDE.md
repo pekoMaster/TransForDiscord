@@ -25,7 +25,7 @@ message-handler-v2.js ← 核心路由，匹配 URL → 呼叫 extractor → 組
 src/app/events/interaction-create.js ← prefix 路由分流
   ├── commands/pe.js                 /pe 斜線指令（設定、API Key、黑名單）
   ├── commands/tfd-context-actions.js 右鍵選單「PekoEmbed 操作」
-  ├── handlers/report-button-interactions.js 回報系統（按鈕/Modal/Select）
+  ├── src/features/reports/interactions/report-router.js 回報系統（按鈕/Modal/Select）
   ├── handlers/twitter-v2-interactions.js    V2 Container 互動
   ├── handlers/twitter-translate-interactions.js 翻譯按鈕
   ├── handlers/spoiler-button-interactions.js    防爆雷
@@ -88,7 +88,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | 改 URL 匹配規則 | `tfd-system/regex/patterns.js` + `matcher.js` | 所有 regex 定義 |
 | 改互動（按鈕/Modal） | `src/app/events/interaction-create.js` | prefix 路由表，確認不衝突 |
 | 改黑名單邏輯 | `utils/guild-blacklist-manager.js` → `db/index.js` → `src/shared/db/schema.sql` | Manager → DB API → Schema 三層 |
-| 改回報流程 | `handlers/report-button-interactions.js` | 完整的 button→modal→admin 鏈 |
+| 改回報流程 | `src/features/reports/interactions/report-router.js` | 完整的 button→modal→admin 鏈 |
 | 改翻譯功能 | `src/features/translation/` | 統一翻譯 domain；舊 `utils/*` 路徑為 adapter |
 | 改 Twitter/X | `src/features/twitter/` | Twitter domain；沒有發推功能；舊 `handlers/twitter-*`、`utils/twitter-v2-state-store.js`、`tfd-system/extractors/twitter-*` 路徑為 adapter |
 | 改 Twitter V2 互動 | `src/features/twitter/interactions/v2/` | `v2-router.js` 只做分派；翻譯/展開/重整/防爆雷在 v2 子模組 |
@@ -113,8 +113,8 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 
 | 模組 | 消費者 | 說明 |
 |------|--------|------|
-| `src/shared/discord/message-helpers.js` | tfd-context-actions, report-button-interactions | `resolveAuthorId` / `detectPlatformFromUrl` / `extractUrlFromMessage`；`utils/embed-helpers.js` 保留相容轉接 |
-| `utils/recall-limiter.js` | tfd-context-actions, report-button-interactions | 共用收回次數限制（3次/10分鐘） |
+| `src/shared/discord/message-helpers.js` | tfd-context-actions, report-router | `resolveAuthorId` / `detectPlatformFromUrl` / `extractUrlFromMessage`；`utils/embed-helpers.js` 保留相容轉接 |
+| `utils/recall-limiter.js` | tfd-context-actions, report-router | 共用收回次數限制（3次/10分鐘） |
 | `src/shared/discord/spoiler-button-helper.js` | message-handler-v2, twitter-reload, pixiv-reload, twitter-v2-container-builder | 回報/防爆雷按鈕附加；`utils/spoiler-button-helper.js` 保留相容轉接 |
 | `src/shared/discord/component-sanitizer.js` | message-handler-v2, webhook-manager | 送出/編輯 Discord components 前過濾空 ActionRow、拆分超過 5 個子元件的 row |
 | `src/shared/discord/embed-builder.js` | ptt, instagram, pixiv, threads, twitter-legacy extractors | Generic Discord EmbedBuilder wrapper；`tfd-system/utils/embed-builder.js` 保留相容轉接 |
@@ -136,11 +136,11 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 |--------|--------|------|
 | Modal | `v2_spoiler_modal_` | twitter-v2-interactions |
 | Modal | `ctx_delete_modal_` / `ctx_spoiler_modal_` / `ctx_report_modal_` | tfd-context-actions |
-| Modal | `report_spoiler_modal_` / `report_recall_modal_` / `report_blacklist_modal_` / `rbl_admin_modal_` | report-button-interactions |
+| Modal | `report_spoiler_modal_` / `report_recall_modal_` / `report_blacklist_modal_` / `rbl_admin_modal_` | report-router |
 | Modal | `spoiler_modal_` | spoiler-button-interactions |
 | Button | `spoiler_btn` | spoiler-button-interactions |
 | Button | `ctx_*` | tfd-context-actions |
-| Button/Select | `report_*` / `rbl_*` | report-button-interactions |
+| Button/Select | `report_*` / `rbl_*` | report-router |
 | Button | `v2_*` | twitter-v2-interactions |
 | Button | `twitter_expand_all_` / `twitter_collapse_all_` | twitter-all-interactions（必須在 expand_ 之前） |
 | Button | `twitter_expand_` / `twitter_collapse_` | twitter-expand-interactions |
@@ -167,3 +167,8 @@ type(scope): 描述
 ```
 type: `feat` / `fix` / `refactor` / `docs` / `chore`
 scope: 模組名（如 `blacklist`, `twitter-v2`, `pe`, `db`）
+
+## Current Canonical Refactor Paths
+
+- Report interactions: `src/features/reports/interactions/report-router.js`
+- Legacy adapter: `handlers/report-button-interactions.js`

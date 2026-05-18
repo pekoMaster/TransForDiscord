@@ -189,7 +189,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `handlers/content-translation-interactions.js` | Legacy adapter for content translation cache. | adapter | translation/twitter | `src/features/translation/cache/content-cache.js` | done-adapter | Old name suggests handler but now only preserves require compatibility. |
 | `src/features/pixiv/interactions/reload.js` | Canonical Pixiv reload interaction and webhook edit. | interaction-handler | pixiv | `src/features/pixiv/interactions/reload.js` | keep | Depends on Pixiv extractor/cache/webhook. |
 | `handlers/pixiv-reload-interactions.js` | Legacy adapter for Pixiv reload interaction. | adapter | pixiv | `src/features/pixiv/interactions/reload.js` | done-adapter | Preserves interactionCreate old require path. |
-| `handlers/report-button-interactions.js` | Report button tree: spoiler, recall, blacklist, admin approval, modals/selects. | interaction-handler | reports/moderation | `src/features/reports/interactions/report-router.js` | split | Large file; split router/actions/modals/admin. |
+| `src/features/reports/interactions/report-router.js` | Report button tree: spoiler, recall, blacklist, admin approval, modals/selects. | interaction-handler | reports/moderation | `src/features/reports/interactions/report-router.js` | keep | Canonical report interaction router; future split can separate actions/modals/admin. |
+| `handlers/report-button-interactions.js` | Legacy adapter for report interaction router. | adapter | reports/moderation | `src/features/reports/interactions/report-router.js` | done-adapter | Preserves old handler require path. |
 | `handlers/spoiler-button-interactions.js` | Anti-spoiler transformation and modal handling for normal messages. | interaction-handler | spoilers | `src/features/spoilers/interactions/spoiler-buttons.js` | split | Also contains spoiler rendering helpers. |
 | `src/features/twitter/interactions/toggle-all.js` | Canonical Twitter expand/collapse all for quote/reply/full text. | interaction-handler | twitter | `src/features/twitter/interactions/toggle-all.js` | keep | Depends on translation/content caches. |
 | `src/features/twitter/interactions/expand.js` | Canonical Twitter full-text expand/collapse for classic embeds. | interaction-handler | twitter | `src/features/twitter/interactions/expand.js` | keep | Uses cached content and translation state. |
@@ -529,7 +530,7 @@ Plan:
 ### 5. Reports, Spoilers, Moderation
 
 Current related files:
-- `handlers/report-button-interactions.js`
+- `src/features/reports/interactions/report-router.js` (`handlers/report-button-interactions.js` adapter)
 - `handlers/spoiler-button-interactions.js`
 - `src/shared/discord/spoiler-button-helper.js` (`utils/spoiler-button-helper.js` adapter)
 - `utils/guild-blacklist-manager.js`

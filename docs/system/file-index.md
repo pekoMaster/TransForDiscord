@@ -179,6 +179,14 @@ MessageCreate
 
 > `handlers/twitter-pagination-interactions.js`, `handlers/twitter-translate-interactions.js`, and `handlers/twitter-v2-interactions.js` are legacy adapters to the canonical files above.
 
+### Reports Feature Module (`src/features/reports/`)
+
+| Path | Purpose |
+|------|---------|
+| `interactions/report-router.js` | Canonical report interaction router for `report_*` and `rbl_*` buttons, modals, and select menus. |
+
+> `handlers/report-button-interactions.js` is a legacy adapter to `src/features/reports/interactions/report-router.js`.
+
 ### Site Extractors (`src/features/sites/`)
 
 | Module | Purpose |

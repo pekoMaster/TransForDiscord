@@ -69,7 +69,7 @@ async function execute(interaction, client) {
                 modalId.startsWith('report_recall_modal_') ||
                 modalId.startsWith('report_blacklist_modal_') ||
                 modalId.startsWith('rbl_admin_modal_')) {
-                const { routeReportInteraction } = require('../../../handlers/report-button-interactions.js');
+                const { routeReportInteraction } = require('../../features/reports/interactions/report-router.js');
                 return await routeReportInteraction(interaction);
             }
 
@@ -101,7 +101,7 @@ async function execute(interaction, client) {
 
         // ── Report system (回報 / 防爆雷 / 收回 / 黑名單回報 / 管理員審核) ──
         if (customId.startsWith('report_') || customId.startsWith('rbl_')) {
-            const { routeReportInteraction } = require('../../../handlers/report-button-interactions.js');
+            const { routeReportInteraction } = require('../../features/reports/interactions/report-router.js');
             return await routeReportInteraction(interaction);
         }
 
