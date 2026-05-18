@@ -282,6 +282,12 @@ MessageCreate
 | `cache/r18-cache-manager.js` | Pixiv R18 attachment cache manager，`utils/pixiv-r18-cache-manager.js` 保留 adapter |
 | `media/ugoira-mp4-processor.js` | Pixiv Ugoira MP4 conversion helper，`utils/pixiv-ugoira-mp4-processor.js` 保留 adapter |
 
+### PTT 功能模組 (`src/features/ptt/`)
+
+| 檔案 | 作用 |
+|------|------|
+| `cache/ptt-cache-manager.js` | PTT article/image disk cache manager，`utils/ptt-cache-manager.js` 保留 adapter |
+
 ### 正規表達式 (`tfd-system/regex/`)
 
 | 檔案 | 功能 |
@@ -359,7 +365,7 @@ MessageCreate
 |------|------|
 | `pixiv-cache-manager.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/cache/pixiv-cache-manager.js` |
 | `pixiv-r18-cache-manager.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/cache/r18-cache-manager.js` |
-| `ptt-cache-manager.js` | PTT 文章快取管理（磁碟 JSON） |
+| `ptt-cache-manager.js` | 舊路徑 adapter，轉接至 `src/features/ptt/cache/ptt-cache-manager.js` |
 
 ### Webhook 與 Discord
 
