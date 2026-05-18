@@ -28,7 +28,7 @@ src/app/events/interaction-create.js ← prefix 路由分流
   ├── src/features/reports/interactions/report-router.js 回報系統（按鈕/Modal/Select）
   ├── handlers/twitter-v2-interactions.js    V2 Container 互動
   ├── handlers/twitter-translate-interactions.js 翻譯按鈕
-  ├── handlers/spoiler-button-interactions.js    防爆雷
+  ├── src/features/spoilers/interactions/spoiler-buttons.js    防爆雷
   └── handlers/twitter-*.js                      展開/分頁/重整/引用
 ```
 
@@ -137,8 +137,8 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | Modal | `v2_spoiler_modal_` | twitter-v2-interactions |
 | Modal | `ctx_delete_modal_` / `ctx_spoiler_modal_` / `ctx_report_modal_` | tfd-context-actions |
 | Modal | `report_spoiler_modal_` / `report_recall_modal_` / `report_blacklist_modal_` / `rbl_admin_modal_` | report-router |
-| Modal | `spoiler_modal_` | spoiler-button-interactions |
-| Button | `spoiler_btn` | spoiler-button-interactions |
+| Modal | `spoiler_modal_` | spoiler-buttons |
+| Button | `spoiler_btn` | spoiler-buttons |
 | Button | `ctx_*` | tfd-context-actions |
 | Button/Select | `report_*` / `rbl_*` | report-router |
 | Button | `v2_*` | twitter-v2-interactions |
@@ -172,3 +172,5 @@ scope: 模組名（如 `blacklist`, `twitter-v2`, `pe`, `db`）
 
 - Report interactions: `src/features/reports/interactions/report-router.js`
 - Legacy adapter: `handlers/report-button-interactions.js`
+- Spoiler interactions: `src/features/spoilers/interactions/spoiler-buttons.js`
+- Legacy adapter: `handlers/spoiler-button-interactions.js`

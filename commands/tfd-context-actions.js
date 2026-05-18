@@ -6,7 +6,7 @@ const {
 } = require('discord.js');
 const db = require('../db');
 const tlog = require('../utils/tfd-logger');
-const { buildSpoilerComponents, sendSpoilerAndCleanup } = require('../handlers/spoiler-button-interactions');
+const { buildSpoilerComponents, sendSpoilerAndCleanup } = require('../src/features/spoilers/interactions/spoiler-buttons');
 const { getInstance: getGBM } = require('../utils/guild-blacklist-manager');
 const { resolveAuthorId, detectPlatformFromUrl, extractUrlFromMessage } = require('../src/shared/discord/message-helpers');
 const { recallCounts, RECALL_LIMIT_MS, RECALL_LIMIT_COUNT, checkRecallLimit } = require('../src/features/reports/recall-limiter');

@@ -75,7 +75,7 @@ async function execute(interaction, client) {
 
             // 通用防爆雷 Modal
             if (modalId.startsWith('spoiler_modal_')) {
-                const { handleSpoilerModalSubmit } = require('../../../handlers/spoiler-button-interactions.js');
+                const { handleSpoilerModalSubmit } = require('../../features/spoilers/interactions/spoiler-buttons.js');
                 return await handleSpoilerModalSubmit(interaction);
             }
 
@@ -88,7 +88,7 @@ async function execute(interaction, client) {
 
         // ── 通用防爆雷按鈕 ──
         if (customId === 'spoiler_btn') {
-            const { handleSpoilerButtonInteraction } = require('../../../handlers/spoiler-button-interactions.js');
+            const { handleSpoilerButtonInteraction } = require('../../features/spoilers/interactions/spoiler-buttons.js');
             return await handleSpoilerButtonInteraction(interaction);
         }
 

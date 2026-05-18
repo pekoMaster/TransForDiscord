@@ -26,7 +26,7 @@ index.js
 - 所有按鈕/斜線指令互動進入 `src/app/events/interaction-create.js`
 - 路由規則：
   - `v2_*` → `src/features/twitter/interactions/v2-router.js`
-  - `spoiler_btn` / `spoiler_modal_*` → `handlers/spoiler-button-interactions.js`
+  - `spoiler_btn` / `spoiler_modal_*` → `src/features/spoilers/interactions/spoiler-buttons.js`
   - `twitter_expand_*` / `twitter_collapse_*` → `src/features/twitter/interactions/expand.js`
   - `twitter_translate_*` / `twitter_original_*` → `src/features/twitter/interactions/translation.js`
   - `twitter_reload_*` → `src/features/twitter/interactions/reload.js`
@@ -87,7 +87,7 @@ MessageCreate
 |------|------|
 | `content-translation-interactions.js` | 舊路徑 adapter，轉接至 `src/features/translation/cache/content-cache.js` |
 | `pixiv-reload-interactions.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/interactions/reload.js` |
-| `spoiler-button-interactions.js` | 通用防爆雷按鈕 + Modal（V2 Components 版） |
+| `spoiler-button-interactions.js` | Legacy adapter to `src/features/spoilers/interactions/spoiler-buttons.js` |
 | `twitter-all-interactions.js` | 舊路徑 adapter，轉接至 `src/features/twitter/interactions/toggle-all.js` |
 | `twitter-expand-interactions.js` | 舊路徑 adapter，轉接至 `src/features/twitter/interactions/expand.js` |
 | `twitter-pagination-interactions.js` | Twitter 多圖分頁按鈕 |
@@ -186,6 +186,14 @@ MessageCreate
 | `interactions/report-router.js` | Canonical report interaction router for `report_*` and `rbl_*` buttons, modals, and select menus. |
 
 > `handlers/report-button-interactions.js` is a legacy adapter to `src/features/reports/interactions/report-router.js`.
+
+### Spoilers Feature Module (`src/features/spoilers/`)
+
+| Path | Purpose |
+|------|---------|
+| `interactions/spoiler-buttons.js` | Canonical spoiler button/modal interaction module and spoiler component builder. |
+
+> `handlers/spoiler-button-interactions.js` is a legacy adapter to `src/features/spoilers/interactions/spoiler-buttons.js`.
 
 ### Site Extractors (`src/features/sites/`)
 

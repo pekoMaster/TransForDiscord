@@ -23,7 +23,7 @@ const {
     StringSelectMenuBuilder, EmbedBuilder
 } = require('discord.js');
 const db = require('../../../../db');
-const { buildSpoilerComponents, sendSpoilerAndCleanup } = require('../../../../handlers/spoiler-button-interactions');
+const { buildSpoilerComponents, sendSpoilerAndCleanup } = require('../../spoilers/interactions/spoiler-buttons');
 const { getInstance: getGBM } = require('../../../../utils/guild-blacklist-manager');
 const { resolveAuthorId, detectPlatformFromUrl, extractUrlFromMessage } = require('../../../shared/discord/message-helpers');
 const { checkRecallLimit } = require('../recall-limiter');
