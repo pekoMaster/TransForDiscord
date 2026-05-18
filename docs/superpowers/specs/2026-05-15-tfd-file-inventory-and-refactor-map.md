@@ -217,7 +217,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 
 | Current path | Purpose | Type | Domain | Proposed target | Action | Notes |
 |---|---|---|---|---|---|---|
-| `tfd-system/index.js` | PekoEmbed system initializer/health/dependency checks. | service | core/app | `src/core/system/pekoembed-system.js` | move | Singleton export can remain via adapter. |
+| `src/core/system/pekoembed-system.js` | PekoEmbed system initializer/health/dependency checks. | service | core/app | `src/core/system/pekoembed-system.js` | keep | Canonical singleton implementation. |
+| `tfd-system/index.js` | Legacy adapter for the PekoEmbed system singleton. | adapter | core/app | `src/core/system/pekoembed-system.js` | done-adapter | Preserves old import path and returns the same singleton. |
 | `src/core/config/config-loader.js` | Runtime config loader/accessor for current JSON config files. | service | core/config | `src/core/config/config-loader.js` | keep | Transitional layer before moving JSON config files. |
 | `tfd-system/config/pekoembed-config.json` | PekoEmbed feature config. | config | core/config | `src/core/config/pekoembed-config.json` | move | Move only after config loader covers all active reads. |
 | `tfd-system/config/supported-sites.json` | Supported site registry. | config | core/config | `src/core/config/supported-sites.json` | move | Validate JSON/encoding before moving; could become extractor registry metadata. |

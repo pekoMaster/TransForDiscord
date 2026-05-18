@@ -508,3 +508,12 @@ MessageCreate
 | `docs/product/wallet-and-billing.md` | Wallet and billing spec |
 | `docs/research/model-pricing.md` | Model pricing research |
 | `doc/**` / `TFD_UNIFIED_SPEC.md` stubs | Compatibility pointers to canonical `docs/` files |
+
+---
+
+## 補充核心索引
+
+| 路徑 | 功能 |
+|------|------|
+| `src/core/system/pekoembed-system.js` | PekoEmbed/TFD system singleton canonical implementation；舊 `tfd-system/index.js` 僅保留 adapter |
+| `tfd-system/index.js` | 舊路徑 adapter，轉接至 `src/core/system/pekoembed-system.js` |
