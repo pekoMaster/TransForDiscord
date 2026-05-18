@@ -274,6 +274,12 @@ MessageCreate
 | `guild-blacklist-manager.js` | SQLite-backed guild blacklist CRUD and reports helper，`utils/guild-blacklist-manager.js` 保留 adapter |
 | `normalize-author.js` | 黑名單比對用作者正規化，支援 plain embed 與 Discord EmbedBuilder `data` 結構；舊 `utils/normalize-author.js` 僅保留 adapter |
 
+### Pixiv 功能模組 (`src/features/pixiv/`)
+
+| 檔案 | 作用 |
+|------|------|
+| `cache/pixiv-cache-manager.js` | Pixiv disk JSON cache manager with reload cache deletion API，`utils/pixiv-cache-manager.js` 保留 adapter |
+
 ### 正規表達式 (`tfd-system/regex/`)
 
 | 檔案 | 功能 |
@@ -349,7 +355,7 @@ MessageCreate
 
 | 檔案 | 功能 |
 |------|------|
-| `pixiv-cache-manager.js` | Pixiv 作品快取管理（磁碟 JSON） |
+| `pixiv-cache-manager.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/cache/pixiv-cache-manager.js` |
 | `pixiv-r18-cache-manager.js` | Pixiv R18 快取管理（已禁用） |
 | `ptt-cache-manager.js` | PTT 文章快取管理（磁碟 JSON） |
 

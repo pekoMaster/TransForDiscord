@@ -96,7 +96,7 @@ Imported status:
 - V2 blacklist Level 1 warning and unsafe `result.embed.data` access: moved to `src/features/moderation/blacklist-result-decorator.js`; `message-handler-v2` now delegates Level 1/2 decoration.
 - `/pe blacklist list` Embed pagination: moved to `src/features/moderation/blacklist-list-presenter.js`; `commands/pe.js` delegates list rendering and pagination.
 - Twitter quote auto-expand and V1/V2 transition behavior: moved initial display policy to `src/features/twitter/extractors/v2/quote-display-policy.js`; extractor now applies V1/V2 default state, V1 expand can route to V2, and V2 collapse attempts V1 edit with bot-send fallback if Discord rejects Components V2 -> Embed edits.
-- Pixiv reload production error: add a focused bugfix task for `TypeError: cacheManager.deleteArtworkCache is not a function` from `[Pixiv-Reload]`; verify the Pixiv reload handler and cache manager API agree before moving Pixiv modules.
+- Pixiv reload production error: addressed in `src/features/pixiv/cache/pixiv-cache-manager.js` by adding `deleteArtworkCache`; verify reload handler and cache manager API before further Pixiv moves.
 
 ## Proposed Top-Level Structure
 
@@ -308,7 +308,8 @@ Migration principle: create new files under `src/`, then turn old paths into com
 | `utils/playwright-semantic-browser.js` | Legacy adapter for Playwright semantic browser helper. | adapter | shared/browser | `src/shared/browser/playwright-semantic-browser.js` | done-adapter | Runtime dynamic extractor import moved to shared path; optional `playwright` dependency is not installed locally. |
 | `src/shared/browser/lightpanda-client.js` | Lightpanda/Puppeteer CDP metadata fetch helper. | service | shared/browser | `src/shared/browser/lightpanda-client.js` | keep | Shared browser helper implementation. |
 | `src/shared/browser/playwright-semantic-browser.js` | Playwright semantic browser helper. | service | shared/browser | `src/shared/browser/playwright-semantic-browser.js` | keep | Shared browser helper implementation. |
-| `utils/pixiv-cache-manager.js` | Pixiv JSON cache manager. | cache-store | pixiv | `src/features/pixiv/cache/pixiv-cache-manager.js` | move | Feature-owned. |
+| `utils/pixiv-cache-manager.js` | Legacy adapter for Pixiv JSON cache manager. | adapter | pixiv | `src/features/pixiv/cache/pixiv-cache-manager.js` | done-adapter | Keeps reload and pagination imports stable. |
+| `src/features/pixiv/cache/pixiv-cache-manager.js` | Pixiv JSON cache manager. | cache-store | pixiv | `src/features/pixiv/cache/pixiv-cache-manager.js` | keep | Canonical Pixiv cache implementation; includes reload cache deletion API. |
 | `utils/pixiv-r18-cache-manager.js` | Pixiv R18 cache and attachment manager. | cache-store/service | pixiv | `src/features/pixiv/cache/r18-cache-manager.js` | move | Feature-owned. |
 | `utils/pixiv-ugoira-mp4-processor.js` | Pixiv ugoira to MP4 processing. | service | pixiv/media | `src/features/pixiv/media/ugoira-mp4-processor.js` | move | Feature-owned. |
 | `utils/ptt-cache-manager.js` | PTT article/image cache manager. | cache-store | ptt | `src/features/ptt/cache/ptt-cache-manager.js` | move | Feature-owned. |
@@ -477,7 +478,7 @@ src/features/ptt/
 
 Plan:
 - Move caches and interaction handlers.
-- Fix the known Pixiv reload cache API mismatch: `[Pixiv-Reload] TypeError: cacheManager.deleteArtworkCache is not a function`.
+- Pixiv reload cache API mismatch is addressed in `src/features/pixiv/cache/pixiv-cache-manager.js`; keep verifying reload/pagination behavior while moving remaining Pixiv modules.
 - Then move extractors.
 - Split large extractors after behavior-preserving relocation is stable.
 
@@ -565,7 +566,7 @@ Plan:
 
 ### Phase 4: Pixiv and PTT Domain Move
 
-- Fix the Pixiv reload cache manager mismatch before relocation: `cacheManager.deleteArtworkCache` is called by Pixiv reload but is not available on the loaded cache manager.
+- Pixiv reload cache manager mismatch is addressed: `deleteArtworkCache` exists on the loaded cache manager adapter.
 - Move Pixiv cache/media/interactions/extractor.
 - Move PTT cache/interactions/extractor.
 - Convert old event files to adapters or route imports.
