@@ -69,18 +69,7 @@ const patterns = {
         store: /https?:\/\/24h\.pchome\.com\.tw\/store\/([A-Za-z0-9-]+)/i
     },
 
-    // 成人漫畫平台
-    ehentai: {
-        // E-Hentai / ExHentai gallery
-        // 格式: e-hentai.org/g/{galleryId}/{galleryToken}/ 或 exhentai.org/g/...
-        gallery: /https?:\/\/(?:e-hentai|exhentai)\.org\/g\/(\d+)\/([0-9a-f]+)/i
-    },
-
-    nhentai: {
-        // NHentai gallery
-        // 格式: nhentai.net/g/{galleryId}/ 或 nhentai.to/g/{galleryId}/
-        gallery: /https?:\/\/nhentai\.(?:net|to)\/g\/(\d+)/i
-    },
+    // ehentai, nhentai: 已移除 (2026-04-12) - 無對應 extractor
 
     // 遊戲百科
     pokewiki: {
@@ -172,12 +161,12 @@ const patterns = {
         product: /https?:\/\/shop\.hololivepro\.com\/products\/([a-zA-Z0-9_-]+)/i
     },
 
-    // 影片平台 - YouTube（已停用）
-    // youtube: {
-    //     // /live/ 格式直播連結（含可選 si 參數）
-    //     // 格式: youtube.com/live/{videoId} 或 youtube.com/live/{videoId}?si=xxx
-    //     live: /https?:\/\/(?:www\.)?youtube\.com\/live\/([a-zA-Z0-9_-]{11})/i
-    // }
+    // 影片平台 - YouTube
+    youtube: {
+        // /live/ 格式直播連結（含可選 si 參數）
+        // 格式: youtube.com/live/{videoId} 或 youtube.com/live/{videoId}?si=xxx
+        live: /https?:\/\/(?:www\.)?youtube\.com\/live\/([a-zA-Z0-9_-]{11})/i
+    }
 };
 
 module.exports = patterns;

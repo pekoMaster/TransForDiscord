@@ -24,7 +24,7 @@ const SUPPORTED_SITES = [
     { siteName: '4gamers', label: '4Gamers', domains: ['4gamers.com.tw', 'www.4gamers.com.tw'] },
     { siteName: 'threads', label: 'Threads', domains: ['threads.com', 'www.threads.com'] },
     { siteName: 'hololiveshop', label: 'Hololive Shop', domains: ['shop.hololivepro.com'] },
-    // { siteName: 'youtube', label: 'YouTube Live', domains: ['youtube.com', 'www.youtube.com'] } // YouTube: 已停用
+    { siteName: 'youtube', label: 'YouTube Live', domains: ['youtube.com', 'www.youtube.com'] }
 ];
 
 function normalizeDomainInput(input) {
