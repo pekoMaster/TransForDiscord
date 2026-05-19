@@ -23,8 +23,10 @@ const NikkeExtractor = require('./nikke');
 const PokeWikiExtractor = require('./52poke');
 const FourGamersExtractor = require('./4gamers');
 const ThreadsExtractor = require('./threads');
-const YouTubeExtractor = require('./youtube');
+// const YouTubeExtractor = require('./youtube'); // YouTube: 已停用
 const HololiveShopExtractor = require('./hololive-shop');
+const EHentaiExtractor = require('./ehentai');
+const NHentaiExtractor = require('./nhentai');
 const tfd = require('../../utils/tfd-logger');
 
 class ExtractorManager {
@@ -53,6 +55,10 @@ class ExtractorManager {
         // iwara: 已移除 (2026-04-12)
         this.extractors.set('bilibili', new BilibiliExtractor());
         this.extractors.set('pornhub', new PornhubExtractor());
+
+        // 成人漫畫平台
+        this.extractors.set('ehentai', new EHentaiExtractor());
+        this.extractors.set('nhentai', new NHentaiExtractor());
 
         // 購物平台
         this.extractors.set('pchome', new PChomeExtractor());
@@ -83,8 +89,8 @@ class ExtractorManager {
         // 電商平台 - Hololive Shop
         this.extractors.set('hololiveshop', new HololiveShopExtractor());
 
-        // 影片平台 - YouTube /live/ 連結轉換
-        this.extractors.set('youtube', new YouTubeExtractor());
+        // 影片平台 - YouTube /live/ 連結轉換（已停用）
+        // this.extractors.set('youtube', new YouTubeExtractor());
 
         // 提取器載入日誌已移除（減少啟動時輸出）
     }
@@ -220,7 +226,9 @@ class ExtractorManager {
                 pokewiki: './52poke',
                 '4gamers': './4gamers',
                 threads: './threads',
-                hololiveshop: './hololive-shop'
+                hololiveshop: './hololive-shop',
+                ehentai: './ehentai',
+                nhentai: './nhentai'
             };
 
             if (extractorPaths[siteName]) {

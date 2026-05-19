@@ -212,7 +212,12 @@ class URLMatcher {
                 product: (m) => ({ productId: m[1] }),
                 store: (m) => ({ storeId: m[1] })
             },
-            // ehentai, nhentai: 已移除 (2026-04-12)
+            ehentai: {
+                gallery: (m) => ({ galleryId: m[1], galleryToken: m[2] })
+            },
+            nhentai: {
+                gallery: (m) => ({ galleryId: m[1] })
+            },
             linetoday: {
                 article: (m) => ({ language: m[1], articleId: m[2] })
             },
@@ -251,9 +256,9 @@ class URLMatcher {
             hololiveshop: {
                 product: (m) => ({ productSlug: m[1] })
             },
-            youtube: {
-                live: (m) => ({ videoId: m[1] })
-            }
+            // youtube: { // YouTube: 已停用
+            //     live: (m) => ({ videoId: m[1] })
+            // }
         };
 
         const siteExtractors = extractors[siteName];
