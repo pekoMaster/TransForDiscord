@@ -5,14 +5,15 @@
  *   /pe api add|edit|del|status   — 管理個人 AI API Key（所有用戶；加密儲存）
  *   /pe log add|edit|del          — 管理本伺服器日誌頻道（管理員）
  *   /pe log show                  — 查看本伺服器日誌頻道設定（管理員）
- *   /pe nouser                    — 排除使用者（管理員，per-guild）
- *   /pe noch                      — 排除頻道（管理員，per-guild）
+ *   /pe switch channel|user       — 切換頻道/使用者名單模式（管理員，per-guild）
+ *   /pe channel whitelist|blacklist — 管理頻道白名單/黑名單（管理員，per-guild）
+ *   /pe users whitelist|blacklist — 管理使用者白名單/黑名單（管理員，per-guild）
  *   /pe owner                     — 設定本伺服器活動 owner（管理員）
  *   /pe linksup                   — 啟用/停用本伺服器支援網域（管理員）
  *   /pe status                    — 查看本伺服器 Peko Embed 狀態（管理員）
  *
  * 多租戶設計：
- *   - log_channel / blocked_channels / excluded_users / owner 全部 per-guild
+ *   - log_channel / channel lists / user lists / owner 全部 per-guild
  *   - api_keys 加密後儲存於 SQLite（per-user 全域，使用者設定一次即跨伺服器可用）
  */
 
@@ -23,6 +24,16 @@ const {
     MessageFlags
 } = require('discord.js');
 
+// 支援的頻道類型：文字頻道 + 論壇頻道 + 討論串（白名單/黑名單都要能選）
+const CHANNEL_PICKER_TYPES = [
+    ChannelType.GuildText,
+    ChannelType.GuildForum,
+    ChannelType.GuildAnnouncement,
+    ChannelType.PublicThread,
+    ChannelType.PrivateThread,
+    ChannelType.AnnouncementThread,
+];
+
 const db = require('../db');
 const { PROVIDERS, saveKey, removeKey, getKeyStatus, hasAnyKey, getPreferredProvider, setPreferredProvider } = require('../utils/user-api-key-storage.js');
 const tlog = require('../utils/tfd-logger');
@@ -31,11 +42,16 @@ const linkSupport = require('../src/features/link-support/link-support-service')
 const { listSupportedDomains } = require('../src/features/link-support/domain-registry');
 const { sendPaginatedBlacklistList } = require('../src/features/moderation/blacklist-list-presenter');
 
-const PROVIDER_CHOICES = [
+const KEY_PROVIDER_CHOICES = [
     { name: 'OpenAI', value: 'openai' },
     { name: 'Claude (Anthropic)', value: 'claude' },
     { name: 'Gemini (Google)', value: 'gemini' },
     { name: 'OpenRouter', value: 'openrouter' }
+];
+
+const MODEL_PROVIDER_CHOICES = [
+    { name: 'FREE', value: 'free' },
+    ...KEY_PROVIDER_CHOICES
 ];
 
 module.exports = {
@@ -49,18 +65,18 @@ module.exports = {
             .setName('api')
             .setDescription('管理你的個人 AI 翻譯 API Key（加密儲存）')
             .addSubcommand(s => s.setName('add').setDescription('新增 AI API Key')
-                .addStringOption(o => o.setName('provider').setDescription('AI 服務商').setRequired(true).addChoices(...PROVIDER_CHOICES))
+                .addStringOption(o => o.setName('provider').setDescription('AI 服務商').setRequired(true).addChoices(...KEY_PROVIDER_CHOICES))
                 .addStringOption(o => o.setName('apikey').setDescription('你的 API Key').setRequired(true))
             )
             .addSubcommand(s => s.setName('edit').setDescription('修改已設定的 API Key')
-                .addStringOption(o => o.setName('provider').setDescription('AI 服務商').setRequired(true).addChoices(...PROVIDER_CHOICES))
+                .addStringOption(o => o.setName('provider').setDescription('AI 服務商').setRequired(true).addChoices(...KEY_PROVIDER_CHOICES))
                 .addStringOption(o => o.setName('apikey').setDescription('新的 API Key').setRequired(true))
             )
             .addSubcommand(s => s.setName('del').setDescription('刪除已設定的 API Key')
-                .addStringOption(o => o.setName('provider').setDescription('AI 服務商').setRequired(true).addChoices(...PROVIDER_CHOICES))
+                .addStringOption(o => o.setName('provider').setDescription('AI 服務商').setRequired(true).addChoices(...KEY_PROVIDER_CHOICES))
             )
             .addSubcommand(s => s.setName('model').setDescription('選擇預設翻譯引擎（點翻譯時使用）')
-                .addStringOption(o => o.setName('provider').setDescription('要使用的 AI 服務商').setRequired(true).addChoices(...PROVIDER_CHOICES))
+                .addStringOption(o => o.setName('provider').setDescription('要使用的 AI 服務商').setRequired(true).addChoices(...MODEL_PROVIDER_CHOICES))
             )
             .addSubcommand(s => s.setName('status').setDescription('查看你的 API Key 設定狀態'))
         )
@@ -135,19 +151,49 @@ module.exports = {
             )
         )
 
-        // ── /pe nouser（管理員，per-guild）──
-        .addSubcommand(s => s.setName('nouser').setDescription('排除/恢復某使用者在本伺服器觸發預覽（管理員）')
-            .addUserOption(o => o.setName('user').setDescription('要排除/恢復的使用者').setRequired(true))
-            .addStringOption(o => o.setName('action').setDescription('操作').setRequired(true)
-                .addChoices({ name: '新增排除', value: 'add' }, { name: '移除排除', value: 'remove' }, { name: '列表', value: 'list' })
+        // ── /pe switch（管理員，per-guild）──
+        .addSubcommandGroup(g => g
+            .setName('switch')
+            .setDescription('切換頻道/使用者名單模式（管理員）')
+            .addSubcommand(s => s.setName('channel').setDescription('設定本伺服器使用頻道白名單或黑名單')
+                .addStringOption(o => o.setName('mode').setDescription('頻道名單模式').setRequired(true)
+                    .addChoices({ name: '白名單', value: 'whitelist' }, { name: '黑名單', value: 'blacklist' }))
+            )
+            .addSubcommand(s => s.setName('user').setDescription('設定本伺服器使用使用者白名單或黑名單')
+                .addStringOption(o => o.setName('mode').setDescription('使用者名單模式').setRequired(true)
+                    .addChoices({ name: '白名單', value: 'whitelist' }, { name: '黑名單', value: 'blacklist' }))
             )
         )
 
-        // ── /pe noch（管理員，per-guild）──
-        .addSubcommand(s => s.setName('noch').setDescription('排除/恢復某頻道在本伺服器觸發預覽（管理員）')
-            .addChannelOption(o => o.setName('channel').setDescription('要排除/恢復的頻道').setRequired(true).addChannelTypes(ChannelType.GuildText))
-            .addStringOption(o => o.setName('action').setDescription('操作').setRequired(true)
-                .addChoices({ name: '新增排除', value: 'add' }, { name: '移除排除', value: 'remove' }, { name: '列表', value: 'list' })
+        // ── /pe channel（管理員，per-guild）──
+        .addSubcommandGroup(g => g
+            .setName('channel')
+            .setDescription('管理本伺服器頻道白名單/黑名單（管理員）')
+            .addSubcommand(s => s.setName('whitelist').setDescription('管理頻道白名單（可指定頻道或討論串）')
+                .addStringOption(o => o.setName('action').setDescription('操作').setRequired(true)
+                    .addChoices({ name: '新增', value: 'add' }, { name: '移除', value: 'remove' }, { name: '列表', value: 'list' }))
+                .addChannelOption(o => o.setName('channel').setDescription('频道/讨论串 ID').setRequired(false).addChannelTypes(...CHANNEL_PICKER_TYPES))
+            )
+            .addSubcommand(s => s.setName('blacklist').setDescription('管理頻道黑名單（可指定頻道或討論串）')
+                .addStringOption(o => o.setName('action').setDescription('操作').setRequired(true)
+                    .addChoices({ name: '新增', value: 'add' }, { name: '移除', value: 'remove' }, { name: '列表', value: 'list' }))
+                .addChannelOption(o => o.setName('channel').setDescription('频道/讨论串 ID').setRequired(false).addChannelTypes(...CHANNEL_PICKER_TYPES))
+            )
+        )
+
+        // ── /pe users（管理員，per-guild）──
+        .addSubcommandGroup(g => g
+            .setName('users')
+            .setDescription('管理本伺服器使用者白名單/黑名單（管理員）')
+            .addSubcommand(s => s.setName('whitelist').setDescription('管理使用者白名單')
+                .addStringOption(o => o.setName('action').setDescription('操作').setRequired(true)
+                    .addChoices({ name: '新增', value: 'add' }, { name: '移除', value: 'remove' }, { name: '列表', value: 'list' }))
+                .addUserOption(o => o.setName('user').setDescription('要新增/移除的使用者').setRequired(false))
+            )
+            .addSubcommand(s => s.setName('blacklist').setDescription('管理使用者黑名單')
+                .addStringOption(o => o.setName('action').setDescription('操作').setRequired(true)
+                    .addChoices({ name: '新增', value: 'add' }, { name: '移除', value: 'remove' }, { name: '列表', value: 'list' }))
+                .addUserOption(o => o.setName('user').setDescription('要新增/移除的使用者').setRequired(false))
             )
         )
 
@@ -201,11 +247,12 @@ module.exports = {
 
             if (group === 'log') return await handleLog(interaction, sub, guildId);
             if (group === 'blacklist') return await handleBlacklist(interaction, sub, guildId, userId);
+            if (group === 'switch') return await handleListModeSwitch(interaction, sub, guildId);
+            if (group === 'channel') return await handleChannelList(interaction, sub, guildId, userId);
+            if (group === 'users') return await handleUserList(interaction, sub, guildId, userId);
 
 
             switch (sub) {
-                case 'nouser': return await handleNoUser(interaction, guildId, userId);
-                case 'noch': return await handleNoChannel(interaction, guildId, userId);
                 case 'owner': return await handleOwner(interaction, guildId);
                 case 'linksup': return await handleLinkSupport(interaction, guildId, userId);
                 case 'status': return await handleStatus(interaction, guildId);
@@ -320,67 +367,115 @@ async function handleLog(interaction, sub, guildId) {
 }
 
 // ────────────────────────────────────────────────────────────
-// /pe nouser（per-guild）
+// /pe switch, /pe channel, /pe users（per-guild）
 // ────────────────────────────────────────────────────────────
-async function handleNoUser(interaction, guildId, addedBy) {
-    const action = interaction.options.getString('action');
-
-    if (action === 'list') {
-        const list = db.excludedUsers.list(guildId);
-        if (list.length === 0) return interaction.reply({ content: '📋 本伺服器目前沒有排除任何使用者', flags: MessageFlags.Ephemeral });
-        const lines = list.slice(0, 25).map(r => `• <@${r.user_id}>`);
-        if (list.length > 25) lines.push(`...另有 ${list.length - 25} 位`);
-        return interaction.reply({ content: `📋 本伺服器排除使用者（${list.length}）：\n${lines.join('\n')}`, flags: MessageFlags.Ephemeral });
+async function handleListModeSwitch(interaction, sub, guildId) {
+    const mode = interaction.options.getString('mode');
+    if (sub === 'channel') {
+        db.guilds.setChannelListMode(guildId, mode);
+        const count = mode === 'whitelist' ? db.allowedChannels.list(guildId).length : db.blockedChannels.list(guildId).length;
+        const note = mode === 'whitelist' && count === 0 ? '\n⚠️ 目前頻道白名單是空的，所有頻道都不會觸發 Peko Embed。' : '';
+        return interaction.reply({ content: `✅ 已切換為頻道${formatListMode(mode)}模式${note}`, flags: MessageFlags.Ephemeral });
     }
 
-    const user = interaction.options.getUser('user');
-    if (action === 'add') {
-        if (db.excludedUsers.has(guildId, user.id)) {
-            return interaction.reply({ content: `⚠️ ${user.tag} 已在排除清單中`, flags: MessageFlags.Ephemeral });
-        }
-        db.excludedUsers.add(guildId, user.id, addedBy);
-        return interaction.reply({ content: `✅ 已將 ${user.tag} 加入本伺服器排除清單`, flags: MessageFlags.Ephemeral });
-    }
-
-    if (action === 'remove') {
-        if (!db.excludedUsers.has(guildId, user.id)) {
-            return interaction.reply({ content: `⚠️ ${user.tag} 不在本伺服器排除清單中`, flags: MessageFlags.Ephemeral });
-        }
-        db.excludedUsers.remove(guildId, user.id);
-        return interaction.reply({ content: `✅ 已將 ${user.tag} 從本伺服器排除清單移除`, flags: MessageFlags.Ephemeral });
-    }
+    db.guilds.setUserListMode(guildId, mode);
+    const count = mode === 'whitelist' ? db.allowedUsers.list(guildId).length : db.excludedUsers.list(guildId).length;
+    const note = mode === 'whitelist' && count === 0 ? '\n⚠️ 目前使用者白名單是空的，所有使用者都不會觸發 Peko Embed。' : '';
+    return interaction.reply({ content: `✅ 已切換為使用者${formatListMode(mode)}模式${note}`, flags: MessageFlags.Ephemeral });
 }
 
-// ────────────────────────────────────────────────────────────
-// /pe noch（per-guild）
-// ────────────────────────────────────────────────────────────
-async function handleNoChannel(interaction, guildId, addedBy) {
+async function handleChannelList(interaction, sub, guildId, addedBy) {
     const action = interaction.options.getString('action');
+    const isWhitelist = sub === 'whitelist';
+    const store = isWhitelist ? db.allowedChannels : db.blockedChannels;
+    const label = isWhitelist ? '頻道白名單' : '頻道黑名單';
+
+    /** 判斷 channel fetched from API 是否為討論串型頻道 */
+    /** @param {import('discord.js').Channel} ch */
+    function isThread(ch) {
+        return [ChannelType.PublicThread, ChannelType.PrivateThread, ChannelType.AnnouncementThread].includes(ch.type);
+    }
 
     if (action === 'list') {
-        const list = db.blockedChannels.list(guildId);
-        if (list.length === 0) return interaction.reply({ content: '📋 本伺服器目前沒有排除任何頻道', flags: MessageFlags.Ephemeral });
-        const lines = list.slice(0, 25).map(r => `• <#${r.channel_id}>`);
+        const list = store.list(guildId);
+        if (list.length === 0) return interaction.reply({ content: `📋 本伺服器目前沒有設定任何${label}`, flags: MessageFlags.Ephemeral });
+        // 逐條 fetch 判斷是頻道還是討論串
+        const lines = [];
+        for (const r of list.slice(0, 25)) {
+            let isT = false;
+            try {
+                const ch = await interaction.guild.channels.fetch(r.channel_id);
+                isT = ch ? isThread(ch) : false;
+            } catch { /* 頻道已刪除 */ }
+            lines.push(isT ? `• 🧵 <#${r.channel_id}>（討論串）` : `• <#${r.channel_id}>`);
+        }
         if (list.length > 25) lines.push(`...另有 ${list.length - 25} 個`);
-        return interaction.reply({ content: `📋 本伺服器排除頻道（${list.length}）：\n${lines.join('\n')}`, flags: MessageFlags.Ephemeral });
+        return interaction.reply({ content: `📋 本伺服器${label}（${list.length}）：\n${lines.join('\n')}`, flags: MessageFlags.Ephemeral });
     }
 
     const channel = interaction.options.getChannel('channel');
-    if (action === 'add') {
-        if (db.blockedChannels.has(guildId, channel.id)) {
-            return interaction.reply({ content: `⚠️ ${channel.name} 已在排除清單中`, flags: MessageFlags.Ephemeral });
-        }
-        db.blockedChannels.add(guildId, channel.id, addedBy);
-        return interaction.reply({ content: `✅ 已將 ${channel.name} 加入本伺服器排除清單`, flags: MessageFlags.Ephemeral });
+    if (!channel) {
+        return interaction.reply({ content: `❌ ${action === 'add' ? '新增' : '移除'}${label}時必須指定頻道或討論串`, flags: MessageFlags.Ephemeral });
     }
 
-    if (action === 'remove') {
-        if (!db.blockedChannels.has(guildId, channel.id)) {
-            return interaction.reply({ content: `⚠️ ${channel.name} 不在本伺服器排除清單中`, flags: MessageFlags.Ephemeral });
+    const isThreadChannel = isThread(channel);
+    const tag = isThreadChannel ? '討論串' : '頻道';
+    // 顯示名稱：討論串用「父頻道名 # 討論串名」格式，頻道直接用 name
+    const display = isThreadChannel
+        ? (channel.parent ? `${channel.parent.name} # ${channel.name}` : `#${channel.name}`)
+        : channel.name;
+
+    if (action === 'add') {
+        if (store.has(guildId, channel.id)) {
+            return interaction.reply({ content: `⚠️ ${display} 已在${label}中`, flags: MessageFlags.Ephemeral });
         }
-        db.blockedChannels.remove(guildId, channel.id);
-        return interaction.reply({ content: `✅ 已將 ${channel.name} 從本伺服器排除清單移除`, flags: MessageFlags.Ephemeral });
+        store.add(guildId, channel.id, addedBy);
+        return interaction.reply({ content: `✅ 已將${tag} ${display} 加入本伺服器${label}`, flags: MessageFlags.Ephemeral });
     }
+
+    if (!store.has(guildId, channel.id)) {
+        return interaction.reply({ content: `⚠️ ${display} 不在本伺服器${label}中`, flags: MessageFlags.Ephemeral });
+    }
+    store.remove(guildId, channel.id);
+    return interaction.reply({ content: `✅ 已將${tag} ${display} 從本伺服器${label}移除`, flags: MessageFlags.Ephemeral });
+}
+
+async function handleUserList(interaction, sub, guildId, addedBy) {
+    const action = interaction.options.getString('action');
+    const isWhitelist = sub === 'whitelist';
+    const store = isWhitelist ? db.allowedUsers : db.excludedUsers;
+    const label = isWhitelist ? '使用者白名單' : '使用者黑名單';
+
+    if (action === 'list') {
+        const list = store.list(guildId);
+        if (list.length === 0) return interaction.reply({ content: `📋 本伺服器目前沒有設定任何${label}`, flags: MessageFlags.Ephemeral });
+        const lines = list.slice(0, 25).map(r => `• <@${r.user_id}>`);
+        if (list.length > 25) lines.push(`...另有 ${list.length - 25} 位`);
+        return interaction.reply({ content: `📋 本伺服器${label}（${list.length}）：\n${lines.join('\n')}`, flags: MessageFlags.Ephemeral });
+    }
+
+    const user = interaction.options.getUser('user');
+    if (!user) {
+        return interaction.reply({ content: `❌ ${action === 'add' ? '新增' : '移除'}${label}時必須指定使用者`, flags: MessageFlags.Ephemeral });
+    }
+
+    if (action === 'add') {
+        if (store.has(guildId, user.id)) {
+            return interaction.reply({ content: `⚠️ ${user.tag} 已在${label}中`, flags: MessageFlags.Ephemeral });
+        }
+        store.add(guildId, user.id, addedBy);
+        return interaction.reply({ content: `✅ 已將 ${user.tag} 加入本伺服器${label}`, flags: MessageFlags.Ephemeral });
+    }
+
+    if (!store.has(guildId, user.id)) {
+        return interaction.reply({ content: `⚠️ ${user.tag} 不在本伺服器${label}中`, flags: MessageFlags.Ephemeral });
+    }
+    store.remove(guildId, user.id);
+    return interaction.reply({ content: `✅ 已將 ${user.tag} 從本伺服器${label}移除`, flags: MessageFlags.Ephemeral });
+}
+
+function formatListMode(mode) {
+    return mode === 'whitelist' ? '白名單' : '黑名單';
 }
 
 // ────────────────────────────────────────────────────────────
@@ -456,16 +551,20 @@ function formatSupportedDomainHint(limit = 14) {
 async function handleStatus(interaction, guildId) {
     const g = db.guilds.get(guildId) || {};
     const blocked = db.blockedChannels.list(guildId).length;
+    const allowedChannels = db.allowedChannels.list(guildId).length;
     const excluded = db.excludedUsers.list(guildId).length;
+    const allowedUsers = db.allowedUsers.list(guildId).length;
     const disabledDomains = db.linkDomains.listDisabled(guildId).length;
+    const channelMode = g.channel_list_mode || 'blacklist';
+    const userMode = g.user_list_mode || 'blacklist';
 
     const lines = [
         '**🔧 Peko Embed 本伺服器狀態**\n',
         `**啟用狀態：** ${g.enabled ? '✅ 啟用' : '❌ 停用'}`,
         `**日誌頻道：** ${g.log_channel_id ? `<#${g.log_channel_id}>` : '_未設定（不發 log）_'}`,
         `**活動 Owner：** ${g.owner_user_id ? `<@${g.owner_user_id}>` : '_未設定_'}`,
-        `**排除使用者：** ${excluded} 位`,
-        `**排除頻道：** ${blocked} 個`,
+        `**頻道模式：** ${formatListMode(channelMode)}（白名單 ${allowedChannels} 個 / 黑名單 ${blocked} 個，黑名單永遠優先 deny）`,
+        `**使用者模式：** ${formatListMode(userMode)}（白名單 ${allowedUsers} 位 / 黑名單 ${excluded} 位，黑名單永遠優先 deny）`,
         `**停用支援網域：** ${disabledDomains} 個`,
         '',
         '**🌐 連結支援：**',
