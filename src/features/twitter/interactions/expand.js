@@ -1,6 +1,6 @@
 /**
  * Twitter 文字展開/收起按鈕互動處理器
- * 處理「顯示全文」和「收回全文」按鈕的切換功能
+ * 處理「顯示全文」和「縮回全文」按鈕的切換功能
  */
 
 const { ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags } = require('discord.js');

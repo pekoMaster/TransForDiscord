@@ -312,6 +312,9 @@ class TFDTwitterExtractor {
      * 🔧 2026-02-07: 使用 vxtwitter.com 讓 Discord 可直接內嵌播放影片
      */
     handleVideoTweet(tweet, originalURL, message = null) {
+        // 快取推文資料（供翻譯按鈕使用）
+        cacheTweetData(tweet.id, { tweet, originalURL, quoteData: null, replyData: null });
+
         // 使用 vxtwitter.com 處理影片推文
         const vxtwitterURL = originalURL.replace(/x\.com|twitter\.com/, 'vxtwitter.com');
 
@@ -628,7 +631,7 @@ class TFDTwitterExtractor {
     }
 
     /**
-     * 建立統一展開/收回按鈕組件（整合引用、回覆、全文）
+     * 建立統一展開/縮回按鈕組件（整合引用、回覆、全文）
      * @param {string} tweetId - 推文 ID
      * @param {boolean} isAllExpanded - 是否已全部展開
      * @returns {ButtonBuilder}

@@ -1,6 +1,9 @@
 /**
  * TransForDiscord — 互動路由
  * 處理 TFD 相關的按鈕與斜線指令
+ *
+ * v2.1 變更 (2026-05-29):
+ * - 新增 threads_reload_ 按鈕路由
  */
 
 const path = require('path');
@@ -105,13 +108,25 @@ async function execute(interaction, client) {
             return await routeReportInteraction(interaction);
         }
 
+        // ── Threads 重整按鈕（必須在 threads_gallery_ 之前匹配）──
+        if (customId.startsWith('threads_reload_')) {
+            const { handleThreadsReloadInteraction } = require('../../features/threads/interactions/reload.js');
+            return await handleThreadsReloadInteraction(interaction);
+        }
+
+        // ── Threads 多圖分頁 ──
+        if (customId.startsWith('threads_gallery_')) {
+            const { handleThreadsGalleryPagination } = require('../../features/threads/interactions/gallery-pagination.js');
+            return await handleThreadsGalleryPagination(interaction);
+        }
+
         // ── Twitter V2 互動
         if (customId.startsWith('v2_')) {
             const handler = require('../../features/twitter/interactions/v2-router.js');
             return await handler.handleV2Interaction(interaction);
         }
 
-        // ── Twitter 全展開/全收回（必須在 twitter_expand_ 之前匹配）──
+        // ── Twitter 全展開/全縮回（必須在 twitter_expand_ 之前匹配）──
         if (customId.startsWith('twitter_expand_all_') || customId.startsWith('twitter_collapse_all_')) {
             const { handleTwitterAllToggleInteraction } = require('../../features/twitter/interactions/toggle-all.js');
             return await handleTwitterAllToggleInteraction(interaction);

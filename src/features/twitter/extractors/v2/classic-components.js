@@ -47,14 +47,14 @@ function buildPaginationButtons(tweet, tweetType, extractImagesFromTweet) {
 function buildExpandToggleButtonComponent(tweetId, isExpanded) {
     return new ButtonBuilder()
         .setCustomId(isExpanded ? `twitter_collapse_${tweetId}` : `twitter_expand_${tweetId}`)
-        .setLabel(isExpanded ? '收回全文' : '展開全文')
+        .setLabel(isExpanded ? '縮回全文' : '展開全文')
         .setStyle(ButtonStyle.Secondary);
 }
 
 function buildAllToggleButtonComponent(tweetId, isAllExpanded) {
     return new ButtonBuilder()
         .setCustomId(isAllExpanded ? `twitter_collapse_all_${tweetId}` : `twitter_expand_all_${tweetId}`)
-        .setLabel(isAllExpanded ? '收回' : '展開')
+        .setLabel(isAllExpanded ? '縮回' : '展開')
         .setStyle(ButtonStyle.Secondary);
 }
 

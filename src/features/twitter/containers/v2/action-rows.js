@@ -18,7 +18,7 @@ function buildV2ActionRows(tweet, options = {}) {
         buttons.push(
             new ButtonBuilder()
                 .setCustomId(isTranslated ? `v2_original_${tweet.id}` : `v2_translate_${tweet.id}`)
-                .setLabel(isTranslated ? '??' : '蝧餉陌')
+                .setLabel(isTranslated ? '原文' : '翻譯')
                 .setStyle(ButtonStyle.Secondary)
         );
     }
@@ -36,7 +36,7 @@ function buildV2ActionRows(tweet, options = {}) {
         buttons.push(
             new ButtonBuilder()
                 .setCustomId(isAllExpanded ? `v2_collapse_all_${tweet.id}` : `v2_expand_all_${tweet.id}`)
-                .setLabel(isAllExpanded ? '?嗅?' : '撅?')
+                .setLabel(isAllExpanded ? '縮回' : '展開')
                 .setStyle(ButtonStyle.Secondary)
         );
     }
@@ -44,11 +44,11 @@ function buildV2ActionRows(tweet, options = {}) {
     buttons.push(
         new ButtonBuilder()
             .setCustomId(`v2_reload_${tweet.id}`)
-            .setLabel('?')
+            .setLabel('重整')
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
             .setCustomId(REPORT_BTN_PREFIX + reportId)
-            .setLabel('?')
+            .setLabel('回報')
             .setStyle(ButtonStyle.Secondary)
     );
 

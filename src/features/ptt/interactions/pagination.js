@@ -31,7 +31,7 @@ module.exports = {
             return;
         }
 
-        // 展開/收回按鈕
+        // 展開/縮回按鈕
         if (interaction.customId.startsWith('ptt_expand_') || interaction.customId.startsWith('ptt_collapse_')) {
             await handlePttExpandCollapse(interaction);
             return;
@@ -239,12 +239,12 @@ async function handlePttExpandCollapse(interaction) {
             const header = `作者 ${articleData.author}\n\n`;
             newEmbed.setDescription(header + displayContent);
         } else {
-            // 收回：用截斷內容替換
+            // 縮回：用截斷內容替換
             const header = `作者 ${articleData.author}\n\n`;
             newEmbed.setDescription(header + articleData.content);
         }
 
-        // 重建按鈕：切換展開/收回
+        // 重建按鈕：切換展開/縮回
         const existingRows = interaction.message.components || [];
         const newComponents = [];
 
@@ -256,7 +256,7 @@ async function handlePttExpandCollapse(interaction) {
                     newRow.addComponents(
                         new ButtonBuilder()
                             .setCustomId(`ptt_collapse_${articleHash}`)
-                            .setLabel('收回')
+                            .setLabel('縮回')
                             .setStyle(ButtonStyle.Secondary)
                     );
                 } else if (id && id.startsWith('ptt_collapse_')) {
@@ -283,7 +283,7 @@ async function handlePttExpandCollapse(interaction) {
             components: newComponents
         });
 
-        tlog.sys('PTT展開', `用戶 ${interaction.user.tag} ${isExpand ? '展開' : '收回'}全文`);
+        tlog.sys('PTT展開', `用戶 ${interaction.user.tag} ${isExpand ? '展開' : '縮回'}全文`);
     } catch (error) {
         tlog.sysError('PTT展開', `處理失敗: ${error.message}`);
         try {

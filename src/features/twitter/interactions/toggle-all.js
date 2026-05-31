@@ -1,6 +1,6 @@
 /**
- * Twitter 統一展開/收回按鈕互動處理器
- * 一鍵展開全部（引用 + 回覆 + 全文）/ 一鍵收回全部
+ * Twitter 統一展開/縮回按鈕互動處理器
+ * 一鍵展開全部（引用 + 回覆 + 全文）/ 一鍵縮回全部
  * 對應按鈕 ID: twitter_expand_all_{tweetId} / twitter_collapse_all_{tweetId}
  */
 
@@ -13,7 +13,7 @@ const { rebuildAndUpdate } = require('./v2/view-updater');
 const tlog = require('../../../../utils/tfd-logger');
 
 /**
- * 處理 Twitter 統一展開/收回按鈕互動
+ * 處理 Twitter 統一展開/縮回按鈕互動
  * @param {import('discord.js').ButtonInteraction} interaction
  * @returns {Promise<boolean>}
  */
@@ -193,7 +193,7 @@ async function handleTwitterAllToggleInteraction(interaction) {
 
         } else {
             // ══════════════════════════════
-            // 收回邏輯
+            // 縮回邏輯
             // ══════════════════════════════
 
             // 1. 移除引用 + 回覆 fields
