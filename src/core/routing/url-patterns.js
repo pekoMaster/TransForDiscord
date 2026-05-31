@@ -17,7 +17,7 @@ const patterns = {
 
     instagram: {
         post: /https?:\/\/(?:www\.)?instagram\.com\/p\/([A-Za-z0-9_-]+)/i,
-        reel: /https?:\/\/(?:www\.)?instagram\.com\/reel\/([A-Za-z0-9_-]+)/i,
+        reel: /https?:\/\/(?:www\.)?instagram\.com\/reels?\/([A-Za-z0-9_-]+)/i,
         story: /https?:\/\/(?:www\.)?instagram\.com\/stories\/([A-Za-z0-9._-]+)\/(\d+)/i
     },
 
@@ -161,12 +161,12 @@ const patterns = {
         product: /https?:\/\/shop\.hololivepro\.com\/products\/([a-zA-Z0-9_-]+)/i
     },
 
-    // 影片平台 - YouTube
-    youtube: {
+    // 影片平台 - YouTube（已停用）
+    // youtube: {
         // /live/ 格式直播連結（含可選 si 參數）
         // 格式: youtube.com/live/{videoId} 或 youtube.com/live/{videoId}?si=xxx
-        live: /https?:\/\/(?:www\.)?youtube\.com\/live\/([a-zA-Z0-9_-]{11})/i
-    }
+    //     live: /https?:\/\/(?:www\.)?youtube\.com\/live\/([a-zA-Z0-9_-]{11})/i
+    // }
 };
 
 module.exports = patterns;

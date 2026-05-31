@@ -105,7 +105,7 @@ async function handleMainButton(interaction) {
 
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`report_spoiler_${channelId}_${messageId}_${subTs}`).setLabel('上防爆雷').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId(`report_recall_${channelId}_${messageId}_${subTs}`).setLabel('收回訊息').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`report_recall_${channelId}_${messageId}_${subTs}`).setLabel('縮回訊息').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId(`report_blacklist_${channelId}_${messageId}_${subTs}`).setLabel('黑名單回報').setStyle(ButtonStyle.Secondary)
     );
 

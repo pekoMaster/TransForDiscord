@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS guild_settings (
   guild_name        TEXT,                      -- 快照（用於管理面板顯示）
   enabled           INTEGER NOT NULL DEFAULT 1,
   blacklist_enabled INTEGER NOT NULL DEFAULT 1, -- TFD 是否在此伺服器啟用（0/1）
+  channel_list_mode TEXT NOT NULL DEFAULT 'blacklist' CHECK(channel_list_mode IN ('blacklist', 'whitelist')),
+  user_list_mode    TEXT NOT NULL DEFAULT 'blacklist' CHECK(user_list_mode IN ('blacklist', 'whitelist')),
   log_channel_id    TEXT,                      -- 日誌頻道；NULL = 不發 log
   owner_user_id     TEXT,                      -- 活動用「自定 owner」（管理員按鈕用）
   language          TEXT DEFAULT 'zh-TW',      -- 介面語言
@@ -36,7 +38,22 @@ CREATE TABLE IF NOT EXISTS guild_blocked_channels (
 CREATE INDEX IF NOT EXISTS idx_blocked_channels_guild ON guild_blocked_channels(guild_id);
 
 -- ────────────────────────────────────────────────────────────
--- 3. 每個伺服器的排除使用者（這些使用者貼 URL 不會觸發 TFD）
+-- 3. 每個伺服器的允許頻道（白名單模式時，只有這些頻道會觸發 TFD）
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS guild_allowed_channels (
+  guild_id    TEXT NOT NULL,
+  channel_id  TEXT NOT NULL,
+  added_by    TEXT,
+  reason      TEXT,
+  created_at  INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, channel_id),
+  FOREIGN KEY (guild_id) REFERENCES guild_settings(guild_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_allowed_channels_guild ON guild_allowed_channels(guild_id);
+
+-- ────────────────────────────────────────────────────────────
+-- 4. 每個伺服器的排除使用者（這些使用者貼 URL 不會觸發 TFD）
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS guild_excluded_users (
   guild_id    TEXT NOT NULL,
@@ -51,7 +68,22 @@ CREATE TABLE IF NOT EXISTS guild_excluded_users (
 CREATE INDEX IF NOT EXISTS idx_excluded_users_guild ON guild_excluded_users(guild_id);
 
 -- ────────────────────────────────────────────────────────────
--- 4. 使用者 API Keys（AES-256-GCM 加密）
+-- 5. 每個伺服器的允許使用者（白名單模式時，只有這些使用者會觸發 TFD）
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS guild_allowed_users (
+  guild_id    TEXT NOT NULL,
+  user_id     TEXT NOT NULL,
+  added_by    TEXT,
+  reason      TEXT,
+  created_at  INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, user_id),
+  FOREIGN KEY (guild_id) REFERENCES guild_settings(guild_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_allowed_users_guild ON guild_allowed_users(guild_id);
+
+-- ────────────────────────────────────────────────────────────
+-- 6. 使用者 API Keys（AES-256-GCM 加密）
 --    格式：base64(iv(12) || authTag(16) || ciphertext)
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS user_api_keys (

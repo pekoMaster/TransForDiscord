@@ -251,9 +251,9 @@ class URLMatcher {
             hololiveshop: {
                 product: (m) => ({ productSlug: m[1] })
             },
-            youtube: {
-                live: (m) => ({ videoId: m[1] })
-            }
+            // youtube: { // YouTube: 已停用
+            //     live: (m) => ({ videoId: m[1] })
+            // }
         };
 
         const siteExtractors = extractors[siteName];

@@ -2,13 +2,27 @@ const { buildPrompt } = require('../text/prompt-builder');
 const { splitTranslatedBundle } = require('../text/text-bundle');
 const { resolveTranslationKey } = require('../keys/key-resolver');
 const { failure } = require('../errors');
+const OpenCC = require('opencc-js');
+
+// 簡體轉繁體轉換器（簡體 → 繁體）
+const converter = OpenCC.Converter({ from: 'cn', to: 'tw' });
 
 const providers = {
+    free: require('../providers/free-provider'),
     gemini: require('../providers/gemini-provider'),
     openrouter: require('../providers/openrouter-provider'),
     openai: require('../providers/openai-provider'),
     claude: require('../providers/claude-provider')
 };
+
+/**
+ * 後處理：確保翻譯結果為繁體中文
+ * 使用 OpenCC 將簡體中文轉換為繁體中文
+ */
+function ensureTraditionalChinese(text) {
+    if (!text) return text;
+    return converter(text);
+}
 
 async function translateTweet({
     textBundle,
@@ -32,10 +46,6 @@ async function translateTweet({
     const keyResult = resolveTranslationKey({ userId, provider, allowEnvFallback });
     if (!keyResult.success) return keyResult;
 
-    if (keyResult.provider === 'free') {
-        return failure('FREE_NOT_READY');
-    }
-
     const providerImpl = providers[keyResult.provider];
     if (!providerImpl) return failure('NO_PROVIDER_SELECTED');
 
@@ -48,11 +58,14 @@ async function translateTweet({
 
     if (!result.success) return result;
 
+    // 後處理：確保翻譯結果為繁體中文
+    const translatedText = ensureTraditionalChinese(result.text);
+
     return {
         success: true,
         provider: keyResult.provider,
         model: result.model,
-        translated: splitTranslatedBundle(result.text),
+        translated: splitTranslatedBundle(translatedText),
         error: null,
         errorType: null
     };

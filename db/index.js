@@ -37,6 +37,7 @@ function init() {
 
     const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
     db.exec(schema);
+    _runMigrations();
 
     _prepareStatements();
     tlog.sys('DB', `SQLite 初始化完成: ${DB_PATH}`);
@@ -63,6 +64,16 @@ function _stmt(name) {
 
 function now() {
     return Math.floor(Date.now() / 1000);
+}
+
+function _runMigrations() {
+    const columns = db.prepare('PRAGMA table_info(guild_settings)').all().map(row => row.name);
+    if (!columns.includes('channel_list_mode')) {
+        db.exec("ALTER TABLE guild_settings ADD COLUMN channel_list_mode TEXT NOT NULL DEFAULT 'blacklist'");
+    }
+    if (!columns.includes('user_list_mode')) {
+        db.exec("ALTER TABLE guild_settings ADD COLUMN user_list_mode TEXT NOT NULL DEFAULT 'blacklist'");
+    }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -97,6 +108,15 @@ function _prepareStatements() {
     stmts.blockedChannelList = db.prepare('SELECT * FROM guild_blocked_channels WHERE guild_id = ? ORDER BY created_at DESC');
     stmts.blockedChannelHas = db.prepare('SELECT 1 FROM guild_blocked_channels WHERE guild_id = ? AND channel_id = ?');
 
+    // guild_allowed_channels
+    stmts.allowedChannelAdd = db.prepare(`
+        INSERT OR IGNORE INTO guild_allowed_channels (guild_id, channel_id, added_by, reason, created_at)
+        VALUES (?, ?, ?, ?, ?)
+    `);
+    stmts.allowedChannelRemove = db.prepare('DELETE FROM guild_allowed_channels WHERE guild_id = ? AND channel_id = ?');
+    stmts.allowedChannelList = db.prepare('SELECT * FROM guild_allowed_channels WHERE guild_id = ? ORDER BY created_at DESC');
+    stmts.allowedChannelHas = db.prepare('SELECT 1 FROM guild_allowed_channels WHERE guild_id = ? AND channel_id = ?');
+
     // guild_excluded_users
     stmts.excludedUserAdd = db.prepare(`
         INSERT OR IGNORE INTO guild_excluded_users (guild_id, user_id, added_by, reason, created_at)
@@ -105,6 +125,15 @@ function _prepareStatements() {
     stmts.excludedUserRemove = db.prepare('DELETE FROM guild_excluded_users WHERE guild_id = ? AND user_id = ?');
     stmts.excludedUserList = db.prepare('SELECT * FROM guild_excluded_users WHERE guild_id = ? ORDER BY created_at DESC');
     stmts.excludedUserHas = db.prepare('SELECT 1 FROM guild_excluded_users WHERE guild_id = ? AND user_id = ?');
+
+    // guild_allowed_users
+    stmts.allowedUserAdd = db.prepare(`
+        INSERT OR IGNORE INTO guild_allowed_users (guild_id, user_id, added_by, reason, created_at)
+        VALUES (?, ?, ?, ?, ?)
+    `);
+    stmts.allowedUserRemove = db.prepare('DELETE FROM guild_allowed_users WHERE guild_id = ? AND user_id = ?');
+    stmts.allowedUserList = db.prepare('SELECT * FROM guild_allowed_users WHERE guild_id = ? ORDER BY created_at DESC');
+    stmts.allowedUserHas = db.prepare('SELECT 1 FROM guild_allowed_users WHERE guild_id = ? AND user_id = ?');
 
     // user_api_keys
     stmts.apiKeyUpsert = db.prepare(`
@@ -276,6 +305,30 @@ const guilds = {
             .run(enabled ? 1 : 0, now(), guildId);
     },
 
+    getChannelListMode(guildId) {
+        const g = _stmt('guildGet').get(guildId);
+        return g?.channel_list_mode || 'blacklist';
+    },
+
+    setChannelListMode(guildId, mode) {
+        if (!['blacklist', 'whitelist'].includes(mode)) throw new Error(`Invalid channel list mode: ${mode}`);
+        guilds._ensure(guildId);
+        return getDB().prepare('UPDATE guild_settings SET channel_list_mode = ?, updated_at = ? WHERE guild_id = ?')
+            .run(mode, now(), guildId);
+    },
+
+    getUserListMode(guildId) {
+        const g = _stmt('guildGet').get(guildId);
+        return g?.user_list_mode || 'blacklist';
+    },
+
+    setUserListMode(guildId, mode) {
+        if (!['blacklist', 'whitelist'].includes(mode)) throw new Error(`Invalid user list mode: ${mode}`);
+        guilds._ensure(guildId);
+        return getDB().prepare('UPDATE guild_settings SET user_list_mode = ?, updated_at = ? WHERE guild_id = ?')
+            .run(mode, now(), guildId);
+    },
+
     all() {
         return _stmt('guildAll').all();
     },
@@ -310,6 +363,25 @@ const blockedChannels = {
     }
 };
 
+const allowedChannels = {
+    add(guildId, channelId, addedBy = null, reason = null) {
+        guilds._ensure(guildId);
+        return _stmt('allowedChannelAdd').run(guildId, channelId, addedBy, reason, now());
+    },
+
+    remove(guildId, channelId) {
+        return _stmt('allowedChannelRemove').run(guildId, channelId);
+    },
+
+    list(guildId) {
+        return _stmt('allowedChannelList').all(guildId);
+    },
+
+    has(guildId, channelId) {
+        return !!_stmt('allowedChannelHas').get(guildId, channelId);
+    }
+};
+
 // ────────────────────────────────────────────────────────────
 // excluded users API
 // ────────────────────────────────────────────────────────────
@@ -330,6 +402,25 @@ const excludedUsers = {
 
     has(guildId, userId) {
         return !!_stmt('excludedUserHas').get(guildId, userId);
+    }
+};
+
+const allowedUsers = {
+    add(guildId, userId, addedBy = null, reason = null) {
+        guilds._ensure(guildId);
+        return _stmt('allowedUserAdd').run(guildId, userId, addedBy, reason, now());
+    },
+
+    remove(guildId, userId) {
+        return _stmt('allowedUserRemove').run(guildId, userId);
+    },
+
+    list(guildId) {
+        return _stmt('allowedUserList').all(guildId);
+    },
+
+    has(guildId, userId) {
+        return !!_stmt('allowedUserHas').get(guildId, userId);
     }
 };
 
@@ -608,7 +699,9 @@ module.exports = {
     getDB,
     guilds,
     blockedChannels,
+    allowedChannels,
     excludedUsers,
+    allowedUsers,
     linkDomains,
     apiKeys,
     urlStats,

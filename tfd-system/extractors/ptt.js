@@ -9,6 +9,7 @@ const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
 const tfd = require('../../utils/tfd-logger');
 const PTTCacheManager = require('../../utils/ptt-cache-manager');
 const _pttCacheManager = new PTTCacheManager();
+const PTT_FOOTER_TEXT = 'PTT 批踢踢實業坊';
 
 class PTTExtractor {
     constructor() {
@@ -80,9 +81,7 @@ class PTTExtractor {
 
         // 🔍 檢查是否為錯誤回應
         if (html && typeof html === 'object' && html.error) {
-            if (html.status === 404) {
-                return this.create404Response(displayURL);
-            }
+            const firstStatus = html.status;
 
             // 🔄 備援：pttweb.cc 失敗 → 改用 ptt.cc（反之亦然）
             if (fetchURL.includes('pttweb.cc')) {
@@ -94,6 +93,9 @@ class PTTExtractor {
             html = await this.httpClient.fetchHTML(fallbackURL, pttHeaders);
 
             if ((html && typeof html === 'object' && html.error) || !html) {
+                if (firstStatus === 404 && html && html.status === 404) {
+                    return this.create404Response(displayURL);
+                }
                 throw new Error('無法取得文章內容（主要和備援 URL 均失敗）');
             }
         }
@@ -543,6 +545,8 @@ class PTTExtractor {
             if (mainContent.length === 0) {
                 mainContent = $('.e7-main-content');
             }
+            mainContent = mainContent.clone();
+            mainContent.find('.push, .f2, script, style').remove();
             const contentText = mainContent.text();
 
             const imageUrlRegex = /https?:\/\/[^\s<>"]+?\.(?:jpg|jpeg|png|gif|webp)/gi;
@@ -661,7 +665,7 @@ class PTTExtractor {
             }
 
             let contentToDisplay = articleData.content;
-            let footerText = 'PTT 批踢踢實業坊';
+            let footerText = PTT_FOOTER_TEXT;
             if (articleData.publishTime && typeof articleData.publishTime === 'string' && articleData.publishTime.trim()) {
                 footerText += ` • ${articleData.publishTime.trim()}`;
             }
@@ -676,8 +680,7 @@ class PTTExtractor {
                 url: originalURL,
                 color: this.embedBuilder.getSiteColor('ptt'),
                 footer: {
-                    text: footerText,
-                    iconURL: 'https://www.ptt.cc/favicon.ico'
+                    text: footerText
                 }
             };
 
@@ -744,23 +747,17 @@ class PTTExtractor {
                 const totalPages = Math.ceil(validImages.length / imagesPerPage);
                 const articleHash = this.cacheManager.extractArticleHash(originalURL);
 
-                let pageFooterText = 'PTT 批踢踢實業坊';
+                let pageFooterText = PTT_FOOTER_TEXT;
                 pageFooterText += ` • 第 ${pageIndex + 1}/${totalPages} 頁 • 共 ${validImages.length} 張圖片`;
                 if (articleData.publishTime) {
                     pageFooterText += ` • ${articleData.publishTime}`;
                 }
                 embed.setFooter({
-                    text: pageFooterText,
-                    iconURL: 'https://www.ptt.cc/favicon.ico'
+                    text: pageFooterText
                 });
 
                 const buttons = new ActionRowBuilder()
                     .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`ptt_first_${articleHash}_0`)
-                            .setLabel('⏪')
-                            .setStyle(ButtonStyle.Secondary)
-                            .setDisabled(pageIndex === 0),
                         new ButtonBuilder()
                             .setCustomId(`ptt_prev_${articleHash}_${Math.max(0, pageIndex - 1)}`)
                             .setLabel('◀️')
@@ -771,22 +768,16 @@ class PTTExtractor {
                             .setLabel('▶️')
                             .setStyle(ButtonStyle.Secondary)
                             .setDisabled(pageIndex === totalPages - 1),
-                        new ButtonBuilder()
-                            .setCustomId(`ptt_last_${articleHash}_${totalPages - 1}`)
-                            .setLabel('⏩')
-                            .setStyle(ButtonStyle.Secondary)
-                            .setDisabled(pageIndex === totalPages - 1)
                     );
                 components = [buttons];
             } else if (validImages.length > 0) {
                 // 有圖片但不需要翻頁，顯示圖片數量
-                let imageFooterText = `PTT 批踢踢實業坊 • 共 ${validImages.length} 張圖片`;
+                let imageFooterText = `${PTT_FOOTER_TEXT} • 共 ${validImages.length} 張圖片`;
                 if (articleData.publishTime) {
                     imageFooterText += ` • ${articleData.publishTime}`;
                 }
                 embed.setFooter({
-                    text: imageFooterText,
-                    iconURL: 'https://www.ptt.cc/favicon.ico'
+                    text: imageFooterText
                 });
             }
         }
@@ -813,12 +804,20 @@ class PTTExtractor {
                 .setStyle(ButtonStyle.Secondary)
         );
 
-        if (components.length > 0) {
-            for (const btn of actionButtons) {
-                components[0].addComponents(btn);
+        // 🚨 回報按鈕（所有文章都加入）
+        actionButtons.push(
+            new ButtonBuilder()
+                .setCustomId(`report_btn_${Date.now()}`)
+                .setLabel('回報')
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+        if (actionButtons.length > 0) {
+            if (components.length > 0) {
+                components.push(new ActionRowBuilder().addComponents(...actionButtons));
+            } else {
+                components = [new ActionRowBuilder().addComponents(...actionButtons)];
             }
-        } else {
-            components = [new ActionRowBuilder().addComponents(...actionButtons)];
         }
 
             return {
@@ -868,8 +867,7 @@ class PTTExtractor {
             url: originalURL,
             color: this.embedBuilder.getSiteColor('ptt'),
             footer: {
-                text: 'PTT 批踢踢實業坊',
-                iconURL: 'https://www.ptt.cc/favicon.ico'
+                text: PTT_FOOTER_TEXT
             }
         });
 

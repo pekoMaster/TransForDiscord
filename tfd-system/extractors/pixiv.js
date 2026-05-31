@@ -561,15 +561,57 @@ class PixivExtractor {
             }
         }
 
-        // 方法3: 直接使用 phixiv.net 備援 - 如果所有方法都失敗
+        // 方法3: phixiv.net og:image 備援 — 針對新版作品（Pixiv API urls=null + Pages API 404）
+        // phixiv.net 對 Discord User-Agent 返回 HTML + og:image 含 /i/ 代理圖片 URL
         if (!imageURL && illust.id) {
-            tfd.sys('Pixiv', `所有 API 都無法獲取圖片 URLs，使用 phixiv.net 代理服務`);
+            try {
+                tfd.sys('Pixiv', `API 圖片 URL 不可用，嘗試 phixiv.net og:image 解析`);
+                const phixivPageURL = `https://phixiv.net/artworks/${illust.id}`;
+                const phixivResp = await this.httpClient.client.get(phixivPageURL, {
+                    timeout: 12000,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)',
+                        'Accept': 'text/html'
+                    },
+                    maxRedirects: 0,
+                    validateStatus: () => true
+                });
 
-            // phixiv.net 會自動處理圖片載入和預覽，最可靠的方案
-            imageURL = `https://phixiv.net/artworks/${illust.id}`;
-            allImages.push(imageURL);
+                if (phixivResp.status === 200 && typeof phixivResp.data === 'string') {
+                    // 從 og:image 提取圖片 URL（格式：https://phixiv.net/i/img-master/img/...）
+                    const ogMatch = phixivResp.data.match(/og:image[^>]+content="([^"]+)"/);
+                    if (ogMatch && ogMatch[1]) {
+                        const phixivImageURL = ogMatch[1];
+                        tfd.sys('Pixiv', `✅ phixiv og:image: ${phixivImageURL}`);
 
-            tfd.sys('Pixiv', `phixiv URL: ${imageURL}`);
+                        // 從 og:image 的日期路徑生成多圖 URL（如果有多頁）
+                        if (illust.pageCount > 1) {
+                            for (let i = 0; i < illust.pageCount; i++) {
+                                const pageURL = phixivImageURL.replace(/_p\d+_/, `_p${i}_`);
+                                allImages.push(pageURL);
+                            }
+                        }
+                        imageURL = phixivImageURL;
+                    } else {
+                        // 沒有 og:image，使用 phixiv 頁面 URL 作為 embed.url
+                        tfd.sys('Pixiv', `phixiv 無 og:image，使用頁面 URL 作為 embed 連結`);
+                        imageURL = phixivPageURL;
+                        allImages.push(phixivPageURL);
+                    }
+                } else {
+                    tfd.sys('Pixiv', `phixiv 回應異常 (${phixivResp.status})，標記為無法顯示圖片`);
+                    // 不設定 imageURL — 空圖比壞圖好
+                }
+            } catch (error) {
+                tfd.sys('Pixiv', `phixiv 請求失敗: ${error.message}`);
+            }
+        }
+
+        // 方法4: 最後手段 — 使用 phixiv 頁面 URL 讓 Discord 自動 unfurl（不設定 image，embed 只顯示文字+連結）
+        if (!imageURL && illust.id) {
+            tfd.sys('Pixiv', `所有方法均失敗，以文字 embed + 連結顯示`);
+            imageURL = null;
+            allImages.length = 0;
         }
 
         // LOG removed for simplicity
@@ -836,7 +878,7 @@ class PixivExtractor {
                 iconURL: null,
                 url: `https://www.pixiv.net/users/${artworkData.artist?.id || ''}`
             },
-            image: displayImage,
+            image: displayImage || null,
             timestamp: artworkData.createDate,
             artist: artworkData.artist?.name || 'Unknown Artist', // 字串格式，供 createArtworkEmbed 使用
             tags: artworkData.tags || [], // 添加標籤
@@ -894,9 +936,13 @@ class PixivExtractor {
         // 圖片始終顯示在 embed 內（與 Twitter 多 embed 方式不同）
 
         // 設定 embed 圖片為當前頁的圖片
-        if (displayImage) {
+        // 只接受真正的圖片 URL（proxy 或 phixiv /i/ 路徑），跳過 phixiv 頁面 URL（不是圖片）
+        const isImageURL = displayImage && /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(displayImage);
+        const isPhixivProxyURL = displayImage && displayImage.includes('phixiv.net/i/');
+        if (isImageURL || isPhixivProxyURL) {
             embed.setImage(displayImage);
         }
+        // 否則不設定 embed 圖片（embed 顯示文字+連結，沒有壞圖）
 
         return {
             success: true,

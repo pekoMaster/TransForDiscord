@@ -14,7 +14,16 @@ class HololiveShopExtractor {
         this.icon = '🛍️';
         this.color = 0x39C5BB;
         this.timeout = 10000;
-        this.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+        this.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8,zh-TW;q=0.7',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1'
+        };
     }
 
     async extract(matchResult, message = null) {
@@ -23,7 +32,7 @@ class HololiveShopExtractor {
 
         try {
             const response = await axios.get(url, {
-                headers: { 'User-Agent': this.userAgent },
+                headers: this.headers,
                 timeout: this.timeout,
                 maxRedirects: 5
             });

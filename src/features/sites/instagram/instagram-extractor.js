@@ -8,7 +8,8 @@ const DOMParser = require('../../../shared/html/dom-parser');
 const TFDEmbedBuilder = require('../../../shared/discord/embed-builder');
 const URLConverterLogger = require('../../../shared/logging/url-converter-logger');
 const axios = require('axios');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ContainerBuilder, TextDisplayBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { REPORT_BTN_PREFIX } = require('../../../shared/discord/spoiler-button-helper');
 const tfd = require('../../../shared/logging/tfd-logger');
 
 class InstagramExtractor {
@@ -53,13 +54,18 @@ class InstagramExtractor {
      * @returns {Promise<Object>}
      */
     async extractPost(postId, originalURL, message = null) {
-        // 使用 URL 轉換方式：將 www.instagram.com 改為 www.kkinstagram.com
         const convertedURL = this.convertInstagramURL(originalURL);
-
-        // 記錄 URL 轉換日誌
         URLConverterLogger.logConversion('instagram', message, convertedURL);
 
-        // 回傳 URL 轉換結果
+        const embedData = await this.fetchInstagramEmbedData(originalURL, convertedURL, {
+            contentType: 'post',
+            shortcode: postId
+        });
+
+        if (embedData) {
+            return this.createInstagramV2Response(embedData, message);
+        }
+
         return {
             success: true,
             siteName: 'instagram',
@@ -72,7 +78,6 @@ class InstagramExtractor {
             }
         };
     }
-
     /**
      * 提取 Reel 資訊
      * @param {string} reelId
@@ -81,43 +86,28 @@ class InstagramExtractor {
      * @returns {Promise<Object>}
      */
     async extractReel(reelId, originalURL, message = null) {
-        // Instagram Reels 轉換：instagram.com/reel → vxinstagram.com/reel
         const convertedURL = this.convertInstagramURL(originalURL);
-
-        // 使用 Puppeteer 爬取 Reels 詳細資訊
-        let reelsData = null;
-        try {
-            reelsData = await this.scrapeReelsWithPuppeteer(originalURL);
-            tfd.sys('TFD-Instagram', `Reels 資料提取成功: ${JSON.stringify(reelsData)}`);
-        } catch (error) {
-            tfd.sysError('TFD-Instagram', `Reels 爬取失敗: ${error.message}`);
-            // 爬取失敗時仍繼續處理，使用基本 URL 轉換
-        }
-
-        // 記錄 URL 轉換日誌
         URLConverterLogger.logConversion('instagram', message, convertedURL);
 
-        // Instagram Reels 特殊處理：刪除原訊息並發送 embed 訊息
-        const reelsMessage = this.createReelsFormattedMessageWithMetadata(message, convertedURL, reelsData);
+        const embedData = await this.fetchInstagramEmbedData(originalURL, convertedURL, {
+            contentType: 'reel',
+            shortcode: reelId
+        });
+
+        if (embedData) {
+            return this.createInstagramV2Response(embedData, message);
+        }
 
         return {
             success: true,
             siteName: 'instagram',
-            contentType: 'reel_with_metadata',  // 新的內容類型：帶有 metadata 的 Reels
+            contentType: 'url_conversion',
             convertedURL: convertedURL,
-            deleteOriginal: true,  // 標記需要刪除原訊息
-            embed: reelsMessage.embed,  // 使用 embed 格式
-            content: reelsMessage.content,
-            data: {
-                originalURL: originalURL,
-                convertedURL: convertedURL,
-                reelId: reelId,
-                type: 'reel',
-                metadata: reelsData
-            }
+            redirect: true,
+            redirectURL: convertedURL,
+            data: { originalURL, convertedURL, reelId, type: 'reel' }
         };
     }
-
     /**
      * 提取 Story 資訊
      * @param {string} username
@@ -127,31 +117,178 @@ class InstagramExtractor {
      * @returns {Promise<Object>}
      */
     async extractStory(username, storyId, originalURL, message = null) {
-        // Stories 使用特殊的 vxinstagram.com 轉換
         const convertedURL = this.convertInstagramURL(originalURL);
-
-        // 記錄 URL 轉換日誌
         URLConverterLogger.logConversion('instagram', message, convertedURL);
 
-        // Instagram Stories 特殊處理：刪除原訊息並發送 embed 訊息
-        const storyMessage = this.createStoriesFormattedMessage(message, convertedURL);
+        const embedData = await this.fetchInstagramEmbedData(originalURL, convertedURL, {
+            contentType: 'story',
+            shortcode: storyId,
+            username
+        });
 
+        if (embedData) {
+            return this.createInstagramV2Response(embedData, message);
+        }
+
+        const storyMessage = this.createStoriesFormattedMessage(message, convertedURL);
         return {
             success: true,
             siteName: 'instagram',
-            contentType: 'story_formatted',  // 特殊內容類型
+            contentType: 'story_formatted',
             convertedURL: convertedURL,
-            deleteOriginal: true,  // 標記需要刪除原訊息
-            embed: storyMessage.embed,  // 使用 embed 格式
+            deleteOriginal: true,
+            embed: storyMessage.embed,
             content: storyMessage.content,
-            data: {
-                originalURL: originalURL,
-                convertedURL: convertedURL,
-                username: username,
-                storyId: storyId,
-                type: 'story'
-            }
+            data: { originalURL, convertedURL, username, storyId, type: 'story' }
         };
+    }
+    async fetchInstagramEmbedData(originalURL, convertedURL, options = {}) {
+        const contentType = options.contentType || 'post';
+        const shortcode = options.shortcode || null;
+        const originalMeta = await this.fetchOpenGraphMetadata(originalURL);
+        const proxyMeta = await this.fetchOpenGraphMetadata(convertedURL);
+        const title = originalMeta.title || proxyMeta.title || null;
+        const description = originalMeta.description || proxyMeta.description || null;
+        const imageUrl = originalMeta.image || proxyMeta.image || null;
+        let videoUrl = proxyMeta.video || originalMeta.video || null;
+        if (!videoUrl && contentType === 'reel' && shortcode) {
+            videoUrl = 'https://vxinstagram.com/offload/' + shortcode + '/0.mp4';
+        }
+        const authorName = this.extractAuthorFromInstagramMeta(description, title, originalURL) || options.username || null;
+        const caption = this.extractCaptionFromInstagramMeta(description, title);
+        const stats = this.extractStatsFromInstagramMeta(description);
+        if (!title && !description && !imageUrl && !videoUrl) return null;
+        return { originalURL, convertedURL, contentType, shortcode, title, description, authorName, caption, imageUrl, videoUrl, stats };
+    }
+
+    async fetchOpenGraphMetadata(url) {
+        const empty = { title: null, description: null, image: null, video: null };
+        try {
+            const response = await axios.get(url, {
+                timeout: 8000,
+                maxRedirects: 3,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8'
+                }
+            });
+            const html = typeof response.data === 'string' ? response.data : '';
+            if (!html) return empty;
+            return {
+                title: this.extractMetaContent(html, 'og:title'),
+                description: this.extractMetaContent(html, 'og:description'),
+                image: this.extractMetaContent(html, 'og:image'),
+                video: this.extractMetaContent(html, 'og:video') || this.extractMetaContent(html, 'og:video:url') || this.extractMetaContent(html, 'twitter:player:stream')
+            };
+        } catch (error) {
+            tfd.sys('TFD-Instagram', 'OG metadata fetch failed (' + (error.code || error.message) + '): ' + url);
+            return empty;
+        }
+    }
+
+    createInstagramV2Response(embedData, message = null) {
+        return {
+            success: true,
+            siteName: 'instagram',
+            contentType: 'instagram_v2',
+            isV2: true,
+            v2Container: this.buildInstagramV2Container(embedData, message),
+            originalURL: embedData.originalURL,
+            convertedURL: embedData.convertedURL,
+            data: embedData
+        };
+    }
+
+    buildInstagramV2Container(embedData, message = null) {
+        const container = new ContainerBuilder().setAccentColor(0xE4405F);
+        const typeLabel = { post: 'Instagram 貼文', reel: 'Instagram Reels', story: 'Instagram Story' }[embedData.contentType] || 'Instagram';
+        const lines = ['**' + typeLabel + '**'];
+        if (embedData.authorName) lines.push('[@' + embedData.authorName + '](https://www.instagram.com/' + embedData.authorName + '/)');
+        const caption = this.truncateCaption(embedData.caption || embedData.description || embedData.title || '', 900);
+        if (caption) lines.push(caption);
+        let linkLine = '[原網址](' + embedData.originalURL + ')';
+        if (embedData.convertedURL && embedData.convertedURL !== embedData.originalURL) linkLine += '  [轉換連結](' + embedData.convertedURL + ')';
+        lines.push(linkLine);
+        container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.filter(Boolean).join('\n')));
+        const galleryItems = [];
+        const seen = new Set();
+        const addMedia = (url, label) => {
+            if (!url) return;
+            const cleanUrl = this.decodeHtmlEntities(url);
+            if (seen.has(cleanUrl)) return;
+            seen.add(cleanUrl);
+            galleryItems.push(new MediaGalleryItemBuilder().setURL(cleanUrl).setDescription(label));
+        };
+        addMedia(embedData.videoUrl, '影片');
+        addMedia(embedData.imageUrl, '圖片');
+        if (galleryItems.length > 0) container.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(...galleryItems));
+        const stats = [];
+        if (embedData.stats && embedData.stats.likes) stats.push('likes ' + embedData.stats.likes);
+        if (embedData.stats && embedData.stats.comments) stats.push('comments ' + embedData.stats.comments);
+        const footerText = stats.length > 0 ? '-# ' + stats.join('  ') + ' | Instagram | Peko Embed' : '-# Instagram | Peko Embed';
+        container.addTextDisplayComponents(new TextDisplayBuilder().setContent(footerText));
+        container.addActionRowComponents(new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(REPORT_BTN_PREFIX + Date.now()).setLabel('回報').setStyle(ButtonStyle.Secondary)));
+        return container;
+    }
+
+    extractAuthorFromInstagramMeta(description, title, url) {
+        const desc = this.decodeHtmlEntities(description || '');
+        const titleText = this.decodeHtmlEntities(title || '');
+        let m = desc.match(/comments?\s*-\s*([A-Za-z0-9._]+)\s+(?:on|於)\s+/i);
+        if (m) return m[1];
+        m = titleText.match(/@([A-Za-z0-9._]+)/);
+        if (m) return m[1];
+
+        try {
+            const parts = new URL(url).pathname.split('/').filter(Boolean);
+            const first = parts.find(part => !['p', 'reel', 'reels', 'stories'].includes(part.toLowerCase()));
+            return first || null;
+        } catch (_) {
+            m = String(url || '').match(/instagram\.com\/([^/]+)\//i);
+            if (!m) return null;
+            return ['p', 'reel', 'reels', 'stories'].includes(m[1].toLowerCase()) ? null : m[1];
+        }
+    }
+
+    extractCaptionFromInstagramMeta(description, title) {
+        const desc = this.decodeHtmlEntities(description || '');
+        const titleText = this.decodeHtmlEntities(title || '');
+        let text = desc || titleText || '';
+        const marker = ' : "';
+        let start = text.indexOf(marker);
+        if (start >= 0) {
+            start += marker.length;
+            const end = text.indexOf('"', start);
+            if (end > start) return text.slice(start, end).trim();
+        }
+        start = titleText.indexOf(': "');
+        if (start >= 0) {
+            start += 3;
+            const end = titleText.indexOf('"', start);
+            if (end > start) return titleText.slice(start, end).trim();
+        }
+        return text.trim();
+    }
+
+    extractStatsFromInstagramMeta(description) {
+        const desc = this.decodeHtmlEntities(description || '');
+        const likesMatch = desc.match(/([0-9,.KM]+)\s*likes/i) || desc.match(/([0-9,.KM]+)\s*個讚/i);
+        const commentsMatch = desc.match(/([0-9,.KM]+)\s*comments/i) || desc.match(/([0-9,.KM]+)\s*則留言/i);
+        return { likes: likesMatch ? likesMatch[1] : null, comments: commentsMatch ? commentsMatch[1] : null };
+    }
+
+    decodeHtmlEntities(value) {
+        if (!value || typeof value !== 'string') return value || null;
+        return value
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+            .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+            .trim();
     }
 
     /**
@@ -561,7 +698,7 @@ class InstagramExtractor {
             'i'
         );
         const match = html.match(regex);
-        return match ? (match[1] || match[2] || null) : null;
+        return match ? this.decodeHtmlEntities(match[1] || match[2] || null) : null;
     }
 
     /**

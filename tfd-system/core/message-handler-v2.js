@@ -17,6 +17,7 @@ const { applyBlacklistDecoration } = require('../../src/features/moderation/blac
 const { getInstance: getGBM } = require('../../utils/guild-blacklist-manager.js');
 const { setMessageState: setTwitterV2MessageState } = require('../../utils/twitter-v2-state-store');
 const { sanitizeComponentsForSend } = require('../../src/shared/discord/component-sanitizer');
+const { isAllowedBotMessage } = require('../../src/features/bot-forwarding/allowed-bot-messages');
 
 // URL 統計（footer N/M/O 顯示用）
 const { recordUrl } = require('../../src/shared/analytics/url-stats');
@@ -31,6 +32,133 @@ class TFDMessageHandler {
         this.iconURL = 'https://pekoembed.canaria.cc/pic/canaria.png'; // 原版 TFD 圖標
     }
 
+    /**
+     * WEBM direct URL support.
+     * Only accepts http/https URLs whose pathname ends with .webm.
+     * @param {string} content
+     * @returns {string[]}
+     */
+    extractWebmUrls(content) {
+        if (!content || typeof content !== 'string') return [];
+
+        const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
+        const urls = content.match(urlRegex) || [];
+        const seen = new Set();
+        const webmUrls = [];
+
+        for (const rawUrl of urls) {
+            const cleanUrl = rawUrl.replace(/[),.;!?]+$/g, '');
+            try {
+                const parsed = new URL(cleanUrl);
+                if (!/^https?:$/.test(parsed.protocol)) continue;
+                if (!/\.webm$/i.test(parsed.pathname)) continue;
+
+                const key = parsed.href;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                webmUrls.push(key);
+            } catch (_) {
+                // ignore invalid URL-like text
+            }
+        }
+
+        return webmUrls;
+    }
+
+    removeWebmUrlsFromContent(content, webmUrls) {
+        if (!content || !webmUrls || webmUrls.length === 0) return content || '';
+
+        let cleaned = content;
+        for (const url of webmUrls) {
+            cleaned = cleaned.split(url).join('');
+        }
+
+        return cleaned
+            .split('\n')
+            .map(line => line.trim())
+            .filter(Boolean)
+            .join('\n')
+            .trim();
+    }
+
+    extractUrlsFromText(content) {
+        if (!content || typeof content !== 'string') return [];
+        return content.match(/https?:\/\/[^\s<>"{}|\\^`[\]]+/gi) || [];
+    }
+
+    getMessageEmbeds(message) {
+        if (!message || !message.embeds) return [];
+        if (Array.isArray(message.embeds)) return message.embeds;
+        if (typeof message.embeds.values === 'function') return Array.from(message.embeds.values());
+        return [];
+    }
+
+    collectAllowedBotEmbedUrls(message) {
+        if (!isAllowedBotMessage(message)) return [];
+        const urls = [];
+        const seen = new Set();
+
+        const addFromText = (text) => {
+            for (const rawUrl of this.extractUrlsFromText(text)) {
+                const cleanUrl = rawUrl.replace(/[),.;!?]+$/g, '');
+                if (seen.has(cleanUrl)) continue;
+                seen.add(cleanUrl);
+                urls.push(cleanUrl);
+            }
+        };
+
+        for (const embed of this.getMessageEmbeds(message)) {
+            const data = embed?.data || embed || {};
+            addFromText(data.url || embed?.url);
+            addFromText(data.title || embed?.title);
+            addFromText(data.description || embed?.description);
+
+            const fields = data.fields || embed?.fields || [];
+            for (const field of fields) {
+                addFromText(field?.name);
+                addFromText(field?.value);
+            }
+        }
+
+        return urls;
+    }
+
+    prepareAllowedBotMessageContent(message) {
+        const embedUrls = this.collectAllowedBotEmbedUrls(message);
+        if (embedUrls.length === 0) return;
+
+        const content = message.content || '';
+        const missingUrls = embedUrls.filter(url => !content.includes(url));
+        if (missingUrls.length === 0) return;
+
+        message.content = [content, ...missingUrls].filter(Boolean).join('\n');
+    }
+    async handleWebmUrls(message, webmUrls) {
+        const maxAttachments = parseInt(process.env.WEBM_ATTACHMENT_MAX_COUNT, 10) || 4;
+        const targetUrls = webmUrls.slice(0, maxAttachments);
+        if (targetUrls.length === 0) return null;
+
+        this.log(`WEBM 附件處理: ${targetUrls.length} 個`);
+
+        message._isFirstUrlConversion = true;
+        message._userText = this.removeWebmUrlsFromContent(message.content, webmUrls);
+        message._currentOriginalUrl = targetUrls[0];
+
+        await this.sendViaWebhook(message, {
+            files: targetUrls,
+            originalUrl: targetUrls[0],
+            userText: message._userText,
+            addSpoilerButton: false
+        });
+
+        return {
+            success: true,
+            siteName: 'webm',
+            contentType: 'webm_attachment',
+            originalURL: targetUrls[0],
+            attachmentCount: targetUrls.length
+        };
+    }
 
     /**
      * 🌐 使用 Webhook 發送訊息（以使用者身份顯示）
@@ -1062,8 +1190,11 @@ class TFDMessageHandler {
      */
     async sendThreadsWithMultipleEmbeds(message, result) {
         try {
-            const embeds = [];
             const originalURL = result.originalURL || 'https://www.threads.com';
+            const imageUrls = Array.isArray(result.multipleImages) ? result.multipleImages : [];
+            const { createGalleryState } = require('../../src/features/threads/gallery/gallery-cache');
+            const { buildThreadsGalleryPage } = require('../../src/features/threads/gallery/gallery-view');
+
             // 📊 Footer 統計注入
             try {
                 if (originalURL && message.guildId && message.channelId) {
@@ -1071,28 +1202,36 @@ class TFDMessageHandler {
                     const footer = result.embed.data?.footer;
                     const baseText = (footer?.text || '🧵 Threads').replace(/(\s*•\s*\d+\/\d+\/\d+)+$/, '');
                     result.embed.setFooter({
-                        text: `${baseText} • ${urlCounts.channel}/${urlCounts.guild}/${urlCounts.total}`,
+                        text: baseText + ' • ' + urlCounts.channel + '/' + urlCounts.guild + '/' + urlCounts.total,
                         iconURL: footer?.icon_url
                     });
                 }
             } catch (_e) {}
 
-            // 主 embed（已含 images[0]），確保 url 正確
             result.embed.setURL(originalURL);
-            embeds.push(result.embed);
+            const baseEmbedData = typeof result.embed.toJSON === 'function' ? result.embed.toJSON() : result.embed.data;
+            const galleryId = createGalleryState({
+                originalURL,
+                baseEmbedData,
+                imageUrls
+            });
 
-            // 額外圖片（從第 2 張開始，同 URL 觸發 Discord gallery）
-            for (let i = 1; i < result.multipleImages.length; i++) {
-                embeds.push(new EmbedBuilder().setURL(originalURL).setImage(result.multipleImages[i]));
-            }
+            const pageView = buildThreadsGalleryPage({
+                galleryId,
+                originalURL,
+                baseEmbedData,
+                imageUrls
+            }, 0);
 
-            await this.sendViaWebhook(message, { embeds });
+            await this.sendViaWebhook(message, {
+                embeds: pageView.embeds,
+                components: pageView.components
+            });
         } catch (error) {
             this.log(`[Threads] 多圖 embed 發送失敗: ${error.message}`, 'error');
             await this.messageSender(message, this.getSiteIcon(result.siteName), result.embed, '🧵 Threads');
         }
     }
-
     /**
      * 發送包含影片連結的回應
      * @param {Object} message
@@ -1241,6 +1380,15 @@ class TFDMessageHandler {
             if (allUrlsWrapped) {
                 // this.log(`所有 URL 都被 Markdown 包裹，跳過處理`);
                 return [];
+            }
+
+            // WEBM direct URL: resend text and pass WEBM URLs to Discord file attachments
+            const webmUrls = this.extractWebmUrls(message.content);
+            if (webmUrls.length > 0) {
+                const webmResult = await this.handleWebmUrls(message, webmUrls);
+                if (webmResult) {
+                    return [webmResult];
+                }
             }
 
             // 🔍 檢查防爆雷標記的 Twitter URL
@@ -1695,6 +1843,8 @@ class TFDMessageHandler {
      * @returns {boolean}
      */
     shouldProcessMessage(message) {
+        this.prepareAllowedBotMessageContent(message);
+
         // 檢查系統是否啟用
         if (!this.config.enabled) {
             return false;
@@ -1706,7 +1856,7 @@ class TFDMessageHandler {
         }
 
         // 忽略機器人訊息
-        if (message.author.bot) {
+        if (message.author.bot && !isAllowedBotMessage(message)) {
             return false;
         }
 
@@ -1724,18 +1874,23 @@ class TFDMessageHandler {
             return false;
         }
 
-        // 檢查使用者是否被排除（per-guild）
+        // 黑名單永遠優先 deny；白名單模式只在未被 deny 時生效。
         if (db.excludedUsers.has(guildId, message.author.id)) {
+            return false;
+        }
+        if (db.guilds.getUserListMode(guildId) === 'whitelist' && !db.allowedUsers.has(guildId, message.author.id)) {
             return false;
         }
 
         // 檢查頻道是否被排除（子頻道、討論串、論壇貼文會繼承父/祖父頻道的排除狀態）
         const ch = message.channel;
-        if (
-            db.blockedChannels.has(guildId, ch.id) ||
-            (ch.parentId && db.blockedChannels.has(guildId, ch.parentId)) ||
-            (ch.parent?.parentId && db.blockedChannels.has(guildId, ch.parent.parentId))
-        ) {
+        const channelIds = [ch.id, ch.parentId, ch.parent?.parentId].filter(Boolean);
+        const isBlockedChannel = channelIds.some(channelId => db.blockedChannels.has(guildId, channelId));
+        if (isBlockedChannel) {
+            return false;
+        }
+        const isAllowedChannel = channelIds.some(channelId => db.allowedChannels.has(guildId, channelId));
+        if (db.guilds.getChannelListMode(guildId) === 'whitelist' && !isAllowedChannel) {
             return false;
         }
 
@@ -1789,6 +1944,10 @@ class TFDMessageHandler {
             // 檢查此 URL 是否被 <> 包裹
             if (this.isUrlWrappedInAngleBrackets(content, url)) {
                 continue; // 跳過被包裹的 URL
+            }
+
+            if (this.extractWebmUrls(url).length > 0) {
+                return true;
             }
 
             if (this.linkProcessor.urlMatcher.matchURL(url)) {
@@ -2178,8 +2337,7 @@ class TFDMessageHandler {
             // 修改 footer 加上防爆雷標記
             const originalFooter = mainEmbed.data?.footer?.text || 'PTT 批踢踢實業坊';
             mainEmbed.setFooter({
-                text: `🔒 防爆雷模式 • ${originalFooter}`,
-                iconURL: 'https://www.ptt.cc/favicon.ico'
+                text: `🔒 防爆雷模式 • ${originalFooter}`
             });
 
             // 🖼️ 準備防爆雷圖片 URL

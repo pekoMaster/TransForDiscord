@@ -46,6 +46,7 @@ function buildV2Container(tweet, originalURL, options = {}) {
     const truncator = new TextTruncator();
     const author = tweet.author;
     const authorUrl = `https://twitter.com/${author.screen_name}`;
+    const displayName = author.name || author.screen_name || 'Unknown';
 
     const container = new ContainerBuilder()
         .setAccentColor(0x1DA1F2);
@@ -56,7 +57,7 @@ function buildV2Container(tweet, originalURL, options = {}) {
 
     container.addTextDisplayComponents(
         new TextDisplayBuilder()
-            .setContent(`[@${author.screen_name}](${authorUrl})\n**${author.name}**\n${displayText}`)
+            .setContent(`[@${author.screen_name}](${authorUrl})\n**${displayName}**\n${displayText}`)
     );
 
     // 2. 引用推文（如果展開）

@@ -4,16 +4,22 @@
  * 舊版 proxy 轉址邏輯保留為 _extractPostLegacy fallback
  *
  * 支援域名：threads.com
+ *
+ * v2.1 變更 (2026-05-29):
+ * - _fetchHtml 加入 HTTP 狀態碼檢查，4xx/5xx 拋出錯誤
+ * - fixthreads URL 加入 ?embed=1 參數 (與 4.0 同步)
+ * - 所有貼文加入重整按鈕
  */
 
 const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
-const { EmbedBuilder, ContainerBuilder, TextDisplayBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder, MessageFlags } = require('discord.js');
+const { EmbedBuilder, ContainerBuilder, TextDisplayBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const tfd = require('../../utils/tfd-logger');
 
 const THREADS_COLOR = 0x000000;
 const THREADS_ICON = 'https://static.cdninstagram.com/rsrc.php/ye/r/lEu8iVizmNW.ico';
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 let LightpandaClient = null;
 try {
@@ -31,6 +37,10 @@ function _fetchHtml(url) {
     return new Promise((resolve, reject) => {
         const u = new URL(url);
         https.get({ hostname: u.hostname, path: u.pathname + u.search, headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
+            if (res.statusCode >= 400) {
+                res.resume();
+                return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
+            }
             let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
         }).on('error', reject).setTimeout(15000, function () { this.destroy(); reject(new Error('timeout')); });
     });
@@ -65,6 +75,10 @@ function _parseQuote(desc) {
     return { reposterText: match[1].trim(), originalUsername: match[2].trim(), quotedText: match[3].trim() };
 }
 
+function _generateThreadHash(url) {
+    return crypto.createHash('md5').update(url).digest('hex').slice(0, 12);
+}
+
 // -----------------------------------------------------------------------
 
 class ThreadsExtractor {
@@ -78,6 +92,7 @@ class ThreadsExtractor {
 
     /**
      * 處理 Threads URL
+     * 失敗時只記 log，不顯示錯誤給用戶（保留原訊息）
      */
     async extract(matchResult) {
         const { patternName, extractedData, originalURL } = matchResult;
@@ -98,7 +113,8 @@ class ThreadsExtractor {
             }
         } catch (error) {
             tfd.sysError('TFD-Threads', `提取失敗: ${error.message}`);
-            return this.createErrorResponse(error.message, originalURL);
+            // 回傳失敗但不顯示錯誤 embed，讓呼叫端決定是否保留原訊息
+            return { success: false, siteName: 'threads', error: error.message };
         }
     }
 
@@ -111,11 +127,16 @@ class ThreadsExtractor {
             tfd.sys('TFD-Threads', `抓取貼文: @${username}/post/${postId}`);
 
             const [postHtml, profHtml] = await Promise.all([
-                _fetchHtml(`https://fixthreads.seria.moe/@${username}/post/${postId}`),
+                _fetchHtml(`https://fixthreads.seria.moe/@${username}/post/${postId}?embed=1`),
                 _fetchHtml(`https://fixthreads.seria.moe/@${username}`)
             ]);
 
-            const videoUrl   = _extractMeta(postHtml, 'og:video');
+            // 檢查 fixthreads 是否返回有效內容（包含 OG 標籤）
+            if (!postHtml.includes('og:title') && !postHtml.includes('og:description') && !postHtml.includes('og:video')) {
+                throw new Error('fixthreads 返回無效內容（無 OG 標籤）');
+            }
+
+            const videoUrl   = _extractMeta(postHtml, 'og:video') || _extractMeta(postHtml, 'twitter:player:stream') || _extractMeta(postHtml, 'twitter:player');
             const rawText    = _extractMeta(postHtml, 'og:description') || '';
             const images     = _extractAllMeta(postHtml, 'og:image');
             const avatar     = _extractMeta(profHtml, 'og:image');
@@ -123,7 +144,7 @@ class ThreadsExtractor {
             const twitterCard = _extractMeta(postHtml, 'twitter:card');
 
             const realName   = titleProf ? titleProf.replace(/ \(@[^)]+\).*/, '').trim() : username;
-            const isVideo    = twitterCard === 'player' && !!videoUrl;
+            const isVideo    = (!!videoUrl) || (twitterCard === 'player');
             const hasRealImg = twitterCard === 'summary_large_image';
             const quoteInfo  = _parseQuote(rawText);
 
@@ -144,6 +165,7 @@ class ThreadsExtractor {
                     siteName: 'threads',
                     isV2: true,
                     v2Container: this._buildV2Container(r),
+                    components: this._buildComponents(originalURL),
                     originalURL
                 };
             }
@@ -153,6 +175,7 @@ class ThreadsExtractor {
                     success: true,
                     siteName: 'threads',
                     embed: this._buildV1Embed(r),
+                    components: this._buildComponents(originalURL),
                     multipleImages: images,
                     originalURL
                 };
@@ -162,6 +185,7 @@ class ThreadsExtractor {
                 success: true,
                 siteName: 'threads',
                 embed: this._buildV1Embed(r),
+                components: this._buildComponents(originalURL),
                 originalURL
             };
 
@@ -169,6 +193,24 @@ class ThreadsExtractor {
             tfd.sysError('TFD-Threads', `fixthreads 失敗 (${error.message})，切換舊版 proxy`);
             return this._extractPostLegacy(username, postId, originalURL);
         }
+    }
+
+    /**
+     * 建立按鈕元件（重整 + 回報）
+     */
+    _buildComponents(originalURL) {
+        const threadHash = _generateThreadHash(originalURL);
+        const actionRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`threads_reload_${threadHash}`)
+                .setLabel('重整')
+                .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+                .setCustomId(`report_btn_${Date.now()}`)
+                .setLabel('回報')
+                .setStyle(ButtonStyle.Secondary)
+        );
+        return [actionRow];
     }
 
     /**
@@ -246,6 +288,25 @@ class ThreadsExtractor {
         return container;
     }
 
+    /**
+     * 建立 Threads 個人資料 embed
+     */
+    buildProfileEmbed(profileData, originalURL) {
+        const username = profileData.username;
+        const rawTitle = profileData.title || '@' + username;
+        const title = rawTitle.replace(/\s+on Threads$/i, '').trim();
+        const description = profileData.description || null;
+        const avatar = profileData.image || null;
+
+        return this.embedBuilder.createBasicEmbed({
+            title,
+            description,
+            url: originalURL,
+            thumbnail: avatar,
+            color: THREADS_COLOR,
+            footer: { text: '🧵 Threads | Peko Embed' }
+        });
+    }
     /**
      * 舊版 fallback：proxy 轉址
      */
@@ -425,25 +486,44 @@ class ThreadsExtractor {
      * 提取個人資料
      */
     async extractProfile(username, originalURL) {
-        try {
-            tfd.sys('TFD-Threads', `抓取個人資料: @${username}`);
+        tfd.sys('TFD-Threads', `抓取個人資料: @${username}`);
 
+        try {
+            const profileHtml = await _fetchHtml(`https://fixthreads.seria.moe/@${username}`);
+            const title = _extractMeta(profileHtml, 'og:title');
+            const description = _extractMeta(profileHtml, 'og:description');
+            const image = _extractMeta(profileHtml, 'og:image');
+
+            if (title || description || image) {
+                return {
+                    success: true,
+                    siteName: 'threads',
+                    embed: this.buildProfileEmbed({ username, title, description, image }, originalURL),
+                    originalURL
+                };
+            }
+        } catch (error) {
+            tfd.sys('TFD-Threads', `fixthreads 個人資料抓取失敗: ${error.message}`);
+        }
+
+        try {
             const profileData = await this.fetchPageMeta(originalURL, {
                 extraWaitMs: 1000,
                 timeout: 30000
             });
 
-            if (profileData.ogTitle || profileData.ogDescription) {
-                const embed = this.embedBuilder.createBasicEmbed({
-                    title: profileData.ogTitle || `@${username}`,
-                    description: profileData.ogDescription || null,
-                    url: originalURL,
-                    thumbnail: profileData.ogImage || null,
-                    color: THREADS_COLOR,
-                    footer: { text: '🧵 Threads | Peko Embed' }
-                });
-
-                return { success: true, siteName: 'threads', embed };
+            if (profileData.ogTitle || profileData.ogDescription || profileData.ogImage) {
+                return {
+                    success: true,
+                    siteName: 'threads',
+                    embed: this.buildProfileEmbed({
+                        username,
+                        title: profileData.ogTitle,
+                        description: profileData.ogDescription,
+                        image: profileData.ogImage
+                    }, originalURL),
+                    originalURL
+                };
             }
         } catch (error) {
             tfd.sys('TFD-Threads', `抓取失敗: ${error.message}`);
@@ -451,7 +531,6 @@ class ThreadsExtractor {
 
         return this.buildBasicProfileEmbed(username, originalURL);
     }
-
     /**
      * 建立基本貼文 embed（轉址失敗時的最後備援）
      */
@@ -470,7 +549,7 @@ class ThreadsExtractor {
             footer: { text: '🧵 Threads | Peko Embed' }
         });
 
-        return { success: true, siteName: 'threads', embed };
+        return { success: true, siteName: 'threads', embed, components: this._buildComponents(originalURL) };
     }
 
     /**

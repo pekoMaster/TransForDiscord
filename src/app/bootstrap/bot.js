@@ -4,6 +4,7 @@ const express = require('express');
 const TFDMessageHandler = require('../../../tfd-system/core/message-handler-v2.js');
 const interactionCreate = require('../events/interaction-create.js');
 const tfd = require('../../shared/logging/tfd-logger');
+const { isAllowedBotMessage } = require('../../features/bot-forwarding/allowed-bot-messages');
 
 const client = new Client({
     intents: [
@@ -50,7 +51,7 @@ client.once(Events.ClientReady, () => {
 
 // 訊息 → TFD
 client.on(Events.MessageCreate, async (message) => {
-    if (message.author.bot) return;
+    if (message.author.bot && !isAllowedBotMessage(message)) return;
     try {
         await tfdHandler.handleMessage(message);
     } catch (err) {
@@ -60,7 +61,7 @@ client.on(Events.MessageCreate, async (message) => {
 
 // 訊息編輯
 client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
-    if (newMessage.author?.bot) return;
+    if (newMessage.author?.bot && !isAllowedBotMessage(newMessage)) return;
     try {
         await tfdHandler.handleMessageUpdate(oldMessage, newMessage);
     } catch (err) {

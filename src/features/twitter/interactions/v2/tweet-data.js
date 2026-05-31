@@ -1,6 +1,6 @@
 const HTTPClient = require('../../../../shared/http/http-client');
 const TFDTwitterExtractor = require('../../extractors/twitter-v2-extractor');
-const { cacheTweetData } = require('../../state/v2-tweet-cache');
+const { cacheTweetData, getCachedTweetData } = require('../../state/v2-tweet-cache');
 
 async function hydrateTweetBundle(tweetId, originalURL = null) {
     const httpClient = new HTTPClient();

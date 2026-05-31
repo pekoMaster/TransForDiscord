@@ -144,10 +144,13 @@ class LinkProcessor {
      * @returns {boolean}
      */
     isChannelAllowed(channelId, guildId = null) {
-        // 公開版：只用 per-guild blocked channels（不再支援全域 allowedChannels）
         if (!guildId) return true;
         const db = require('../../db');
-        return !db.blockedChannels.has(guildId, channelId);
+        if (db.blockedChannels.has(guildId, channelId)) return false;
+        if (db.guilds.getChannelListMode(guildId) === 'whitelist') {
+            return db.allowedChannels.has(guildId, channelId);
+        }
+        return true;
     }
 
     /**
