@@ -110,8 +110,8 @@ class PTTExtractor {
         // 🖼️ 提取文章中的所有圖片（排除簽名檔）
         const validImages = this.extractImagesFromArticle($);
 
-        // 🏠 儲存到快取（供翻頁、展開全文和重整使用）
-        if (validImages.length > 0 || articleData.isTruncated) {
+        // 🏠 儲存到快取（供翻頁、展開全文、引述展開和重整使用）
+        if (validImages.length > 0 || articleData.isTruncated || articleData.hasQuotedContent) {
             await this.cacheManager.saveToCache(displayURL, articleData, validImages);
         }
 
@@ -225,6 +225,9 @@ class PTTExtractor {
             }
         }
 
+        const quoteParts = this.extractQuotedText(content);
+        content = quoteParts.content;
+
         // 提取推文統計
         let pushStats;
         if (isPttweb) {
@@ -258,6 +261,8 @@ class PTTExtractor {
             content: isTruncated ? truncatedContent : content,
             fullContent: fullContent,
             isTruncated: isTruncated,
+            quotedContent: quoteParts.quotedContent,
+            hasQuotedContent: quoteParts.hasQuotedContent,
             pushStats: pushStats,
             url: null
         };
@@ -323,7 +328,6 @@ class PTTExtractor {
             text = text.substring(0, markerIndex);
         }
 
-        text = this.removeQuotedText(text);
         text = text.replace(/--[\s\S]*?--/g, '');
         text = text.replace(/\n{3,}/g, '\n\n').trim();
 
@@ -401,22 +405,17 @@ class PTTExtractor {
         // 取得純文字內容
         let content = mainContent.text().trim();
 
-        // 🔍 方法1：移除「※ 引述」開頭的引文區域
-        // 格式：※ 引述 《作者》 之銘言：
-        //      : 引文內容（每行開頭有 :）
-        content = this.removeQuotedText(content);
-
-        // 🔍 方法2：移除「--」包裹的簽名檔區域
+        // 🔍 方法1：移除「--」包裹的簽名檔區域
         content = content.replace(/--[\s\S]*?--/g, '');
 
-        // 🔍 方法3：移除「※ 發信站」之後的所有內容（包括簽名檔）
+        // 🔍 方法2：移除「※ 發信站」之後的所有內容（包括簽名檔）
         const sendStationMarker = '※ 發信站: 批踢踢實業坊(ptt.cc)';
         const markerIndex = content.indexOf(sendStationMarker);
         if (markerIndex !== -1) {
             content = content.substring(0, markerIndex);
         }
 
-        // 🔍 方法4：移除「※ 編輯」標記之後的內容（有些文章會有編輯記錄）
+        // 🔍 方法3：移除「※ 編輯」標記之後的內容（有些文章會有編輯記錄）
         const editMarker = '※ 編輯:';
         const editIndex = content.indexOf(editMarker);
         if (editIndex !== -1) {
@@ -439,43 +438,75 @@ class PTTExtractor {
     /**
      * 移除引文內容
      * @param {string} content - 文章內容
-     * @returns {string} - 移除引文後的內容
+     * @returns {Object} - 分離後的正文與引述內容
      */
-    removeQuotedText(content) {
-        if (!content) return '';
-
-        // 分割成行
-        const lines = content.split('\n');
-        const result = [];
-        let inQuote = false;
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-
-            // 檢查是否為引述開始標記：※ 引述 《作者》 之銘言：
-            if (line.includes('※ 引述') && line.includes('之銘言')) {
-                inQuote = true;
-                continue; // 跳過引述標記行
-            }
-
-            // 如果在引文區域內
-            if (inQuote) {
-                // 引文每行開頭都是 ": "（冒號 + 空格）或單獨的 ":"
-                if (line.trim().startsWith(':')) {
-                    continue; // 跳過引文內容行
-                } else {
-                    // 遇到非引文行，結束引文區域
-                    inQuote = false;
-                }
-            }
-
-            // 如果不在引文區域，保留這行
-            if (!inQuote) {
-                result.push(line);
-            }
+    extractQuotedText(content) {
+        if (!content) {
+            return { content: '', quotedContent: '', hasQuotedContent: false };
         }
 
-        return result.join('\n');
+        const lines = content.split('\n');
+        const result = [];
+        const quotedLines = [];
+        let inQuote = false;
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            const isQuoteHeader = /^:*\s*※\s*引述/.test(trimmed) && trimmed.includes('之銘言');
+
+            if (isQuoteHeader) {
+                inQuote = true;
+                quotedLines.push(line.trimEnd());
+                continue;
+            }
+
+            if (inQuote) {
+                if (trimmed === '' || trimmed.startsWith(':')) {
+                    quotedLines.push(line.trimEnd());
+                    continue;
+                }
+                inQuote = false;
+            }
+
+            result.push(line);
+        }
+
+        const cleanContent = result.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+        const quotedContent = quotedLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+
+        return {
+            content: cleanContent,
+            quotedContent,
+            hasQuotedContent: quotedContent.length > 0
+        };
+    }
+
+    formatQuotedContentForEmbed(quotedContent) {
+        if (!quotedContent) return '';
+
+        return quotedContent
+            .split('\n')
+            .map(line => line.trim() ? `> ${line.trimEnd()}` : '>')
+            .join('\n');
+    }
+
+    buildArticleDescription(articleData, expanded = false) {
+        const body = expanded
+            ? (articleData.fullContent || articleData.content || '')
+            : (articleData.content || '');
+
+        const parts = [body ? `作者 ${articleData.author}\n\n${body}` : `作者 ${articleData.author}`];
+        if (expanded && articleData.hasQuotedContent && articleData.quotedContent) {
+            parts.push(this.formatQuotedContentForEmbed(articleData.quotedContent));
+        }
+
+        const description = parts.filter(Boolean).join('\n\n');
+        if (description.length <= 4096) return description;
+        return description.substring(0, 4093) + '...';
+    }
+
+    removeQuotedText(content) {
+        return this.extractQuotedText(content).content;
     }
 
     /**
@@ -655,28 +686,24 @@ class PTTExtractor {
         const { EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
         try {
-            if (!articleData || !articleData.title || !articleData.author || !articleData.content) {
+            if (!articleData || !articleData.title || !articleData.author || (!articleData.content && !articleData.hasQuotedContent)) {
                 tfd.sysError('PTT-Extractor', `articleData 資料不完整: ${{
                     hasTitle: !!articleData?.title,
                     hasAuthor: !!articleData?.author,
-                    hasContent: !!articleData?.content
+                    hasContent: !!articleData?.content,
+                    hasQuotedContent: !!articleData?.hasQuotedContent
                 }}`);
                 throw new Error('文章資料不完整');
             }
 
-            let contentToDisplay = articleData.content;
             let footerText = PTT_FOOTER_TEXT;
             if (articleData.publishTime && typeof articleData.publishTime === 'string' && articleData.publishTime.trim()) {
                 footerText += ` • ${articleData.publishTime.trim()}`;
             }
 
-            // 🔍 在 Description 開頭只顯示作者資訊
-            const header = `作者 ${articleData.author}\n\n`;
-            const descriptionWithHeader = header + contentToDisplay;
-
             const embedData = {
                 title: this.embedBuilder.truncateText(articleData.title, 200),
-                description: descriptionWithHeader,
+                description: this.buildArticleDescription(articleData, false),
                 url: originalURL,
                 color: this.embedBuilder.getSiteColor('ptt'),
                 footer: {
@@ -786,8 +813,8 @@ class PTTExtractor {
         const articleHash = this.cacheManager.extractArticleHash(originalURL);
         const actionButtons = [];
 
-        // 📖 展開按鈕（文章被截斷時才顯示）
-        if (articleData.isTruncated) {
+        // 📖 展開按鈕（文章被截斷或含引述時顯示）
+        if (articleData.isTruncated || articleData.hasQuotedContent) {
             actionButtons.push(
                 new ButtonBuilder()
                     .setCustomId(`ptt_expand_${articleHash}`)
@@ -826,6 +853,7 @@ class PTTExtractor {
                 components: components,
                 siteName: 'ptt',
                 contentType: 'article',
+                originalURL,
                 data: articleData,
                 // 向下相容
                 embed: embeds[0]

@@ -186,6 +186,8 @@ class PTTCacheManager {
                     content: articleData.content,
                     fullContent: articleData.fullContent,
                     isTruncated: articleData.isTruncated,
+                    quotedContent: articleData.quotedContent,
+                    hasQuotedContent: articleData.hasQuotedContent,
                     pushStats: articleData.pushStats
                 },
                 pages: pages,

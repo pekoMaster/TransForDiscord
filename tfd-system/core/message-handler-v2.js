@@ -2254,7 +2254,8 @@ class TFDMessageHandler {
             // 🌐 使用 Webhook 發送
             await this.sendViaWebhook(message, {
                 embeds: embeds,
-                components: components
+                components: components,
+                originalUrl: result.originalURL
             });
         } catch (error) {
             this.log(`[PTT] 發送失敗: ${error.message}`, 'error');
@@ -2273,7 +2274,8 @@ class TFDMessageHandler {
 
             // 🌐 使用 Webhook 發送
             await this.sendViaWebhook(message, {
-                embeds: embeds
+                embeds: embeds,
+                originalUrl: result.originalURL
             });
         } catch (error) {
             this.log(`[PTT] 發送失敗: ${error.message}`, 'error');
