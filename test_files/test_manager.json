@@ -1,0 +1,8 @@
+[
+  {
+    "file": "test_files/test_threads_preview_fallback.cjs",
+    "created": "20260601_122914",
+    "reason": "Verify Threads extractor avoids Discord login-preview fallback and can parse official OG metadata",
+    "cleanupAfterHours": 24
+  }
+]

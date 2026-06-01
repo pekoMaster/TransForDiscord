@@ -33,10 +33,24 @@ const http = require('http');
 
 // -- fixthreads HTTP helper functions -----------------------------------
 
-function _fetchHtml(url) {
+function _fetchHtml(url, redirectsLeft = 3) {
     return new Promise((resolve, reject) => {
         const u = new URL(url);
-        https.get({ hostname: u.hostname, path: u.pathname + u.search, headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
+        const client = u.protocol === 'http:' ? http : https;
+        client.get({
+            hostname: u.hostname,
+            path: u.pathname + u.search,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml',
+                'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8'
+            }
+        }, res => {
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirectsLeft > 0) {
+                res.resume();
+                const nextUrl = new URL(res.headers.location, url).toString();
+                return resolve(_fetchHtml(nextUrl, redirectsLeft - 1));
+            }
             if (res.statusCode >= 400) {
                 res.resume();
                 return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
@@ -46,13 +60,26 @@ function _fetchHtml(url) {
     });
 }
 
+function _decodeHtmlEntities(value) {
+    if (!value || typeof value !== 'string') return value || null;
+    return value
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+        .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+        .trim();
+}
+
 function _extractMeta(html, propName) {
     const propIdx = html.indexOf('"' + propName + '"');
     if (propIdx < 0) return null;
     const segment = html.slice(propIdx, propIdx + 2000);
     const cm = segment.match(/content\s*=\s*"([\s\S]*?)"\s*\/?>/i);
     if (!cm) return null;
-    return cm[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim();
+    return _decodeHtmlEntities(cm[1]);
 }
 
 function _extractAllMeta(html, propName) {
@@ -63,7 +90,7 @@ function _extractAllMeta(html, propName) {
         if (propIdx < 0) break;
         const segment = html.slice(propIdx, propIdx + 2000);
         const cm = segment.match(/content\s*=\s*"([\s\S]*?)"\s*\/?>/i);
-        if (cm) results.push(cm[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim());
+        if (cm) results.push(_decodeHtmlEntities(cm[1]));
         searchFrom = propIdx + propName.length + 2;
     }
     return results;
@@ -77,6 +104,26 @@ function _parseQuote(desc) {
 
 function _generateThreadHash(url) {
     return crypto.createHash('md5').update(url).digest('hex').slice(0, 12);
+}
+
+function _isThreadsLoginMeta(title, description, canonicalUrl) {
+    const titleText = (title || '').toLowerCase();
+    const descText = (description || '').toLowerCase();
+    const urlText = (canonicalUrl || '').replace(/\/+$/, '').toLowerCase();
+    return titleText.includes('threads • log in')
+        || titleText.includes('threads - log in')
+        || descText.includes('join threads to share ideas')
+        || urlText === 'https://www.threads.com'
+        || urlText === 'https://threads.com';
+}
+
+function _extractThreadsRealName(title, username) {
+    const decoded = _decodeHtmlEntities(title || '') || '';
+    const match = decoded.match(/^(.+?)\s+\(@[^)]+\)\s+on Threads$/i);
+    if (match) return match[1].trim();
+    const name = decoded.replace(/\s+on Threads$/i, '').replace(/ \(@[^)]+\).*/, '').trim();
+    if (!name || name === username || name === '@' + username) return username;
+    return name;
 }
 
 // -----------------------------------------------------------------------
@@ -126,31 +173,47 @@ class ThreadsExtractor {
         try {
             tfd.sys('TFD-Threads', `抓取貼文: @${username}/post/${postId}`);
 
-            const [postHtml, profHtml] = await Promise.all([
-                _fetchHtml(`https://fixthreads.seria.moe/@${username}/post/${postId}?embed=1`),
-                _fetchHtml(`https://fixthreads.seria.moe/@${username}`)
+            const cleanUsername = String(username || '').replace(/^@+/, '');
+            const [postFetch, profFetch] = await Promise.allSettled([
+                _fetchHtml(`https://fixthreads.seria.moe/${encodeURIComponent(cleanUsername)}/post/${encodeURIComponent(postId)}?embed=1`),
+                _fetchHtml(`https://fixthreads.seria.moe/${encodeURIComponent(cleanUsername)}`)
             ]);
+            if (postFetch.status !== 'fulfilled') {
+                throw postFetch.reason;
+            }
+
+            const postHtml = postFetch.value;
+            const profHtml = profFetch.status === 'fulfilled' ? profFetch.value : '';
 
             // 檢查 fixthreads 是否返回有效內容（包含 OG 標籤）
             if (!postHtml.includes('og:title') && !postHtml.includes('og:description') && !postHtml.includes('og:video')) {
                 throw new Error('fixthreads 返回無效內容（無 OG 標籤）');
             }
 
+            const titlePost  = _extractMeta(postHtml, 'og:title') || _extractMeta(postHtml, 'twitter:title');
             const videoUrl   = _extractMeta(postHtml, 'og:video') || _extractMeta(postHtml, 'twitter:player:stream') || _extractMeta(postHtml, 'twitter:player');
-            const rawText    = _extractMeta(postHtml, 'og:description') || '';
+            const rawText    = _extractMeta(postHtml, 'og:description') || _extractMeta(postHtml, 'description') || '';
             const images     = _extractAllMeta(postHtml, 'og:image');
             const avatar     = _extractMeta(profHtml, 'og:image');
             const titleProf  = _extractMeta(profHtml, 'og:title');
             const twitterCard = _extractMeta(postHtml, 'twitter:card');
+            const canonicalUrl = _extractMeta(postHtml, 'og:url');
 
-            const realName   = titleProf ? titleProf.replace(/ \(@[^)]+\).*/, '').trim() : username;
+            if (_isThreadsLoginMeta(titlePost, rawText, canonicalUrl)) {
+                throw new Error('Threads 返回登入頁或不可嵌入內容');
+            }
+            if (!rawText && !videoUrl && images.length === 0) {
+                throw new Error('Threads 官方頁面無可用貼文資料');
+            }
+
+            const realName   = _extractThreadsRealName(titlePost || titleProf, username);
             const isVideo    = (!!videoUrl) || (twitterCard === 'player');
-            const hasRealImg = twitterCard === 'summary_large_image';
+            const hasRealImg = twitterCard === 'summary_large_image' || images.length > 0;
             const quoteInfo  = _parseQuote(rawText);
 
             if (quoteInfo) {
                 try {
-                    const origProfHtml = await _fetchHtml(`https://fixthreads.seria.moe/@${quoteInfo.originalUsername}`);
+                    const origProfHtml = await _fetchHtml(`https://fixthreads.seria.moe/${encodeURIComponent(quoteInfo.originalUsername)}`);
                     quoteInfo.originalAvatar = _extractMeta(origProfHtml, 'og:image');
                 } catch (e) { quoteInfo.originalAvatar = null; }
             }
@@ -190,8 +253,8 @@ class ThreadsExtractor {
             };
 
         } catch (error) {
-            tfd.sysError('TFD-Threads', `fixthreads 失敗 (${error.message})，切換舊版 proxy`);
-            return this._extractPostLegacy(username, postId, originalURL);
+            tfd.sysError('TFD-Threads', `貼文抓取失敗 (${error.message})，改用基本 embed`);
+            return this.buildBasicPostEmbed(username, postId, originalURL);
         }
     }
 
@@ -489,7 +552,7 @@ class ThreadsExtractor {
         tfd.sys('TFD-Threads', `抓取個人資料: @${username}`);
 
         try {
-            const profileHtml = await _fetchHtml(`https://fixthreads.seria.moe/@${username}`);
+            const profileHtml = await _fetchHtml(`https://fixthreads.seria.moe/${encodeURIComponent(String(username || '').replace(/^@+/, ''))}`);
             const title = _extractMeta(profileHtml, 'og:title');
             const description = _extractMeta(profileHtml, 'og:description');
             const image = _extractMeta(profileHtml, 'og:image');
