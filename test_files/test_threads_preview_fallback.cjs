@@ -10,6 +10,12 @@ function embedJson(result) {
 (async () => {
     const extractor = new ThreadsExtractor();
 
+    const summaryUrl = 'https://www.threads.com/@paraen_van/post/DZApYoUDwqL';
+    const summaryResult = await extractor.extractPost('paraen_van', 'DZApYoUDwqL', summaryUrl);
+    const summaryEmbed = embedJson(summaryResult);
+    assert.match(summaryEmbed.description || '', /好奇問個/);
+    assert.ok(!summaryEmbed.image, 'summary-card avatar must not be rendered as post image');
+
     const publicUrl = 'https://www.threads.com/@andydes_21/post/DYmgEg3EnM1';
     const publicResult = await extractor.extractPost('andydes_21', 'DYmgEg3EnM1', publicUrl);
     const publicEmbed = embedJson(publicResult);

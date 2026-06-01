@@ -96,6 +96,42 @@ function _extractAllMeta(html, propName) {
     return results;
 }
 
+function _canonicalImageKey(url) {
+    try {
+        const u = new URL(url);
+        const fileMatch = u.pathname.match(/\/([^/?#]+\.(?:jpe?g|png|webp))$/i);
+        if (fileMatch && /(cdninstagram|fbcdn|instagram\.)/i.test(u.hostname)) {
+            return fileMatch[1].toLowerCase();
+        }
+        return `${u.hostname.toLowerCase()}${u.pathname}`.toLowerCase();
+    } catch (_) {
+        return String(url || '').toLowerCase();
+    }
+}
+
+function _uniqueUrls(urls, getKey = url => url) {
+    const seen = new Set();
+    const results = [];
+    for (const url of urls || []) {
+        const key = getKey(url);
+        if (!url || seen.has(key)) continue;
+        seen.add(key);
+        results.push(url);
+    }
+    return results;
+}
+
+function _filterCarouselImages(images, hasVideo) {
+    const filtered = (images || []).filter(url => {
+        if (!url) return false;
+        if (!/(cdninstagram|fbcdn|instagram\.)/i.test(url)) return false;
+        if (/\/t51\.[^/]+-19\//i.test(url)) return false;
+        if (hasVideo && /\/t51\.71878-15\//i.test(url)) return false;
+        return /\.(?:jpe?g|png|webp)(?:\?|$)/i.test(url);
+    });
+    return _uniqueUrls(filtered, _canonicalImageKey);
+}
+
 function _parseQuote(desc) {
     const match = desc.match(/^([\s\S]*?)\u21aa Quoting @([\w.]+)\n([\s\S]*)$/);
     if (!match) return null;
@@ -175,8 +211,8 @@ class ThreadsExtractor {
 
             const cleanUsername = String(username || '').replace(/^@+/, '');
             const [postFetch, profFetch] = await Promise.allSettled([
-                _fetchHtml(`https://fixthreads.seria.moe/${encodeURIComponent(cleanUsername)}/post/${encodeURIComponent(postId)}?embed=1`),
-                _fetchHtml(`https://fixthreads.seria.moe/${encodeURIComponent(cleanUsername)}`)
+                _fetchHtml(`https://fixthreads.seria.moe/@${encodeURIComponent(cleanUsername)}/post/${encodeURIComponent(postId)}?embed=1`),
+                _fetchHtml(`https://fixthreads.seria.moe/@${encodeURIComponent(cleanUsername)}`)
             ]);
             if (postFetch.status !== 'fulfilled') {
                 throw postFetch.reason;
@@ -193,7 +229,7 @@ class ThreadsExtractor {
             const titlePost  = _extractMeta(postHtml, 'og:title') || _extractMeta(postHtml, 'twitter:title');
             const videoUrl   = _extractMeta(postHtml, 'og:video') || _extractMeta(postHtml, 'twitter:player:stream') || _extractMeta(postHtml, 'twitter:player');
             const rawText    = _extractMeta(postHtml, 'og:description') || _extractMeta(postHtml, 'description') || '';
-            const images     = _extractAllMeta(postHtml, 'og:image');
+            let images       = _extractAllMeta(postHtml, 'og:image');
             const avatar     = _extractMeta(profHtml, 'og:image');
             const titleProf  = _extractMeta(profHtml, 'og:title');
             const twitterCard = _extractMeta(postHtml, 'twitter:card');
@@ -206,14 +242,15 @@ class ThreadsExtractor {
                 throw new Error('Threads 官方頁面無可用貼文資料');
             }
 
-            const realName   = _extractThreadsRealName(titlePost || titleProf, username);
+            const realName   = _extractThreadsRealName(titleProf || titlePost, username);
             const isVideo    = (!!videoUrl) || (twitterCard === 'player');
-            const hasRealImg = twitterCard === 'summary_large_image' || images.length > 0;
+            images           = _filterCarouselImages(images, isVideo);
+            const hasRealImg = images.length > 0;
             const quoteInfo  = _parseQuote(rawText);
 
             if (quoteInfo) {
                 try {
-                    const origProfHtml = await _fetchHtml(`https://fixthreads.seria.moe/${encodeURIComponent(quoteInfo.originalUsername)}`);
+                    const origProfHtml = await _fetchHtml(`https://fixthreads.seria.moe/@${encodeURIComponent(quoteInfo.originalUsername)}`);
                     quoteInfo.originalAvatar = _extractMeta(origProfHtml, 'og:image');
                 } catch (e) { quoteInfo.originalAvatar = null; }
             }
@@ -552,7 +589,7 @@ class ThreadsExtractor {
         tfd.sys('TFD-Threads', `抓取個人資料: @${username}`);
 
         try {
-            const profileHtml = await _fetchHtml(`https://fixthreads.seria.moe/${encodeURIComponent(String(username || '').replace(/^@+/, ''))}`);
+            const profileHtml = await _fetchHtml(`https://fixthreads.seria.moe/@${encodeURIComponent(String(username || '').replace(/^@+/, ''))}`);
             const title = _extractMeta(profileHtml, 'og:title');
             const description = _extractMeta(profileHtml, 'og:description');
             const image = _extractMeta(profileHtml, 'og:image');
