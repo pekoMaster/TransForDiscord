@@ -157,6 +157,12 @@ async function execute(interaction, client) {
             return await handlePagination(interaction);
         }
 
+        // ── Pixiv R18 分頁 ──
+        if (customId.startsWith('pixivr18_')) {
+            const { handlePixivR18Pagination } = require('../../features/pixiv/interactions/r18-pagination.js');
+            return await handlePixivR18Pagination(interaction);
+        }
+
         // ── Pixiv 重新整理（必須在 pixiv_ 之前匹配）──
         if (customId.startsWith('pixiv_reload_')) {
             const { handlePixivReloadInteraction } = require('../../features/pixiv/interactions/reload.js');

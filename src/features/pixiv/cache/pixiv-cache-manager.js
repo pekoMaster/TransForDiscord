@@ -15,7 +15,7 @@ const tfd = require('../../../shared/logging/tfd-logger');
 class PixivCacheManager {
     constructor() {
         this.cacheDir = path.join(__dirname, '..', '..', '..', '..', 'temp', 'pixiv');
-        this.imagesPerPage = 4; // 每頁最多4張圖片
+        this.imagesPerPage = 1; // Pixiv pagination shows one image per page.
         this.ensureCacheDir();
     }
 
@@ -155,7 +155,7 @@ class PixivCacheManager {
      * @param {Object} artworkData - 作品資料
      * @param {Array} allImages - 所有圖片URL
      */
-    async saveToCache(url, artworkData, allImages) {
+    async saveToCache(url, artworkData, allImages, proxyIndex = 0) {
         try {
             const artworkId = this.extractArtworkId(url);
             if (!artworkId) {
@@ -199,7 +199,8 @@ class PixivCacheManager {
                 pages: pages,
                 totalPages: pages.length,
                 totalImages: allImages.length,
-                isR18: artworkData.isR18 || false
+                isR18: artworkData.isR18 || false,
+                proxyIndex: proxyIndex
             };
 
             await this.saveArtworkCache(artworkId, cacheData);

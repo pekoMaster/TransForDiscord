@@ -114,7 +114,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | 模組 | 消費者 | 說明 |
 |------|--------|------|
 | `src/shared/discord/message-helpers.js` | tfd-context-actions, report-router | `resolveAuthorId` / `detectPlatformFromUrl` / `extractUrlFromMessage`；`utils/embed-helpers.js` 保留相容轉接 |
-| `utils/recall-limiter.js` | tfd-context-actions, report-router | 共用收回次數限制（3次/10分鐘） |
+| `utils/recall-limiter.js` | tfd-context-actions, report-router | 共用收回限制器（目前冷卻 0、不限制次數） |
 | `src/shared/discord/spoiler-button-helper.js` | message-handler-v2, twitter-reload, pixiv-reload, twitter-v2-container-builder | 回報/防爆雷按鈕附加；`utils/spoiler-button-helper.js` 保留相容轉接 |
 | `src/shared/discord/component-sanitizer.js` | message-handler-v2, webhook-manager | 送出/編輯 Discord components 前過濾空 ActionRow、拆分超過 5 個子元件的 row |
 | `src/shared/discord/embed-builder.js` | ptt, instagram, pixiv, threads, twitter-legacy extractors | Generic Discord EmbedBuilder wrapper；`tfd-system/utils/embed-builder.js` 保留相容轉接 |
@@ -122,7 +122,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | `src/features/moderation/normalize-author.js` | message-handler-v2 | 各平台作者名正規化（for 黑名單比對）；`utils/normalize-author.js` 保留相容轉接 |
 | `src/shared/logging/tfd-logger.js` | 全專案 | 統一日誌格式 `[MM/DD-HH:mm:ss] [Server] [Fn] [User] detail`；`utils/tfd-logger.js` 保留相容轉接 |
 | `src/shared/logging/url-converter-logger.js` | tfd-system extractors, twitter-v2-extractor | URL 轉換決策 logger；`tfd-system/utils/url-converter-logger.js` 保留相容轉接 |
-| `src/shared/analytics/url-stats.js` | message-handler-v2, Twitter interactions | URL 重複貼文統計（channel/guild/total）；`tfd-system/utils/url-stats.js` 保留相容轉接 |
+| `src/shared/analytics/url-stats.js` | message-handler-v2, Twitter interactions | URL 重複貼文統計（記錄 channel/guild/total；footer 只顯示 channel/guild）；`tfd-system/utils/url-stats.js` 保留相容轉接 |
 | `src/shared/crypto/crypto-helper.js` | user-api-key-storage, migrate-from-json | AES-256-GCM API Key 加解密；`utils/crypto-helper.js` 保留相容轉接；fallback key 固定為 `data/.encryption-key` |
 | `src/shared/html/dom-parser.js` | ptt, instagram, pixiv, twitter-legacy extractors | Cheerio DOM/metadata parser；`tfd-system/utils/dom-parser.js` 保留相容轉接 |
 | `src/shared/http/http-client.js` | tfd-system extractors, Twitter interactions/extractors | Axios HTTP client，含 timeout/retry/bot-block handling；`tfd-system/utils/http-client.js` 保留相容轉接 |
@@ -148,6 +148,7 @@ SQLite（better-sqlite3），單一檔案 `data/tfd.db`。
 | Button | `twitter_reload_` | twitter-reload-interactions |
 | Button | `twitter_page_` | twitter-pagination-interactions |
 | Button | `pixiv_reload_` | pixiv-reload-interactions（必須在 pixiv_ 之前） |
+| Button | `pixivr18_*` | pixiv R18 spoiler pagination |
 | Button | `pixiv_*` | pixiv-pagination-interactions |
 | Button | `ptt_*` | src/features/ptt/interactions/pagination |
 

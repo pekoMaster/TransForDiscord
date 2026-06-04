@@ -19,6 +19,7 @@ const {
     cacheTweetData,
     getCachedTweetData
 } = require('../state/v2-tweet-cache');
+const { formatUrlStatsForFooter } = require('../../../shared/analytics/url-stats');
 
 // Cache functions are re-exported here for old callers; storage lives in ../state/v2-tweet-cache.
 
@@ -40,7 +41,7 @@ function buildV2Container(tweet, originalURL, options = {}) {
         isExpanded = false,
         quoteData = null,
         replyData = null,
-        urlStats = null,   // { channel, guild, total } — 選填，由呼叫方傳入
+        urlStats = null,   // { channel, guild, total } — 選填，由呼叫方傳入；footer 只顯示 channel/guild
     } = options;
 
     const truncator = new TextTruncator();
@@ -134,7 +135,7 @@ function buildV2Container(tweet, originalURL, options = {}) {
     let footerText = `-# ${statsItems.join('  ')}`;
     if (isTranslated) footerText += ' | 🌐 AI 翻譯';
     footerText += ' | Peko Embed';
-    if (urlStats) footerText += ` • ${urlStats.channel}/${urlStats.guild}/${urlStats.total}`;
+    if (urlStats) footerText += ` • ${formatUrlStatsForFooter(urlStats)}`;
 
     container.addTextDisplayComponents(
         new TextDisplayBuilder().setContent(footerText)

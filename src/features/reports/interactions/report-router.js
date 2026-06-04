@@ -30,7 +30,7 @@ const { checkRecallLimit } = require('../recall-limiter');
 
 const BTN_EXPIRE_MS = 86_400_000;
 const SUBMENU_EXPIRE_MS = 60_000;
-const COOLDOWN_MS = 5_000;
+const COOLDOWN_MS = 0;
 const cooldowns = new Map();
 
 setInterval(() => {
@@ -60,9 +60,6 @@ function isExpired(ts) {
 }
 
 function checkCooldown(userId) {
-    const last = cooldowns.get(userId);
-    if (last && Date.now() - last < COOLDOWN_MS) return true;
-    cooldowns.set(userId, Date.now());
     return false;
 }
 

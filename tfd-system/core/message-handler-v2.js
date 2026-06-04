@@ -19,8 +19,12 @@ const { setMessageState: setTwitterV2MessageState } = require('../../utils/twitt
 const { sanitizeComponentsForSend } = require('../../src/shared/discord/component-sanitizer');
 const { isAllowedBotMessage } = require('../../src/features/bot-forwarding/allowed-bot-messages');
 
-// URL 統計（footer N/M/O 顯示用）
-const { recordUrl } = require('../../src/shared/analytics/url-stats');
+// URL 統計（footer 顯示 channel/guild；total 持續記錄但不顯示）
+const {
+    recordUrl,
+    formatUrlStatsForFooter,
+    stripUrlStatsFooter
+} = require('../../src/shared/analytics/url-stats');
 
 const db = require('../../db');
 
@@ -789,16 +793,16 @@ class TFDMessageHandler {
             // 獲取原有的 v2Container
             const container = result.v2Container;
 
-            // 📊 Footer 統計注入：N(channel)/M(guild)/O(total)
+            // 📊 Footer 統計注入：channel/guild
             try {
                 if (originalURL && message.guildId && message.channelId) {
                     const urlCounts = recordUrl(originalURL, message.guildId, message.channelId);
                     // 找到 footer TextDisplay（內容以 -# 開頭且含 Peko Embed）並更新統計
                     for (const comp of container.components) {
                         if (comp?.data?.content?.startsWith('-# ') && comp.data.content.includes('Peko Embed')) {
-                            // 先移除舊的 N/M/O（快取 container 重用時避免重複累加）
-                            const stripped = comp.data.content.replace(/(\s*•\s*\d+\/\d+\/\d+)+$/, '');
-                            comp.data.content = `${stripped} • ${urlCounts.channel}/${urlCounts.guild}/${urlCounts.total}`;
+                            // 先移除舊統計（快取 container 重用時避免重複累加）
+                            const stripped = stripUrlStatsFooter(comp.data.content);
+                            comp.data.content = `${stripped} • ${formatUrlStatsForFooter(urlCounts)}`;
                             break;
                         }
                     }
@@ -1200,9 +1204,9 @@ class TFDMessageHandler {
                 if (originalURL && message.guildId && message.channelId) {
                     const urlCounts = recordUrl(originalURL, message.guildId, message.channelId);
                     const footer = result.embed.data?.footer;
-                    const baseText = (footer?.text || '🧵 Threads').replace(/(\s*•\s*\d+\/\d+\/\d+)+$/, '');
+                    const baseText = stripUrlStatsFooter(footer?.text || '🧵 Threads');
                     result.embed.setFooter({
-                        text: baseText + ' • ' + urlCounts.channel + '/' + urlCounts.guild + '/' + urlCounts.total,
+                        text: `${baseText} • ${formatUrlStatsForFooter(urlCounts)}`,
                         iconURL: footer?.icon_url
                     });
                 }
@@ -1593,22 +1597,28 @@ class TFDMessageHandler {
                             // 統一處理 Pixiv 內容（包括 R18 和一般向）
                             // Pixiv 多張圖片：一頁一張，使用按鈕翻頁，圖片顯示在 embed 內
 
-                            // 📊 Footer 統計注入：N(channel)/M(guild)/O(total)
+                            // 📊 Footer 統計注入：channel/guild
                             try {
                                 if (currentUrl && message.guildId && message.channelId) {
                                     const urlCounts = recordUrl(currentUrl, message.guildId, message.channelId);
                                     const footer = result.embed.data?.footer;
-                                    // 先移除舊的 N/M/O（快取 embed 重用時避免重複累加）
-                                    const baseText = (footer?.text || 'Peko Embed').replace(/(\s*•\s*\d+\/\d+\/\d+)+$/, '');
+                                    // 先移除舊統計（快取 embed 重用時避免重複累加）
+                                    const baseText = stripUrlStatsFooter(footer?.text || 'Peko Embed');
                                     result.embed.setFooter({
-                                        text: `${baseText} • ${urlCounts.channel}/${urlCounts.guild}/${urlCounts.total}`,
+                                        text: `${baseText} • ${formatUrlStatsForFooter(urlCounts)}`,
 
                                         iconURL: footer?.icon_url,
                                     });
                                 }
                             } catch (_statsErr) { /* 統計失敗不影響主流程 */ }
 
-                            if (result.siteName === 'pixiv' && result.pagination && result.pagination.hasMultiplePages) {
+                            if (result.siteName === 'pixiv' && (result.contentType === 'r18_artwork' || result.data?.isR18)) {
+                                const handled = await this.sendPixivR18WithEmbeddedSpoiler(message, result);
+                                if (!handled) {
+                                    await this.sendPixivSingle(message, result);
+                                }
+                                await this.embedSuppresser(message);
+                            } else if (result.siteName === 'pixiv' && result.pagination && result.pagination.hasMultiplePages) {
                                 // 發送帶翻頁按鈕的回應（2張以上使用分頁）
                                 await this.sendPixivWithPagination(message, result);
                                 // 立即抑制原始預覽
@@ -2427,7 +2437,9 @@ class TFDMessageHandler {
         const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
         try {
-            const images = result.multipleImages || [];
+            const images = Array.isArray(result.data?.images?.allImages) && result.data.images.allImages.length > 0
+                ? result.data.images.allImages
+                : (result.multipleImages || []);
             const singleImage = result.data?.images?.medium || result.data?.images?.large || result.data?.images?.original;
 
             // 確定要處理的圖片

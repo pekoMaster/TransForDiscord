@@ -187,4 +187,22 @@ function lookupUrl(url, guildId, channelId) {
     };
 }
 
-module.exports = { recordUrl, lookupUrl };
+const URL_STATS_FOOTER_PATTERN = /(\s*•\s*\d+\/\d+(?:\/\d+)?)+$/;
+
+function formatUrlStatsForFooter(counts) {
+    if (!counts) return '';
+    const channel = Number(counts.channel) || 0;
+    const guild = Number(counts.guild) || 0;
+    return `${channel}/${guild}`;
+}
+
+function stripUrlStatsFooter(text) {
+    return String(text || '').replace(URL_STATS_FOOTER_PATTERN, '').trimEnd();
+}
+
+module.exports = {
+    recordUrl,
+    lookupUrl,
+    formatUrlStatsForFooter,
+    stripUrlStatsFooter
+};

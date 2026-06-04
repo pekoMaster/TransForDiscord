@@ -9,6 +9,7 @@ const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
 const URLConverterLogger = require('../../src/shared/logging/url-converter-logger');
 const axios = require('axios');
 const tfd = require('../../utils/tfd-logger');
+const PixivCacheManager = require('../../src/features/pixiv/cache/pixiv-cache-manager');
 
 // 可用的 Pixiv 圖片代理服務（按優先順序排列）
 // 參考來源: https://pixivfe-docs.pages.dev/public-image-proxies/
@@ -28,6 +29,7 @@ class PixivExtractor {
         this.httpClient = new HTTPClient();
         this.domParser = new DOMParser();
         this.embedBuilder = new TFDEmbedBuilder();
+        this.cacheManager = new PixivCacheManager();
         this.name = 'Pixiv';
         this.proxyServices = PIXIV_PROXY_SERVICES;
     }
@@ -131,7 +133,12 @@ class PixivExtractor {
             this.applyProxyToArtwork(artworkData, proxyIndex);
         }
 
-        return await this.createArtworkResponse(artworkData, originalURL, message, 0, proxyIndex);
+        const result = await this.createArtworkResponse(artworkData, originalURL, message, 0, proxyIndex);
+        if (result.success && artworkData.images && Array.isArray(artworkData.images.allImages)) {
+            await this.cacheManager.saveToCache(originalURL, artworkData, artworkData.images.allImages, proxyIndex);
+        }
+
+        return result;
     }
 
     /**
@@ -385,13 +392,6 @@ class PixivExtractor {
 
         // R18 內容處理
         if (illust.xRestrict > 0) {
-            // 公開版預設停用 R18 預覽（避免將敏感內容上傳到陌生伺服器/cache 頻道）
-            // 啟用方式：設定環境變數 PIXIV_R18_ENABLED=1
-            const r18Enabled = process.env.PIXIV_R18_ENABLED === '1' || process.env.PIXIV_R18_ENABLED === 'true';
-            if (!r18Enabled) {
-                tfd.sys('Pixiv', `偵測到 R18 內容（artwork ${artworkId}），公開版預設略過`);
-                return null;
-            }
 
             tfd.sys('Pixiv', `🚀 開始測試 picsiv-master 方法...`);
             tfd.sys('Pixiv', `📎 目標作品: https://www.pixiv.net/artworks/${artworkId}`);

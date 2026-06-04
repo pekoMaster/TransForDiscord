@@ -10,7 +10,7 @@ const { MessageFlags, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle
 const TFDTwitterExtractor = require('../extractors/twitter-v2-extractor');
 const HTTPClient = require('../../../shared/http/http-client');
 const { appendSpoilerButton } = require('../../../shared/discord/spoiler-button-helper.js');
-const { lookupUrl } = require('../../../shared/analytics/url-stats');
+const { lookupUrl, formatUrlStatsForFooter } = require('../../../shared/analytics/url-stats');
 const tlog = require('../../../../utils/tfd-logger');
 
 /**
@@ -158,7 +158,7 @@ function buildUpdatedEmbed(tweet, images, currentPage, urlStats = null) {
 
     // 設定 footer - 保持與主提取器一致的格式
     const footerBase = 'Peko Embed';
-    const footerSuffix = urlStats ? ` • ${urlStats.channel}/${urlStats.guild}/${urlStats.total}` : '';
+    const footerSuffix = urlStats ? ` • ${formatUrlStatsForFooter(urlStats)}` : '';
     embed.setFooter({
         text: footerBase + footerSuffix, // 統一格式
         iconURL: 'https://pekoembed.canaria.cc/pic/twitter.png'
@@ -272,12 +272,12 @@ async function handleMergeImages(interaction, tweetId) {
             ? `${stats.join(' • ')} | Peko Embed`
             : 'Peko Embed';
 
-        // 📊 N/M/O 統計（唯讀）
+        // 📊 channel/guild 統計（唯讀）
         try {
             const tweetUrl = `https://twitter.com/i/status/${tweetId}`;
             if (interaction.guildId && interaction.channelId) {
                 const urlStats = lookupUrl(tweetUrl, interaction.guildId, interaction.channelId);
-                footerText += ` • ${urlStats.channel}/${urlStats.guild}/${urlStats.total}`;
+                footerText += ` • ${formatUrlStatsForFooter(urlStats)}`;
             }
         } catch (_) {}
 
@@ -401,11 +401,11 @@ async function handleSplitImages(interaction, tweetId) {
             ? `${stats.join(' • ')} | Peko Embed`
             : 'Peko Embed';
 
-        // 📊 N/M/O 統計（唯讀）
+        // 📊 channel/guild 統計（唯讀）
         try {
             if (interaction.guildId && interaction.channelId) {
                 const urlStats = lookupUrl(originalURL, interaction.guildId, interaction.channelId);
-                footerText += ` • ${urlStats.channel}/${urlStats.guild}/${urlStats.total}`;
+                footerText += ` • ${formatUrlStatsForFooter(urlStats)}`;
             }
         } catch (_) {}
 

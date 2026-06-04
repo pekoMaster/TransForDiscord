@@ -49,7 +49,7 @@
         <h3>2.2 短期儲存（伺服器端）</h3>
         <table>
             <tr><th>資料</th><th>用途</th><th>保留期限</th></tr>
-            <tr><td>URL 統計（規範化後的 URL key、出現次數、伺服器/頻道 ID）</td><td>顯示「同一 URL 在本伺服器/頻道出現 N 次」於 footer</td><td>7 天滾動 + 條目級 TTL</td></tr>
+            <tr><td>URL 統計（規範化後的 URL key、出現次數、伺服器/頻道 ID）</td><td>顯示「同一 URL 在本頻道/本伺服器出現 N 次」於 footer；全域總數僅記錄、不顯示</td><td>7 天滾動 + 條目級 TTL</td></tr>
             <tr><td>Rate-limit 計數（使用者 ID、伺服器 ID）</td><td>防止單一使用者/伺服器濫用本服務</td><td>5 分鐘滾動</td></tr>
             <tr><td>濫用記錄（使用者 ID、頻道 ID、事件類型）</td><td>偵測 spam 行為</td><td>30 天</td></tr>
             <tr><td>翻譯快取（譯文文字 hash）</td><td>避免重複翻譯耗用 API 配額</td><td>7 天</td></tr>

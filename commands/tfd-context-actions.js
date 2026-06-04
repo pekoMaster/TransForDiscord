@@ -12,7 +12,7 @@ const { resolveAuthorId, detectPlatformFromUrl, extractUrlFromMessage } = requir
 const { recallCounts, RECALL_LIMIT_MS, RECALL_LIMIT_COUNT, checkRecallLimit } = require('../src/features/reports/recall-limiter');
 
 const cooldowns = new Map();
-const COOLDOWN_MS = 60_000;
+const COOLDOWN_MS = 0;
 
 module.exports = {
     data: new ContextMenuCommandBuilder()
@@ -26,7 +26,7 @@ module.exports = {
 
         const userId = interaction.user.id;
         const last = cooldowns.get(userId);
-        if (last && Date.now() - last < COOLDOWN_MS) {
+        if (COOLDOWN_MS > 0 && last && Date.now() - last < COOLDOWN_MS) {
             return interaction.reply({ content: '操作冷卻中，請稍候再試', flags: MessageFlags.Ephemeral });
         }
         cooldowns.set(userId, Date.now());

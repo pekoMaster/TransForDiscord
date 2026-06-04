@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS user_api_keys (
 CREATE INDEX IF NOT EXISTS idx_api_keys_provider ON user_api_keys(provider);
 
 -- ────────────────────────────────────────────────────────────
--- 5. URL 統計（per-guild per-platform，含 N/M/O footer 計算）
+-- 5. URL 統計（per-guild per-platform，保留 total；footer 顯示 channel/guild）
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS url_stats (
   guild_id       TEXT NOT NULL,

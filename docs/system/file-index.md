@@ -31,6 +31,7 @@ index.js
   - `twitter_translate_*` / `twitter_original_*` → `src/features/twitter/interactions/translation.js`
   - `twitter_reload_*` → `src/features/twitter/interactions/reload.js`
   - `twitter_page_*` → `src/features/twitter/interactions/media-pagination.js`
+  - `pixivr18_*` → `src/features/pixiv/interactions/r18-pagination.js`
   - `pixiv_*` → `src/features/pixiv/interactions/pagination.js`
   - `ptt_*` → `src/features/ptt/interactions/pagination.js`
 
@@ -106,7 +107,7 @@ MessageCreate
 | 檔案 | 功能 |
 |------|------|
 | `link-processor.js` | 連結處理器 — 解析訊息中的 URL 並協調各元件 |
-| `message-handler-v2.js` | **訊息處理主引擎** ⭐ — Embed 組裝、Webhook 發送、N/M/O 注入、V2 Container 路由 |
+| `message-handler-v2.js` | **訊息處理主引擎** ⭐ — Embed 組裝、Webhook 發送、URL 統計 footer 注入、V2 Container 路由 |
 
 ### 擷取器 (`tfd-system/extractors/`)
 
@@ -268,7 +269,7 @@ MessageCreate
 
 | 路徑 | 功能 |
 |------|------|
-| `url-stats.js` | URL 重複貼文統計（channel/guild/total），舊 `tfd-system/utils/url-stats.js` 僅保留 adapter |
+| `url-stats.js` | URL 重複貼文統計（記錄 channel/guild/total；footer 只顯示 channel/guild），舊 `tfd-system/utils/url-stats.js` 僅保留 adapter |
 
 ### Shared Rate Limit 模組 (`src/shared/rate-limit/`)
 
@@ -299,6 +300,7 @@ MessageCreate
 |------|------|
 | `cache/pixiv-cache-manager.js` | Pixiv disk JSON cache manager with reload cache deletion API，`utils/pixiv-cache-manager.js` 保留 adapter |
 | `cache/r18-cache-manager.js` | Pixiv R18 attachment cache manager，`utils/pixiv-r18-cache-manager.js` 保留 adapter |
+| `interactions/r18-pagination.js` | Pixiv R18 spoiler image pagination handler |
 | `media/ugoira-mp4-processor.js` | Pixiv Ugoira MP4 conversion helper，`utils/pixiv-ugoira-mp4-processor.js` 保留 adapter |
 
 ### PTT 功能模組 (`src/features/ptt/`)
@@ -375,7 +377,7 @@ MessageCreate
 | `crypto-helper.js` | 舊路徑 adapter，轉接至 `src/shared/crypto/crypto-helper.js` |
 | `normalize-author.js` | 舊路徑 adapter，轉接至 `src/features/moderation/normalize-author.js` |
 | `recall-limiter.js` | 舊路徑 adapter，轉接至 `src/features/reports/recall-limiter.js` |
-| `src/features/reports/recall-limiter.js` | 回報/Context Action 共用的收回訊息冷卻限制器 |
+| `src/features/reports/recall-limiter.js` | 回報/Context Action 共用的收回訊息限制器；目前冷卻為 0、不限制次數 |
 
 ### 翻譯系統
 
