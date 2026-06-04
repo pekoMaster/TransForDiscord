@@ -1763,6 +1763,13 @@ class TFDMessageHandler {
                             continue; // 跳過這個結果，處理下一個
                         }
 
+                        // 🧡 Shopee 特殊處理：提取失敗時只記錄到後台，不發送 Discord 訊息
+                        // Shopee 的 SSR OG meta 抓取可能被擋或內容缺失，失敗時不刷版
+                        if (result.siteName === 'shopee') {
+                            this.log(`🧡 Shopee 提取失敗（僅後台記錄）: ${result.error || '未知錯誤'}`);
+                            continue; // 跳過這個結果，處理下一個
+                        }
+
                         // 📰 PTT 特殊處理：提取失敗時只記錄到後台，不發送 Discord 訊息
                         if (result.siteName === 'ptt' || result.siteName === 'pttweb') {
                             this.log(`[PTT] 提取失敗: ${result.error || '未知錯誤'}`);

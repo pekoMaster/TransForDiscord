@@ -69,6 +69,13 @@ const patterns = {
         store: /https?:\/\/24h\.pchome\.com\.tw\/store\/([A-Za-z0-9-]+)/i
     },
 
+    shopee: {
+        // 新格式: shopee.tw/product/{shopId}/{itemId}
+        product: /https?:\/\/(?:www\.)?shopee\.tw\/product\/(\d+)\/(\d+)/i,
+        // 舊格式: shopee.tw/{slug}-i.{shopId}.{itemId}（slug 可能含中文/英文）
+        productLegacy: /https?:\/\/(?:www\.)?shopee\.tw\/[^\/\s]*-i\.(\d+)\.(\d+)/i
+    },
+
     // ehentai, nhentai: 已移除 (2026-04-12) - 無對應 extractor
 
     // 遊戲百科

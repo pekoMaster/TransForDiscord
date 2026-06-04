@@ -132,6 +132,7 @@ MessageCreate
 | `pixiv.js` | Pixiv 作品 — 多圖分頁、Ugoira 動圖 |
 | `pixiv-image-attachment-optimizer.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/media/image-attachment-optimizer.js` |
 | `pornhub.js` | Legacy adapter to `src/features/sites/adult/pornhub-extractor.js` |
+| `shopee.js` | Legacy adapter to `src/features/sites/shop/shopee-extractor.js` |
 | `ptt.js` | PTT 文章 — 多圖分頁快取 |
 | `storm.js` | Legacy adapter to `src/features/sites/news/storm-extractor.js` |
 | `threads.js` | Threads — fixthreads.seria.moe OG meta + V2 Container |
@@ -214,6 +215,7 @@ MessageCreate
 | `instagram/instagram-extractor.js` | Instagram URL conversion and embed extractor |
 | `shop/hololive-shop-extractor.js` | Hololive Shop product extractor |
 | `shop/pchome-extractor.js` | PChome product extractor |
+| `shop/shopee-extractor.js` | Shopee 蝦皮購物 — OG meta (bot UA 拿 SSR，無價格/評價/已售) |
 | `video/bilibili-extractor.js` | Bilibili URL conversion extractor |
 | `wiki/52poke-extractor.js` | 52Poke wiki extractor |
 | `bahamut/bahamut-extractor.js` | Bahamut article and GNN extractor |

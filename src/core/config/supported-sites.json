@@ -71,6 +71,12 @@
       "domains": ["24h.pchome.com.tw"],
       "name": "PChome24h",
       "description": "PChome shopping platform"
+    },
+    "shopee": {
+      "enabled": true,
+      "domains": ["shopee.tw", "www.shopee.tw"],
+      "name": "Shopee 蝦皮購物",
+      "description": "Shopee shopping platform (OG-meta preview: 標題/描述/1張圖，無價格/評價/已售)"
     }
   },
   "news": {

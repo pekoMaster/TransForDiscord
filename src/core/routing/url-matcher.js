@@ -212,6 +212,10 @@ class URLMatcher {
                 product: (m) => ({ productId: m[1] }),
                 store: (m) => ({ storeId: m[1] })
             },
+            shopee: {
+                product: (m) => ({ shopId: m[1], itemId: m[2] }),
+                productLegacy: (m) => ({ shopId: m[1], itemId: m[2] })
+            },
             // ehentai, nhentai: 已移除 (2026-04-12)
             linetoday: {
                 article: (m) => ({ language: m[1], articleId: m[2] })

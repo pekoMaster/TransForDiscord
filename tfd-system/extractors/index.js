@@ -25,6 +25,7 @@ const FourGamersExtractor = require('./4gamers');
 const ThreadsExtractor = require('./threads');
 // const YouTubeExtractor = require('./youtube'); // YouTube: 已停用
 const HololiveShopExtractor = require('./hololive-shop');
+const ShopeeExtractor = require('./shopee');
 const tfd = require('../../utils/tfd-logger');
 
 class ExtractorManager {
@@ -82,6 +83,9 @@ class ExtractorManager {
 
         // 電商平台 - Hololive Shop
         this.extractors.set('hololiveshop', new HololiveShopExtractor());
+
+        // 電商平台 - Shopee 蝦皮購物
+        this.extractors.set('shopee', new ShopeeExtractor());
 
         // 影片平台 - YouTube /live/ 連結轉換（已停用）
         // this.extractors.set('youtube', new YouTubeExtractor());
@@ -220,7 +224,8 @@ class ExtractorManager {
                 pokewiki: './52poke',
                 '4gamers': './4gamers',
                 threads: './threads',
-                hololiveshop: './hololive-shop'
+                hololiveshop: './hololive-shop',
+                shopee: './shopee'
             };
 
             if (extractorPaths[siteName]) {
