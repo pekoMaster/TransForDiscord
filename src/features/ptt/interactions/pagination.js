@@ -101,7 +101,6 @@ module.exports = {
             // 準備 Embeds 和按鈕
             const embeds = pageResult.embeds || [pageResult.embed];
             const components = pageResult.components || [];
-            preserveFooterStatsFromMessage(embeds, interaction.message);
 
             await interaction.editReply({
                 embeds: embeds,
@@ -178,7 +177,6 @@ async function handlePttReload(interaction) {
 
         const embeds = result.embeds || [result.embed];
         const components = result.components || [];
-        preserveFooterStatsFromMessage(embeds, interaction.message);
         await interaction.editReply({ embeds, components });
         tlog.sys('PTT重整', `重整成功: ${originalURL}`);
     } catch (error) {
@@ -231,8 +229,20 @@ async function handlePttExpandCollapse(interaction) {
 
         const newEmbed = EmbedBuilder.from(currentEmbed);
 
-        const pttExtractor = new PTTExtractor();
-        newEmbed.setDescription(pttExtractor.buildArticleDescription(articleData, isExpand));
+        if (isExpand) {
+            // 展開：用完整內容替換
+            const fullContent = articleData.fullContent || articleData.content;
+            // Discord embed description 上限 4096 字
+            const displayContent = fullContent.length > 3800
+                ? fullContent.substring(0, 3800) + '...'
+                : fullContent;
+            const header = `作者 ${articleData.author}\n\n`;
+            newEmbed.setDescription(header + displayContent);
+        } else {
+            // 縮回：用截斷內容替換
+            const header = `作者 ${articleData.author}\n\n`;
+            newEmbed.setDescription(header + articleData.content);
+        }
 
         // 重建按鈕：切換展開/縮回
         const existingRows = interaction.message.components || [];
@@ -292,27 +302,6 @@ function cleanExpiredMemoryCache() {
             memoryCache.delete(hash);
         }
     }
-}
-
-function preserveFooterStatsFromMessage(embeds, message) {
-    if (!Array.isArray(embeds) || !embeds[0] || !message) return;
-
-    const currentFooterText =
-        message.embeds?.[0]?.footer?.text ||
-        message.embeds?.[0]?.data?.footer?.text ||
-        '';
-    const statsMatch = currentFooterText.match(/\s•\s\d+\/\d+\/\d+$/);
-    if (!statsMatch) return;
-
-    const { EmbedBuilder } = require('discord.js');
-    const mainEmbed = EmbedBuilder.from(embeds[0]);
-    const footer = mainEmbed.data?.footer || {};
-    const baseText = (footer.text || '').replace(/\s•\s\d+\/\d+\/\d+$/, '');
-    mainEmbed.setFooter({
-        text: `${baseText}${statsMatch[0]}`,
-        iconURL: footer.icon_url
-    });
-    embeds[0] = mainEmbed;
 }
 
 setInterval(cleanExpiredMemoryCache, 10 * 60 * 1000);
