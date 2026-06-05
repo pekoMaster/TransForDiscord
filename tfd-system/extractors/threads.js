@@ -18,6 +18,7 @@ const tfd = require('../../utils/tfd-logger');
 const THREADS_COLOR = 0x000000;
 const THREADS_ICON = 'https://static.cdninstagram.com/rsrc.php/ye/r/lEu8iVizmNW.ico';
 const fs = require('fs');
+const cheerio = require('cheerio');
 const path = require('path');
 const crypto = require('crypto');
 
@@ -74,28 +75,18 @@ function _decodeHtmlEntities(value) {
 }
 
 function _extractMeta(html, propName) {
-    const propIdx = html.indexOf('"' + propName + '"');
-    if (propIdx < 0) return null;
-    const segment = html.slice(propIdx, propIdx + 2000);
-    const cm = segment.match(/content\s*=\s*"([\s\S]*?)"\s*\/?>/i);
-    if (!cm) return null;
-    return _decodeHtmlEntities(cm[1]);
+    const $ = cheerio.load(html);
+    const value = $('meta[property="' + propName + '"], meta[name="' + propName + '"]').first().attr('content');
+    return value ? value.trim() : null;
 }
 
 function _extractAllMeta(html, propName) {
-    const results = [];
-    let searchFrom = 0;
-    while (true) {
-        const propIdx = html.indexOf('"' + propName + '"', searchFrom);
-        if (propIdx < 0) break;
-        const segment = html.slice(propIdx, propIdx + 2000);
-        const cm = segment.match(/content\s*=\s*"([\s\S]*?)"\s*\/?>/i);
-        if (cm) results.push(_decodeHtmlEntities(cm[1]));
-        searchFrom = propIdx + propName.length + 2;
-    }
-    return results;
+    const $ = cheerio.load(html);
+    return $('meta[property="' + propName + '"], meta[name="' + propName + '"]')
+        .map(function(_, el) { return ($(el).attr('content') || '').trim(); })
+        .get()
+        .filter(Boolean);
 }
-
 function _canonicalImageKey(url) {
     try {
         const u = new URL(url);
@@ -243,7 +234,35 @@ class ThreadsExtractor {
             }
 
             const realName   = _extractThreadsRealName(titleProf || titlePost, username);
-            const isVideo    = (!!videoUrl) || (twitterCard === 'player');
+            let isVideo    = (!!videoUrl) || (twitterCard === 'player');
+
+            // 4.0 sync: browser render fallback when fixthreads returns insufficient images
+            const shouldUseAnonymousRender = images.length <= 1 && !videoUrl;
+            if (shouldUseAnonymousRender) {
+                try {
+                    const renderedData = await this.fetchPageMeta(originalURL, {
+                        extraWaitMs: 1000,
+                        timeout: 30000
+                    });
+                    if (renderedData) {
+                        if (renderedData.ogDescription && !rawText) {
+                            rawText = renderedData.ogDescription;
+                        }
+                        if (renderedData.twitterCard && !twitterCard) {
+                            twitterCard = renderedData.twitterCard;
+                        }
+                        if (renderedData.videoSrc && !videoUrl) {
+                            videoUrl = renderedData.videoSrc;
+                            isVideo = true;
+                        }
+                        if (renderedData.images && renderedData.images.length > images.length) {
+                            images = renderedData.images;
+                        }
+                    }
+                } catch (renderErr) {
+                    // silently ignore render fallback failure
+                }
+            }
             images           = _filterCarouselImages(images, isVideo);
             const hasRealImg = images.length > 0;
             const quoteInfo  = _parseQuote(rawText);
