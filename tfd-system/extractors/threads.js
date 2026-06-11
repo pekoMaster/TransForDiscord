@@ -14,6 +14,8 @@
 const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
 const { EmbedBuilder, ContainerBuilder, TextDisplayBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const tfd = require('../../utils/tfd-logger');
+const { truncateText } = require('../../src/shared/text/text-truncator');
+const { createGalleryState } = require('../../src/features/threads/gallery/gallery-cache');
 
 const THREADS_COLOR = 0x000000;
 const THREADS_ICON = 'https://static.cdninstagram.com/rsrc.php/ye/r/lEu8iVizmNW.ico';
@@ -34,28 +36,14 @@ const http = require('http');
 
 // -- fixthreads HTTP helper functions -----------------------------------
 
-function _fetchHtml(url, redirectsLeft = 3) {
+function _fetchHtml(url) {
     return new Promise((resolve, reject) => {
         const u = new URL(url);
-        const client = u.protocol === 'http:' ? http : https;
-        client.get({
+        https.get({
             hostname: u.hostname,
             path: u.pathname + u.search,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml',
-                'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8'
-            }
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
         }, res => {
-            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirectsLeft > 0) {
-                res.resume();
-                const nextUrl = new URL(res.headers.location, url).toString();
-                return resolve(_fetchHtml(nextUrl, redirectsLeft - 1));
-            }
-            if (res.statusCode >= 400) {
-                res.resume();
-                return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-            }
             let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
         }).on('error', reject).setTimeout(15000, function () { this.destroy(); reject(new Error('timeout')); });
     });
@@ -278,13 +266,28 @@ class ThreadsExtractor {
 
             const r = { username, postId, realName, rawText, videoUrl, images, avatar, twitterCard, isVideo, hasRealImg, isQuote: !!quoteInfo, quoteInfo, url: originalURL };
 
+            // 計算 description 並判斷是否需要截斷展開
+            const fullDescription = this._buildDescription(r);
+            const truncation = truncateText(fullDescription, { placeholder: '' });
+            const displayDescription = truncation.text;
+            const expandId = truncation.isTruncated
+                ? createGalleryState({
+                    type: 'threads_expand',
+                    r,
+                    fullDescription,
+                    username,
+                    postId,
+                    originalURL
+                })
+                : null;
+
             if (isVideo) {
                 return {
                     success: true,
                     siteName: 'threads',
                     isV2: true,
                     v2Container: this._buildV2Container(r),
-                    components: this._buildComponents(originalURL),
+                    components: this._buildComponents(originalURL, expandId),
                     originalURL
                 };
             }
@@ -293,8 +296,8 @@ class ThreadsExtractor {
                 return {
                     success: true,
                     siteName: 'threads',
-                    embed: this._buildV1Embed(r),
-                    components: this._buildComponents(originalURL),
+                    embed: this._buildV1Embed(r, displayDescription),
+                    components: this._buildComponents(originalURL, expandId),
                     multipleImages: images,
                     originalURL
                 };
@@ -303,53 +306,83 @@ class ThreadsExtractor {
             return {
                 success: true,
                 siteName: 'threads',
-                embed: this._buildV1Embed(r),
-                components: this._buildComponents(originalURL),
+                embed: this._buildV1Embed(r, displayDescription),
+                components: this._buildComponents(originalURL, expandId),
                 originalURL
             };
 
         } catch (error) {
             tfd.sysError('TFD-Threads', `貼文抓取失敗 (${error.message})，改用基本 embed`);
-            return this.buildBasicPostEmbed(username, postId, originalURL);
+            return { success: false, siteName: 'threads', error: error.message };
         }
     }
 
     /**
-     * 建立按鈕元件（重整 + 回報）
+     * 建立 description 文字（處理 quote 拼接 / 純文字）
+     * @param {Object} r
+     * @returns {string}
      */
-    _buildComponents(originalURL) {
+    _buildDescription(r) {
+        if (r.isQuote && r.quoteInfo) {
+            const q = r.quoteInfo;
+            let desc = '';
+            if (q.reposterText) desc += q.reposterText + '\n\n';
+            const origUrl = 'https://www.threads.com/@' + q.originalUsername;
+            desc += '> **[@' + q.originalUsername + '](' + origUrl + ')**\n';
+            desc += q.quotedText.split('\n').map(l => '> ' + l).join('\n');
+            return desc;
+        }
+        return r.rawText || '';
+    }
+
+    /**
+     * 建立按鈕元件（重整 + 展開/縮回 + 回報）
+     * @param {string} originalURL
+     * @param {string|null} expandId - 有值時加「展開」按鈕，無值時不附加
+     */
+    _buildComponents(originalURL, expandId = null) {
         const threadHash = _generateThreadHash(originalURL);
-        const actionRow = new ActionRowBuilder().addComponents(
+        const actionRow = new ActionRowBuilder();
+
+        actionRow.addComponents(
             new ButtonBuilder()
                 .setCustomId(`threads_reload_${threadHash}`)
                 .setLabel('重整')
-                .setStyle(ButtonStyle.Secondary),
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+        if (expandId) {
+            actionRow.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`threads_expand_${expandId}`)
+                    .setLabel('展開')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+        }
+
+        actionRow.addComponents(
             new ButtonBuilder()
                 .setCustomId(`report_btn_${Date.now()}`)
                 .setLabel('回報')
                 .setStyle(ButtonStyle.Secondary)
         );
+
         return [actionRow];
     }
 
     /**
      * 建立 V1 embed（圖片/文字/引用貼文）
+     * @param {Object} r
+     * @param {string} [descriptionText] - 已處理過的 description 文字（截斷後），未提供時用 r 算
      */
-    _buildV1Embed(r) {
+    _buildV1Embed(r, descriptionText) {
         const authorName = (r.realName && r.realName !== r.username)
             ? r.realName + ' (@' + r.username + ')'
             : '@' + r.username;
 
-        let description = '';
-        if (r.isQuote && r.quoteInfo) {
-            const q = r.quoteInfo;
-            if (q.reposterText) description += q.reposterText + '\n\n';
-            const origUrl = 'https://www.threads.com/@' + q.originalUsername;
-            description += '> **[@' + q.originalUsername + '](' + origUrl + ')**\n';
-            description += q.quotedText.split('\n').map(l => '> ' + l).join('\n');
-        } else {
-            description = r.rawText;
-        }
+        const description = descriptionText !== undefined
+            ? descriptionText
+            : this._buildDescription(r);
 
         const embedData = {
             color: THREADS_COLOR,

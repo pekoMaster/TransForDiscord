@@ -34,6 +34,9 @@ index.js
   - `pixivr18_*` → `src/features/pixiv/interactions/r18-pagination.js`
   - `pixiv_*` → `src/features/pixiv/interactions/pagination.js`
   - `ptt_*` → `src/features/ptt/interactions/pagination.js`
+  - `threads_expand_*` / `threads_collapse_*` → `src/features/threads/interactions/expand-collapse.js`
+  - `threads_reload_*` → `src/features/threads/interactions/reload.js`
+  - `threads_gallery_*` → `src/features/threads/interactions/gallery-pagination.js`
 
 ### 訊息處理流程
 ```
@@ -133,7 +136,7 @@ MessageCreate
 | `pixiv-image-attachment-optimizer.js` | 舊路徑 adapter，轉接至 `src/features/pixiv/media/image-attachment-optimizer.js` |
 | `pornhub.js` | Legacy adapter to `src/features/sites/adult/pornhub-extractor.js` |
 | `shopee.js` | Legacy adapter to `src/features/sites/shop/shopee-extractor.js` |
-| `ptt.js` | PTT 文章 — 多圖分頁快取 |
+| `ptt.js` | PTT 文章 — 多圖分頁快取 — 2026-06-05 圖片提取套用文章界線（`※ 發信站`/`※ 編輯` marker）+ pttweb.cc 推文 class 過濾，確保只抓文內附圖 |
 | `storm.js` | Legacy adapter to `src/features/sites/news/storm-extractor.js` |
 | `threads.js` | Threads — fixthreads.seria.moe OG meta + V2 Container |
 | `twitter-legacy.js` | 舊路徑 adapter，轉接至 `src/features/twitter/extractors/twitter-legacy-extractor.js` |
@@ -243,8 +246,14 @@ MessageCreate
 |------|------|
 | `crypto-helper.js` | AES-256-GCM API Key 加解密 helper；fallback key 固定為專案 `data/.encryption-key` |
 
-### Shared HTML 模組 (`src/shared/html/`)
+### Shared Text 模組 (`src/shared/text/`)
+> 與 `src/shared/discord/text-truncator.js`（舊 Twitter 300 權重版）不同；本區為 PTT/Threads 用的雙閾值（中文 100 / 英數 100）通用截斷。
 
+| 路徑 | 功能 |
+|------|------|
+| `text-truncator.js` | 中英雙閾值文字截斷（`truncateText` / `countChineseChars` / `countAsciiAlnum` / `stripUrls`），URL 跳過計數但完整保留；PTT 與 Threads 共用 |
+
+### Shared HTML 模組 (`src/shared/html/`)
 | 路徑 | 功能 |
 |------|------|
 | `dom-parser.js` | Cheerio DOM/metadata parser，舊 `tfd-system/utils/dom-parser.js` 僅保留 adapter |
@@ -310,7 +319,17 @@ MessageCreate
 | 檔案 | 作用 |
 |------|------|
 | `cache/ptt-cache-manager.js` | PTT article/image disk cache manager，`utils/ptt-cache-manager.js` 保留 adapter |
-| `interactions/pagination.js` | PTT pagination/reload/expand/collapse interaction handler，`events/ptt-pagination-interactions.js` 保留 adapter |
+| `interactions/pagination.js` | PTT pagination/reload/expand/collapse interaction handler（`customId` 用 `data.custom_id` 取值，discord.js v14），`events/ptt-pagination-interactions.js` 保留 adapter |
+
+### Threads 功能模組 (`src/features/threads/`)
+
+| 檔案 | 作用 |
+|------|------|
+| `gallery/gallery-cache.js` | Threads 多圖分頁 + 展開/縮回共用記憶體快取（1 小時 TTL），提供 `createGalleryState` / `getGalleryState` / `setGalleryState` |
+| `gallery/gallery-view.js` | Threads 多圖分頁 embed 建構器（依 `galleryId` 與 page index 切換） |
+| `interactions/gallery-pagination.js` | Threads 多圖分頁按鈕 handler（`threads_gallery_<galleryId>_<page>`） |
+| `interactions/reload.js` | Threads 重新整理按鈕 handler（`threads_reload_<threadHash>`），重新抓取 OG meta |
+| `interactions/expand-collapse.js` | Threads 內文 100 字展開/縮回按鈕 handler（`threads_expand_<galleryId>` / `threads_collapse_<galleryId>`），透過 `gallery-cache` 取完整內文 |
 
 ### URL 路由核心 (`src/core/routing/`)
 

@@ -108,6 +108,12 @@ async function execute(interaction, client) {
             return await routeReportInteraction(interaction);
         }
 
+        // ── Threads 展開/縮回（必須在 threads_reload_ 與 threads_gallery_ 之前匹配）──
+        if (customId.startsWith('threads_expand_') || customId.startsWith('threads_collapse_')) {
+            const { handleThreadsExpandCollapse } = require('../../features/threads/interactions/expand-collapse.js');
+            return await handleThreadsExpandCollapse(interaction);
+        }
+
         // ── Threads 重整按鈕（必須在 threads_gallery_ 之前匹配）──
         if (customId.startsWith('threads_reload_')) {
             const { handleThreadsReloadInteraction } = require('../../features/threads/interactions/reload.js');

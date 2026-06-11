@@ -251,7 +251,8 @@ async function handlePttExpandCollapse(interaction) {
         for (const row of existingRows) {
             const newRow = new ActionRowBuilder();
             for (const component of row.components) {
-                const id = component.customId;
+                // discord.js v14: ButtonBuilder 的 customId 在 data.custom_id（snake_case）
+                const id = component.data && component.data.custom_id;
                 if (id && id.startsWith('ptt_expand_')) {
                     newRow.addComponents(
                         new ButtonBuilder()

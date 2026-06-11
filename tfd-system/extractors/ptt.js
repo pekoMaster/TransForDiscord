@@ -8,6 +8,7 @@ const DOMParser = require('../../src/shared/html/dom-parser');
 const TFDEmbedBuilder = require('../../src/shared/discord/embed-builder');
 const tfd = require('../../utils/tfd-logger');
 const PTTCacheManager = require('../../utils/ptt-cache-manager');
+const { truncateText } = require('../../src/shared/text/text-truncator');
 const _pttCacheManager = new PTTCacheManager();
 const PTT_FOOTER_TEXT = 'PTT 批踢踢實業坊';
 
@@ -357,38 +358,15 @@ class PTTExtractor {
     }
 
     /**
-     * 截斷內容（100中文字限制）
+     * 截斷內容（共用 src/shared/text/text-truncator.js 規則：中文 100 字 OR 英數 100 字）
      * @param {string} content
      * @returns {string}
      */
     truncateContent(content) {
         if (!content) return '';
-
-        const urlPattern = /https?:\/\/[^\s]+/g;
-        const urls = content.match(urlPattern) || [];
-        let contentWithoutUrls = content;
-        urls.forEach(url => { contentWithoutUrls = contentWithoutUrls.replace(url, ''); });
-
-        const chineseCharCount = (contentWithoutUrls.match(/[一-鿿]/g) || []).length;
-        if (chineseCharCount <= 100) return content;
-
-        let charCount = 0;
-        let truncated = '';
-        let i = 0;
-        while (i < content.length && charCount < 100) {
-            if (content.substr(i).match(/^https?:\/\//)) {
-                const urlMatch = content.substr(i).match(/^https?:\/\/[^\s]+/);
-                if (urlMatch) {
-                    truncated += urlMatch[0];
-                    i += urlMatch[0].length;
-                    continue;
-                }
-            }
-            if (content[i].match(/[一-鿿]/)) charCount++;
-            truncated += content[i];
-            i++;
-        }
-        return truncated + '\n\n-# ⬇️ 點擊「展開」查看完整內文';
+        return truncateText(content, {
+            placeholder: '\n\n-# ⬇️ 點擊「展開」查看完整內文'
+        }).displayText;
     }
 
     /**
@@ -576,8 +554,19 @@ class PTTExtractor {
             if (mainContent.length === 0) {
                 mainContent = $('.e7-main-content');
             }
+            if (mainContent.length === 0) {
+                return [];
+            }
             mainContent = mainContent.clone();
-            mainContent.find('.push, .f2, script, style').remove();
+            // ptt.cc: .push / .f2 是推噓文與推文區尾
+            // pttweb.cc: 推文 class 命名漂移，.e7-comment / [class*="comment"] / [class*="push"] 是已知變體
+            // 保險起見多列幾個，避免 class 改版後又漏推文圖
+            mainContent.find('.push, .f2, .e7-comment, [class*="comment"], [class*="push"], script, style').remove();
+
+            // 2026-06-05 修：套用文章界線，與 extractArticleContent / extractPttwebContent 一致
+            // 移除 ※ 發信站 / ※ 編輯 marker 之後的 DOM，避免抓到推文區/簽名檔之後的圖
+            this._truncateAtArticleBoundary($, mainContent);
+
             const contentText = mainContent.text();
 
             const imageUrlRegex = /https?:\/\/[^\s<>"]+?\.(?:jpg|jpeg|png|gif|webp)/gi;
@@ -603,17 +592,12 @@ class PTTExtractor {
             });
 
             // 🔧 備援：從 og:image meta 標籤提取圖片（適用於 pttweb.cc）
+            // 2026-06-05 修：即使已有圖片也跑此 fallback（og:image 是文章封面，不算推文圖）
+            // 但只取 og:image，不取 og:description（og:description 可能含整頁摘要含推文）
             if (allImageUrls.length === 0) {
                 const ogImage = $('meta[property="og:image"]').attr('content');
                 if (ogImage && imageUrlRegex.test(ogImage)) {
                     allImageUrls.push(ogImage);
-                }
-
-                // 🔧 備援：從 og:description 中提取圖片 URL
-                const ogDescription = $('meta[property="og:description"]').attr('content');
-                if (ogDescription) {
-                    const descImageMatches = ogDescription.match(imageUrlRegex) || [];
-                    allImageUrls.push(...descImageMatches);
                 }
             }
 
@@ -634,6 +618,65 @@ class PTTExtractor {
         } catch (error) {
             tfd.sysError('PTT-Extractor', `圖片提取失敗: ${error.message}`);
             return [];
+        }
+    }
+
+    /**
+     * 截斷 cloned mainContent 在文章界線處（移除推文區、簽名檔、發信站等）
+     * 與 extractArticleContent / extractPttwebContent 套用相同 marker：
+     *   - ※ 發信站: 批踢踢實業坊(ptt.cc)
+     *   - ※ 編輯:
+     *
+     * 2026-06-05 新增：
+     *   圖片提取原本只靠 class 過濾 (.push, .f2)，遇到 pttweb.cc 結構差異或
+     *   og:description 漏抓時可能把推文/簽名檔的圖包進來。
+     *   套用此界線後，marker 之後的 DOM 整個消失，後續 <img> / <a> 提取自然不會看到。
+     *
+     * @param {Object} $ - Cheerio 函式（給 _childrenOf 用）
+     * @param {Object} $clonedMain - 已 clone 且 .push, .f2 移除過的 mainContent cheerio 物件
+     * @private
+     */
+    _truncateAtArticleBoundary($, $clonedMain) {
+        const sendStationMarker = '※ 發信站: 批踢踢實業坊(ptt.cc)';
+        const editMarker = '※ 編輯:';
+
+        // Walk through top-level children, accumulating text
+        // 找到 marker 所在的 child 起，後續 child 全部移除
+        const children = $clonedMain.contents().toArray();
+        let accumulatedText = '';
+        let truncateFromIndex = -1;
+
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            const childText = (child.data !== undefined) ? child.data : $(child).text();
+            const newAccumulated = accumulatedText + childText;
+
+            // 哪個 marker 先出現就以哪個為界線
+            const sendIdx = newAccumulated.indexOf(sendStationMarker);
+            const editIdx = newAccumulated.indexOf(editMarker);
+
+            let boundaryIdx = -1;
+            if (sendIdx !== -1 && editIdx !== -1) {
+                boundaryIdx = Math.min(sendIdx, editIdx);
+            } else if (sendIdx !== -1) {
+                boundaryIdx = sendIdx;
+            } else if (editIdx !== -1) {
+                boundaryIdx = editIdx;
+            }
+
+            if (boundaryIdx !== -1) {
+                truncateFromIndex = i;
+                break;
+            }
+
+            accumulatedText = newAccumulated;
+        }
+
+        if (truncateFromIndex === -1) return;
+
+        // 從 marker 所在的 child 起（含）往後的 sibling 全部刪除
+        for (let i = truncateFromIndex; i < children.length; i++) {
+            $(children[i]).remove();
         }
     }
 
