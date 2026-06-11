@@ -823,6 +823,14 @@ class TFDMessageHandler {
                 ...container.components
             ];
 
+            // 🔧 V2 結果若帶外層 components（如 Threads 影片的 重整/展開/回報 按鈕），
+            //    塞進 container 底部（與 Twitter V2 按鈕相同的 addActionRowComponents 模式）。
+            //    Twitter / Instagram V2 無此欄位 → 等同 no-op，不影響其行為。
+            if (Array.isArray(result.components) && result.components.length > 0
+                && typeof container.addActionRowComponents === 'function') {
+                container.addActionRowComponents(...result.components);
+            }
+
             // 使用 Webhook 發送 V2 Container（现在包含用户标记行）
             const sentMsg = await this.sendViaWebhook(message, {
                 components: [container],

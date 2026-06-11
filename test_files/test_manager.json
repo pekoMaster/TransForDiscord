@@ -34,5 +34,17 @@
     "created": "20260611_121955",
     "reason": "Regression coverage for free translation provider using stable Gemini 3.1 Flash-Lite only with key slots 2/3/4/6",
     "cleanupAfterHours": 24
+  },
+  {
+    "file": "test_files/test_passthrough_no_extra_message.cjs",
+    "created": "20260611_200500",
+    "reason": "驗證 URL 文字保留修正不會在 TFD 重蹈 4.0 覆轍：passthrough(vxtwitter)+文字不額外發文/不壓原生預覽；兩個可預覽+文字依序各一則且文字保留",
+    "cleanupAfterHours": 24
+  },
+  {
+    "file": "test_files/test_threads_video_buttons.cjs",
+    "created": "20260611_201200",
+    "reason": "Threads 影片(isV2)保留 重整/回報 按鈕：sendTwitterV2 用 addActionRowComponents 把 result.components 塞進 container；Twitter/Instagram V2 無外層 components 不受影響",
+    "cleanupAfterHours": 24
   }
 ]
