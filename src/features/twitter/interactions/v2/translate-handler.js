@@ -1,5 +1,5 @@
 const { MessageFlags } = require('discord.js');
-const { getCachedTweetData } = require('../../state/v2-tweet-cache');
+const { resolveTweetBundle } = require('./tweet-data');
 const { getPreferredProvider, PROVIDERS } = require('../../../translation/keys/user-api-key-storage');
 const { buildTextBundle } = require('../../../translation/text/text-bundle');
 const { translateTweet } = require('../../../translation/service/translation-service');
@@ -44,7 +44,7 @@ async function handleV2Translate(interaction) {
         return;
     }
 
-    const tweetData = getCachedTweetData(tweetId);
+    const tweetData = await resolveTweetBundle(tweetId);
     if (!tweetData?.tweet) {
         await interaction.followUp({
             content: '找不到推文資料，請重新抓取一次後再試。',

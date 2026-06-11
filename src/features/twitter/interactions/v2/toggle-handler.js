@@ -1,4 +1,4 @@
-const { getCachedTweetData } = require('../../state/v2-tweet-cache');
+const { resolveTweetBundle } = require('./tweet-data');
 const tlog = require('../../../../../utils/tfd-logger');
 const { extractTweetId } = require('./shared');
 const { getCachedV2Translation } = require('./translation-cache');
@@ -17,7 +17,7 @@ async function handleV2Toggle(interaction, type) {
     if (type === 'all') {
         const isExpanding = interaction.customId.startsWith('v2_expand_all_');
         if (!isExpanding) {
-            const cached = getCachedTweetData(tweetId);
+            const cached = await resolveTweetBundle(tweetId);
             const quotedHasVideo = cached?.quoteData?.tweet
                 ? mediaClassifier.hasVideoContent(cached.quoteData.tweet)
                 : false;
@@ -34,7 +34,7 @@ async function handleV2Toggle(interaction, type) {
 
     const cachedTranslation = getCachedV2Translation(tweetId);
     if (cachedTranslation) {
-        const currentState = getStoredViewState(interaction) || buildFallbackState(interaction, tweetId, getCachedTweetData(tweetId));
+        const currentState = getStoredViewState(interaction) || buildFallbackState(interaction, tweetId, await resolveTweetBundle(tweetId));
         if (currentState.isTranslated) {
             overrides.isTranslated = true;
             overrides.translatedText = cachedTranslation.translatedText;

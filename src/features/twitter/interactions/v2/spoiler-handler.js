@@ -10,7 +10,7 @@ const {
     TextInputBuilder,
     TextInputStyle
 } = require('discord.js');
-const { getCachedTweetData } = require('../../state/v2-tweet-cache');
+const { resolveTweetBundle } = require('./tweet-data');
 const db = require('../../../../../db');
 const tlog = require('../../../../../utils/tfd-logger');
 const { extractTweetId, extractMarkerTextFromMessage } = require('./shared');
@@ -55,7 +55,7 @@ async function handleV2SpoilerModalSubmit(interaction) {
 
     await sendSpoilerLog(interaction, tweetId, operatorId, reason);
 
-    const cached = getCachedTweetData(tweetId);
+    const cached = await resolveTweetBundle(tweetId);
     const markerText = extractMarkerTextFromMessage(message);
     const spoilerContainer = buildSpoilerContainer(cached, markerText, operatorId, reason);
 
