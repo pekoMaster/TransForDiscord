@@ -120,6 +120,12 @@ async function execute(interaction, client) {
             return await handleThreadsReloadInteraction(interaction);
         }
 
+        // ── Instagram 重整按鈕 ──
+        if (customId.startsWith('ig_reload_')) {
+            const { handleInstagramReloadInteraction } = require('../../features/sites/instagram/interactions/reload.js');
+            return await handleInstagramReloadInteraction(interaction);
+        }
+
         // ── Threads 多圖分頁 ──
         if (customId.startsWith('threads_gallery_')) {
             const { handleThreadsGalleryPagination } = require('../../features/threads/interactions/gallery-pagination.js');

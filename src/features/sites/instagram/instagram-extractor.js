@@ -228,7 +228,10 @@ class InstagramExtractor {
         if (embedData.stats && embedData.stats.comments) stats.push('comments ' + embedData.stats.comments);
         const footerText = stats.length > 0 ? '-# ' + stats.join('  ') + ' | Instagram | Peko Embed' : '-# Instagram | Peko Embed';
         container.addTextDisplayComponents(new TextDisplayBuilder().setContent(footerText));
-        container.addActionRowComponents(new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(REPORT_BTN_PREFIX + Date.now()).setLabel('回報').setStyle(ButtonStyle.Secondary)));
+        container.addActionRowComponents(new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('ig_reload_' + embedData.originalURL).setLabel('重整').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId(REPORT_BTN_PREFIX + Date.now()).setLabel('回報').setStyle(ButtonStyle.Secondary)
+        ));
         return container;
     }
 
