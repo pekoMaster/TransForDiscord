@@ -21,26 +21,46 @@ class URLMatcher {
      * @returns {string[]} URL 陣列
      */
     extractURLs(text) {
+        return this.extractURLMatches(text).map(match => match.cleanUrl);
+    }
+
+    /**
+     * Extract processable URL tokens with source positions.
+     * This keeps duplicate URLs independent when one copy is wrapped and another is bare.
+     * @param {string} text
+     * @returns {Array<{rawUrl:string, cleanUrl:string, start:number, end:number, removalStart:number, removalEnd:number}>}
+     */
+    extractURLMatches(text) {
+        if (!text || typeof text !== 'string') return [];
+
         const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
-        const allUrls = text.match(urlRegex) || [];
+        const matches = [];
 
-        // 過濾被特定格式包裹的 URL 和 Discord 訊息連結
-        const filteredUrls = allUrls.filter(url => {
-            // 過濾 Markdown 包裹的 URL
-            if (this.isUrlWrappedInMarkdown(text, url)) {
-                return false;
+        for (const match of text.matchAll(urlRegex)) {
+            const rawUrl = match[0];
+            const start = match.index;
+            const end = start + rawUrl.length;
+
+            if (this.isUrlWrappedInMarkdownAt(text, start, end)) {
+                continue;
             }
 
-            // 過濾 Discord 訊息連結（不處理）
-            if (this.isDiscordMessageLink(url)) {
-                return false;
+            if (this.isDiscordMessageLink(rawUrl)) {
+                continue;
             }
 
-            return true;
-        });
+            const removalRange = this.getURLRemovalRange(text, start, end);
+            matches.push({
+                rawUrl,
+                cleanUrl: this.cleanURLParameters(rawUrl),
+                start,
+                end,
+                removalStart: removalRange.start,
+                removalEnd: removalRange.end
+            });
+        }
 
-        // 清理 URL 參數
-        return filteredUrls.map(url => this.cleanURLParameters(url));
+        return matches;
     }
 
     /**
@@ -93,29 +113,35 @@ class URLMatcher {
      * @returns {boolean} true 表示被包裹（應忽略）
      */
     isUrlWrappedInMarkdown(text, url) {
-        // 找出 URL 在文字中的位置
         const urlIndex = text.indexOf(url);
         if (urlIndex === -1) return false;
 
-        const beforeUrl = text.substring(0, urlIndex);
-        const afterUrl = text.substring(urlIndex + url.length);
+        return this.isUrlWrappedInMarkdownAt(text, urlIndex, urlIndex + url.length);
+    }
 
-        // 檢查 1: <URL> 尖括號包裹
+    /**
+     * Position-aware wrapper detection for a URL token.
+     * @param {string} text
+     * @param {number} start
+     * @param {number} end
+     * @returns {boolean}
+     */
+    isUrlWrappedInMarkdownAt(text, start, end) {
+        const beforeUrl = text.substring(0, start);
+        const afterUrl = text.substring(end);
+
         if (beforeUrl.endsWith('<') && afterUrl.startsWith('>')) {
             return true;
         }
 
-        // 檢查 2: ```URL``` 三個反引號（同一行）
         if (beforeUrl.endsWith('```') && afterUrl.startsWith('```')) {
             return true;
         }
 
-        // 檢查 3: 多行 code block（``` 換行 ... URL ... 換行 ```）
         if (/```[^\n]*\n\s*$/.test(beforeUrl) && /^\s*\n\s*```/.test(afterUrl)) {
             return true;
         }
 
-        // 檢查 4: `URL` 單個反引號（不是三個反引號的一部分）
         const endsWithSingleBacktick = beforeUrl.endsWith('`') && !beforeUrl.endsWith('``');
         const startsWithSingleBacktick = afterUrl.startsWith('`') && !afterUrl.startsWith('``');
         if (endsWithSingleBacktick && startsWithSingleBacktick) {
@@ -123,6 +149,87 @@ class URLMatcher {
         }
 
         return false;
+    }
+
+    /**
+     * Expand removal to exact spoiler shells so residual text never leaves stray pipes.
+     * @param {string} text
+     * @param {number} start
+     * @param {number} end
+     * @returns {{start:number,end:number}}
+     */
+    getURLRemovalRange(text, start, end) {
+        if (start >= 2 && text.slice(start - 2, start) === '||' && text.slice(end, end + 2) === '||') {
+            return { start: start - 2, end: end + 2 };
+        }
+
+        return { start, end };
+    }
+
+    /**
+     * Remove only URL tokens that were actually processed by the preview pipeline.
+     * Non-triggering shells such as <URL>, `URL`, and fenced code remain intact.
+     * @param {string} text
+     * @param {string[]} processedUrls
+     * @returns {string}
+     */
+    stripProcessedURLs(text, processedUrls = []) {
+        if (!text || typeof text !== 'string') return '';
+        if (!Array.isArray(processedUrls) || processedUrls.length === 0) {
+            return this.normalizeResidualText(text);
+        }
+
+        const urlTokens = this.extractURLMatches(text);
+        if (urlTokens.length === 0) {
+            return this.normalizeResidualText(text);
+        }
+
+        const usedTokenIndexes = new Set();
+        const ranges = [];
+
+        for (const processedUrl of processedUrls) {
+            const normalizedUrl = this.cleanURLParameters(processedUrl);
+
+            const tokenIndex = urlTokens.findIndex((token, index) => {
+                if (usedTokenIndexes.has(index)) return false;
+                return token.rawUrl === processedUrl ||
+                    token.cleanUrl === processedUrl ||
+                    token.rawUrl === normalizedUrl ||
+                    token.cleanUrl === normalizedUrl;
+            });
+
+            if (tokenIndex === -1) continue;
+
+            usedTokenIndexes.add(tokenIndex);
+            const token = urlTokens[tokenIndex];
+            ranges.push({ start: token.removalStart, end: token.removalEnd });
+        }
+
+        if (ranges.length === 0) {
+            return this.normalizeResidualText(text);
+        }
+
+        ranges.sort((a, b) => a.start - b.start);
+
+        let cursor = 0;
+        let stripped = '';
+        for (const range of ranges) {
+            if (range.start < cursor) continue;
+            stripped += text.slice(cursor, range.start);
+            cursor = range.end;
+        }
+        stripped += text.slice(cursor);
+
+        return this.normalizeResidualText(stripped);
+    }
+
+    normalizeResidualText(text) {
+        return String(text || '')
+            .split('\n')
+            .map(line => line.replace(/[ \t]{2,}/g, ' ').trim())
+            .filter(Boolean)
+            .join('\n')
+            .trim();
     }
 
     /**

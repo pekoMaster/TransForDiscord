@@ -45,8 +45,7 @@ class TFDMessageHandler {
     extractWebmUrls(content) {
         if (!content || typeof content !== 'string') return [];
 
-        const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
-        const urls = content.match(urlRegex) || [];
+        const urls = this.linkProcessor.urlMatcher.extractURLMatches(content).map(match => match.rawUrl);
         const seen = new Set();
         const webmUrls = [];
 
@@ -789,6 +788,8 @@ class TFDMessageHandler {
             const authorId = message.author.id;
             const originalURL = result.originalURL || '';
             const markerText = `-# <@${authorId}>${originalURL ? ` <${originalURL}>` : ''}`;
+            const userText = message._isFirstUrlConversion ? (message._userText || '') : '';
+            const markerDisplayText = userText ? `${markerText}\n${userText}` : markerText;
 
             // 獲取原有的 v2Container
             const container = result.v2Container;
@@ -812,7 +813,7 @@ class TFDMessageHandler {
             // 在 Container 的 components 陣列最前面添加 TextDisplay 和 Separator
             // 注意：需要保持正確的結構，使用 builder 的數據格式
             const { TextDisplayBuilder, SeparatorBuilder } = require('discord.js');
-            const markerTextDisplay = new TextDisplayBuilder().setContent(markerText);
+            const markerTextDisplay = new TextDisplayBuilder().setContent(markerDisplayText);
             const separator = new SeparatorBuilder().setDivider(true);
 
             // 將新的組件添加到 container 的 components 陣列最前面
@@ -827,13 +828,14 @@ class TFDMessageHandler {
                 components: [container],
                 flags: MessageFlags.IsComponentsV2,
             });
+            message._isFirstUrlConversion = false;
 
             if (sentMsg?.id && result.tweetId) {
                 const initialV2State = result.initialV2State || {};
                 setTwitterV2MessageState(sentMsg.id, {
                     tweetId: result.tweetId,
                     originalURL: originalURL || `https://twitter.com/i/status/${result.tweetId}`,
-                    markerText,
+                    markerText: markerDisplayText,
                     isTranslated: false,
                     translatedText: null,
                     translatedQuoteText: null,
@@ -1379,14 +1381,12 @@ class TFDMessageHandler {
                 this.log(`📎 保存使用者附件: ${message._userAttachments.length} 個 (${attachmentArray.map(a => a.name).join(', ')})`);
             }
 
-            // 🚫 早期檢查：Markdown 包裹的 URL（完全不處理）
             const allUrlsWrapped = this.checkAllUrlsWrapped(message.content);
             if (allUrlsWrapped) {
-                // this.log(`所有 URL 都被 Markdown 包裹，跳過處理`);
                 return [];
             }
 
-            // WEBM direct URL: resend text and pass WEBM URLs to Discord file attachments
+            // WEBM direct URL: resend text and pass WEBM URLs to Discord file attachments.
             const webmUrls = this.extractWebmUrls(message.content);
             if (webmUrls.length > 0) {
                 const webmResult = await this.handleWebmUrls(message, webmUrls);
@@ -1395,11 +1395,11 @@ class TFDMessageHandler {
                 }
             }
 
-            // 🔍 檢查防爆雷標記的 Twitter URL
+            const processableUrlMatches = this.linkProcessor.urlMatcher.extractURLMatches(message.content);
+            const hasSingleProcessableUrl = processableUrlMatches.length === 1;
+
             const spoilerTwitterResult = this.checkSpoilerTwitterUrls(message);
-            if (spoilerTwitterResult) {
-                // 🌐 使用 Webhook 發送 fixup URL 並保持防爆雷標記
-                // 原始訊息會被自動刪除，不需要 embedSuppresser
+            if (spoilerTwitterResult && hasSingleProcessableUrl) {
                 await this.sendViaWebhook(message, {
                     content: spoilerTwitterResult
                 });
@@ -1407,11 +1407,8 @@ class TFDMessageHandler {
                 return [{ success: true, spoilerFixup: true }];
             }
 
-            // 🔍 檢查防爆雷標記的 Pixiv URL
             const spoilerPixivResult = this.checkSpoilerPixivUrls(message);
-            if (spoilerPixivResult) {
-                // 🌐 使用 Webhook 發送 phixiv URL 並保持防爆雷標記
-                // 原始訊息會被自動刪除，不需要 embedSuppresser
+            if (spoilerPixivResult && hasSingleProcessableUrl) {
                 await this.sendViaWebhook(message, {
                     content: spoilerPixivResult
                 });
@@ -1419,22 +1416,17 @@ class TFDMessageHandler {
                 return [{ success: true, spoilerFixup: true }];
             }
 
-            // 🛡️ 檢查 PTT 和巴哈姆特的防爆雷標記
             const spoilerPTTData = this.checkSpoilerPTTUrls(message);
             const hasSpoilerBahamut = this.checkSpoilerBahamutUrls(message);
 
-            // PTT 防爆雷：不直接返回，而是設定標記讓後續處理時應用防爆雷
-            if (spoilerPTTData && spoilerPTTData.hasSpoiler) {
-                // 設定標記，讓 PTT 提取器知道需要防爆雷
+            if (spoilerPTTData && spoilerPTTData.hasSpoiler && hasSingleProcessableUrl) {
                 message._pttSpoilerMode = true;
-                // 將原始訊息內容替換為提取的 URL（移除防爆雷標記）
                 message._originalContent = message.content;
                 message.content = spoilerPTTData.extractedUrl;
-                // 繼續正常處理流程
             }
 
-            if (hasSpoilerBahamut) {
-                this.log(`檢測到防爆雷巴哈姆特 URL，忽略轉換`);
+            if (hasSpoilerBahamut && hasSingleProcessableUrl) {
+                this.log('Skipping standalone spoiler Bahamut URL');
                 return [{ success: true, spoilerIgnored: true, siteName: 'bahamut' }];
             }
 
@@ -1447,34 +1439,21 @@ class TFDMessageHandler {
             // 處理連結
             const results = await this.linkProcessor.processMessage(message);
 
-            // 如果沒有找到支援的連結，靜默返回
             if (!results || results.length === 0) {
                 return [];
             }
 
-            // 🔧 提取使用者的非網址文字和不會被轉換的 URL（如 Discord 連結）
             const originalContent = message._originalContent || message.content;
-            const urlPattern = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
-            const allUrls = originalContent.match(urlPattern) || [];
-
-            // 過濾出不會被轉換的 URL（如 Discord 連結）
-            const discordLinkPattern = /^https?:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/channels\/\d+\/\d+\/\d+/i;
-            const nonConvertedUrls = allUrls.filter(url => discordLinkPattern.test(url));
-
-            // 移除所有 URL 後，再加回不會被轉換的 URL
-            let userText = originalContent.replace(urlPattern, '').trim();
-            if (nonConvertedUrls.length > 0) {
-                userText = userText ? `${userText}\n${nonConvertedUrls.join('\n')}` : nonConvertedUrls.join('\n');
-            }
+            const processedUrls = results
+                .map(result => result.originalURL || result.url || result.pagination?.originalURL || result.originalUrl || '')
+                .filter(Boolean);
+            const userText = this.linkProcessor.urlMatcher.stripProcessedURLs(originalContent, processedUrls);
             message._userText = userText;
 
-            // 🔧 追蹤是否為第一個訊息（只有第一個訊息顯示使用者的非網址文字）
             message._isFirstUrlConversion = true;
 
-            // 收集 URL 轉換結果，統一發送避免洗版
             const urlConversions = [];
 
-            // 發送回應並抑制原始預覽 (完全模擬 TFD 流程)
             const responses = [];
             for (const result of results) {
                 // this.log(`處理結果: siteName=${result.siteName}, success=${result.success}, contentType=${result.contentType}`);
@@ -1782,6 +1761,12 @@ class TFDMessageHandler {
                             continue;
                         }
 
+                        // 🧵 Threads 特殊處理：fixthreads 抓不到時靜默跳過，讓 Discord 原生 embed 顯示
+                        if (result.siteName === 'threads') {
+                            this.log(`[Threads] 提取失敗（靜默跳過）: ${result.error || '未知錯誤'}`);
+                            continue;
+                        }
+
                         // 其他網站：顯示錯誤訊息
                         // 🌐 使用 Webhook 發送錯誤 embed
                         if (result.embed) {
@@ -1953,21 +1938,14 @@ class TFDMessageHandler {
      * @returns {boolean}
      */
     containsSupportedURL(content) {
-        const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
-        const urls = content.match(urlRegex) || [];
+        const urlMatches = this.linkProcessor.urlMatcher.extractURLMatches(content);
 
-        // 檢查是否有任何 URL 被支援（排除被 <> 包裹的）
-        for (const url of urls) {
-            // 檢查此 URL 是否被 <> 包裹
-            if (this.isUrlWrappedInAngleBrackets(content, url)) {
-                continue; // 跳過被包裹的 URL
-            }
-
-            if (this.extractWebmUrls(url).length > 0) {
+        for (const urlMatch of urlMatches) {
+            if (this.extractWebmUrls(urlMatch.rawUrl).length > 0) {
                 return true;
             }
 
-            if (this.linkProcessor.urlMatcher.matchURL(url)) {
+            if (this.linkProcessor.urlMatcher.matchURL(urlMatch.cleanUrl)) {
                 return true;
             }
         }
@@ -2157,54 +2135,13 @@ class TFDMessageHandler {
             return false;
         }
 
-        // 使用正則表達式提取所有 URL（包括被包裹的）
         const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
         const allUrls = content.match(urlRegex);
-
-        // 如果沒有 URL，不需要處理
         if (!allUrls || allUrls.length === 0) {
             return false;
         }
 
-        // 檢查每個 URL 是否都被包裹
-        for (const url of allUrls) {
-            const urlIndex = content.indexOf(url);
-            if (urlIndex === -1) continue;
-
-            const beforeUrl = content.substring(0, urlIndex);
-            const afterUrl = content.substring(urlIndex + url.length);
-
-            let isWrapped = false;
-
-            // 檢查 1: <URL>
-            if (beforeUrl.endsWith('<') && afterUrl.startsWith('>')) {
-                isWrapped = true;
-            }
-            // 檢查 2: ```URL``` 三個反引號（同一行）
-            else if (beforeUrl.endsWith('```') && afterUrl.startsWith('```')) {
-                isWrapped = true;
-            }
-            // 檢查 3: 多行 code block
-            else if (/```[^\n]*\n\s*$/.test(beforeUrl) && /^\s*\n\s*```/.test(afterUrl)) {
-                isWrapped = true;
-            }
-            // 檢查 4: `URL` 單個反引號（不是三個反引號的一部分）
-            else {
-                const endsWithSingleBacktick = beforeUrl.endsWith('`') && !beforeUrl.endsWith('``');
-                const startsWithSingleBacktick = afterUrl.startsWith('`') && !afterUrl.startsWith('``');
-                if (endsWithSingleBacktick && startsWithSingleBacktick) {
-                    isWrapped = true;
-                }
-            }
-
-            // 如果有任何一個 URL 沒有被包裹，返回 false
-            if (!isWrapped) {
-                return false;
-            }
-        }
-
-        // 所有 URL 都被包裹
-        return true;
+        return this.linkProcessor.urlMatcher.extractURLMatches(content).length === 0;
     }
 
     /**

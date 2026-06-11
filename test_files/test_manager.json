@@ -4,5 +4,35 @@
     "created": "20260601_122914",
     "reason": "Verify Threads extractor avoids Discord login-preview fallback and can parse official OG metadata",
     "cleanupAfterHours": 24
+  },
+  {
+    "file": "test_files/test_ptt_image_boundary.cjs",
+    "created": "20260605_164439",
+    "reason": "PTT image extraction: 套用 ※ 發信站/※ 編輯 marker 文章界線 + pttweb.cc 推文 class 過濾 (9 cases, all green)",
+    "cleanupAfterHours": 24
+  },
+  {
+    "file": "test_files/test_text_truncator.cjs",
+    "created": "20260605_174207",
+    "reason": "共用 src/shared/text/text-truncator.js 截斷邏輯（中文 100 OR 英數 100，URL 跳過計數但保留）23 cases, all green",
+    "cleanupAfterHours": 24
+  },
+  {
+    "file": "test_files/test_threads_expand_collapse.cjs",
+    "created": "20260605_174207",
+    "reason": "Threads 100-word 展開/縮回：_buildDescription 拼接 + _buildComponents 按鈕配置 + handleThreadsExpandCollapse 16 cases, all green",
+    "cleanupAfterHours": 24
+  },
+  {
+    "file": "test_files/test_url_text_preservation.cjs",
+    "created": "20260611_120027",
+    "reason": "Regression coverage for URL preview text preservation, URL order, spoiler URL shells, and angle/code exclusion",
+    "cleanupAfterHours": 24
+  },
+  {
+    "file": "test_files/test_free_provider_gemini_config.cjs",
+    "created": "20260611_121955",
+    "reason": "Regression coverage for free translation provider using stable Gemini 3.1 Flash-Lite only with key slots 2/3/4/6",
+    "cleanupAfterHours": 24
   }
 ]
