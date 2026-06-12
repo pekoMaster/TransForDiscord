@@ -16,6 +16,7 @@ const {
 } = require('discord.js');
 
 const TFDMessageHandler = require(path.resolve(__dirname, '../tfd-system/core/message-handler-v2.js'));
+const { clearAllIdleTimers } = require(path.resolve(__dirname, '../utils/webhook-manager.js'));
 
 function makeMessage() {
     return {
@@ -41,8 +42,12 @@ function threadsButtons() {
 }
 
 function captureSend(handler) {
-    const captured = {};
-    handler.sendViaWebhook = async (_m, options) => { captured.options = options; return { id: 's1' }; };
+    const captured = { calls: [] };
+    handler.sendViaWebhook = async (_m, options) => {
+        captured.options = options;
+        captured.calls.push(options);
+        return { id: `s${captured.calls.length}` };
+    };
     return captured;
 }
 
@@ -106,8 +111,92 @@ async function testTwitterV2Unaffected() {
     console.log(`✅ Twitter V2 不受影響（container 子元件 ${before} → ${comps[0].components.length}，僅加 marker）\n`);
 }
 
+async function testTwitterV2MixedContentSendsPurePreviewOnly() {
+    const handler = new TFDMessageHandler();
+    const captured = captureSend(handler);
+
+    const c = new ContainerBuilder().setAccentColor(0x000000);
+    c.addTextDisplayComponents(new TextDisplayBuilder().setContent('tweet'));
+
+    const message = {
+        ...makeMessage(),
+        _isFirstUrlConversion: true,
+        _userText: 'normal message',
+        _preserveOriginalMessage: true,
+    };
+    const result = {
+        success: true, siteName: 'twitter', isV2: true,
+        v2Container: c, originalURL: 'https://x.com/a/status/2',
+    };
+
+    await handler.sendTwitterV2(message, result);
+
+    assert.strictEqual(captured.calls.length, 1, 'Twitter V2 mixed content should send only the preview');
+    assert.deepStrictEqual(captured.calls[0].components, [c], 'first send should be the V2 container');
+
+    const markerContent = captured.calls[0].components[0].components[0].data.content;
+    assert.ok(!markerContent.includes('normal message'), 'user text must not be embedded inside V2 container');
+    console.log('Twitter V2 mixed content sends a pure preview only\n');
+}
+
+async function testMixedContentDoesNotDeleteOriginalMessage() {
+    const handler = new TFDMessageHandler();
+    const sentPayloads = [];
+    let deleteCalled = false;
+
+    const fakeWebhook = {
+        name: 'MB_MessageBubble',
+        send: async (payload) => {
+            sentPayloads.push(payload);
+            return { id: 'sent-1' };
+        },
+    };
+    const channel = {
+        id: 'mixed-channel',
+        type: 0,
+        name: 'mixed',
+        guild: { name: 'guild', members: { me: { id: 'bot' } } },
+        fetchWebhooks: async () => ({ find: (predicate) => predicate(fakeWebhook) ? fakeWebhook : null }),
+        permissionsFor: () => ({ has: (permission) => permission === 'ManageWebhooks' }),
+    };
+    const message = {
+        channel,
+        author: {
+            id: 'u1',
+            username: 'alice',
+            displayAvatarURL: () => 'https://example.com/avatar.png',
+        },
+        member: null,
+        _isFirstUrlConversion: true,
+        _userText: 'normal message',
+        _preserveOriginalMessage: true,
+        _userAttachments: ['user-file'],
+        delete: async () => { deleteCalled = true; },
+    };
+
+    try {
+        await handler.sendViaWebhook(message, {
+            embeds: [],
+            components: [],
+            originalUrl: 'https://x.com/a/status/2',
+        });
+    } finally {
+        clearAllIdleTimers();
+    }
+
+    assert.strictEqual(deleteCalled, false, 'mixed content must keep the original message');
+    assert.strictEqual(sentPayloads.length, 1, 'mixed content should still send one preview payload');
+    assert.match(sentPayloads[0].content, /^-# <@u1> <https:\/\/x\.com\/a\/status\/2>/);
+    assert.ok(!sentPayloads[0].content.includes('normal message'), 'preview payload must not duplicate user text');
+    assert.equal(sentPayloads[0].files, undefined, 'preview payload must not duplicate original attachments');
+    console.log('Mixed content keeps the original message and sends a pure preview\n');
+}
+
 (async () => {
     await testThreadsVideoKeepsButtons();
     await testTwitterV2Unaffected();
+    await testTwitterV2MixedContentSendsPurePreviewOnly();
+    await testMixedContentDoesNotDeleteOriginalMessage();
     console.log('🎉 全部通過');
+    process.exit(0);
 })().catch(err => { console.error('\n❌ FAIL:', err.message); process.exit(1); });

@@ -181,7 +181,8 @@ class TFDMessageHandler {
     async sendViaWebhook(message, options = {}) {
         const channel = message.channel;
         const author = message.author;
-        const deleteOriginal = options.deleteOriginal !== false; // 預設刪除
+        const preserveOriginalMessage = Boolean(message._preserveOriginalMessage);
+        const deleteOriginal = !preserveOriginalMessage && options.deleteOriginal !== false; // 預設刪除
         const addUserMention = options.addUserMention !== false; // 預設加入標記
         options = {
             ...options,
@@ -193,7 +194,7 @@ class TFDMessageHandler {
 
         // 🖼️ 處理使用者附件：只在第一個訊息發送時附加使用者的原始附件
         let filesToSend = options.files ? [...options.files] : [];
-        if (!message._userAttachmentsProcessed && message._userAttachments && message._userAttachments.length > 0) {
+        if (!preserveOriginalMessage && !message._userAttachmentsProcessed && message._userAttachments && message._userAttachments.length > 0) {
             // 合併使用者附件與其他附件（只執行一次）
             filesToSend = [...filesToSend, ...message._userAttachments];
             this.log(`📎 附加使用者附件: ${message._userAttachments.length} 個`);
@@ -212,7 +213,9 @@ class TFDMessageHandler {
                 const originalUrl = options.originalUrl || message._currentOriginalUrl || '';
 
                 // 只在第一個訊息顯示使用者的非網址文字
-                const userText = message._isFirstUrlConversion ? (options.userText || message._userText || '') : '';
+                const userText = (!preserveOriginalMessage && message._isFirstUrlConversion)
+                    ? (options.userText || message._userText || '')
+                    : '';
 
                 // 第一行：使用者標記 + 原網址（如果有）
                 let headerLine = `-# <@${author.id}>`;
@@ -788,7 +791,7 @@ class TFDMessageHandler {
             const authorId = message.author.id;
             const originalURL = result.originalURL || '';
             const markerText = `-# <@${authorId}>${originalURL ? ` <${originalURL}>` : ''}`;
-            const userText = message._isFirstUrlConversion ? (message._userText || '') : '';
+            const userText = (!message._preserveOriginalMessage && message._isFirstUrlConversion) ? (message._userText || '') : '';
             const markerDisplayText = userText ? `${markerText}\n${userText}` : markerText;
 
             // 獲取原有的 v2Container
@@ -1457,6 +1460,7 @@ class TFDMessageHandler {
                 .filter(Boolean);
             const userText = this.linkProcessor.urlMatcher.stripProcessedURLs(originalContent, processedUrls);
             message._userText = userText;
+            message._preserveOriginalMessage = Boolean(userText);
 
             message._isFirstUrlConversion = true;
 
