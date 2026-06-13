@@ -1644,6 +1644,14 @@ class TFDMessageHandler {
                                 await this.sendPTTWithMultipleEmbeds(message, result);
                                 // 立即抑制原始預覽
                                 await this.embedSuppresser(message);
+                            } else if (result.siteName === 'bahamut' && result.components && result.components.length > 0) {
+                                // 發送巴哈姆特多圖回應（帶翻頁按鈕，>4 張圖）
+                                await this.sendBahamutWithPagination(message, result);
+                                await this.embedSuppresser(message);
+                            } else if (result.siteName === 'bahamut' && result.embeds && result.embeds.length > 1) {
+                                // 發送巴哈姆特多圖回應（多 Embeds 圖庫，2~4 張圖）
+                                await this.sendBahamutWithMultipleEmbeds(message, result);
+                                await this.embedSuppresser(message);
                             } else if (result.siteName === 'twitter' && result.gasResult) {
                                 // 發送 Google Apps Script 處理的回應
                                 await this.sendTwitterWithGAS(message, result);
@@ -1846,7 +1854,8 @@ class TFDMessageHandler {
             'instagram': 'https://pekoembed.canaria.cc/pic/instagram.png',
             'pixiv': 'https://pekoembed.canaria.cc/pic/pixiv.png',
             'bilibili': 'https://pekoembed.canaria.cc/pic/bilibili.png',
-            'ptt': 'https://pekoembed.canaria.cc/pic/ptt.png'
+            'ptt': 'https://pekoembed.canaria.cc/pic/ptt.png',
+            'bahamut': 'https://i2.bahamut.com.tw/apple-touch-icon.png'
         };
         return icons[siteName] || this.iconURL;
     }
@@ -2245,6 +2254,35 @@ class TFDMessageHandler {
             });
         } catch (error) {
             this.log(`[PTT] 發送失敗: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * 發送巴哈姆特多圖回應（帶翻頁按鈕，>4 張圖）
+     */
+    async sendBahamutWithPagination(message, result) {
+        try {
+            await this.sendViaWebhook(message, {
+                embeds: result.embeds || [result.embed],
+                components: result.components || [],
+                originalUrl: result.originalURL || result.data?.url
+            });
+        } catch (error) {
+            this.log(`[Bahamut] 翻頁發送失敗: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * 發送巴哈姆特多圖回應（多 Embeds 圖庫，2~4 張圖，無翻頁）
+     */
+    async sendBahamutWithMultipleEmbeds(message, result) {
+        try {
+            await this.sendViaWebhook(message, {
+                embeds: result.embeds || [result.embed],
+                originalUrl: result.originalURL || result.data?.url
+            });
+        } catch (error) {
+            this.log(`[Bahamut] 多圖發送失敗: ${error.message}`, 'error');
         }
     }
 

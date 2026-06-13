@@ -13,10 +13,10 @@ class BahamutAuth {
         this.cookiePath = path.join(__dirname, '..', '..', '..', '..', 'data', 'bahamut_cookies.json');
         this.loginURL = 'https://api.gamer.com.tw/mobile_app/user/v3/do_login.php';
 
-        // 認證資訊
+        // 認證資訊（優先讀 .env，舊寫死值僅作 fallback）
         this.credentials = {
-            uid: 'lmmlmm',
-            passwd: '011404'
+            uid: process.env.GAMER_USERNAME || 'lmmlmm',
+            passwd: process.env.GAMER_PASSWORD || '011404'
         };
 
         // Cookie 快取

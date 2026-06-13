@@ -193,6 +193,12 @@ async function execute(interaction, client) {
             return await handler.execute(interaction);
         }
 
+        // ── 巴哈姆特多圖分頁 ──
+        if (customId.startsWith('baha_')) {
+            const handler = require('../../features/sites/bahamut/interactions/pagination.js');
+            return await handler.execute(interaction);
+        }
+
     } catch (err) {
         tlog.error('InteractionCreate', interaction, `處理錯誤 (${interaction.customId || interaction.commandName}): ${err.message}`);
         try {

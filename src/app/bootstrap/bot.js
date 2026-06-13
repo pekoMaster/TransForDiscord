@@ -47,6 +47,25 @@ client.once(Events.ClientReady, () => {
             tfd.sysError('url-stats', `清理失敗: ${e.message}`);
         }
     }, 24 * 60 * 60 * 1000);
+
+    // 巴哈姆特登入 Cookie 維護：啟動時若過期立即補登 + 每 12 小時主動刷新
+    // （帳號須完成手機認證 mobileVerify:true 才過得了兒少保護警示頁）
+    const refreshBahamutCookie = async (reason) => {
+        try {
+            const BahamutAuth = require('../../features/sites/bahamut/bahamut-auth.js');
+            const auth = new BahamutAuth();
+            if (reason === 'startup' && auth.getAuthStatus().isValid) return; // 啟動時仍有效就不重登
+            const r = await auth.login();
+            if (!r.success) { tfd.sysError('巴哈Cookie', `刷新失敗: ${r.error}`); return; }
+            let mv;
+            try { mv = JSON.parse(Buffer.from(r.BAHARUNE.split('.')[1], 'base64').toString('utf8')).mobileVerify; } catch {}
+            tfd.sys('巴哈Cookie', `已刷新 (${reason})${mv === false ? ' ⚠️ 此帳號未完成手機認證，敏感內容頁仍會被擋' : ''}`);
+        } catch (e) {
+            tfd.sysError('巴哈Cookie', `刷新例外: ${e.message}`);
+        }
+    };
+    refreshBahamutCookie('startup');
+    setInterval(() => refreshBahamutCookie('每12h排程'), 12 * 60 * 60 * 1000);
 });
 
 // 訊息 → TFD

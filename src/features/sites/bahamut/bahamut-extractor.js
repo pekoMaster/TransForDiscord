@@ -5,15 +5,24 @@
 
 const axios = require('axios');
 const cheerio = require('cheerio');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const BahamutAuth = require('./bahamut-auth');
+const BahamutCacheManager = require('./bahamut-cache-manager');
 const URLConverterLogger = require('../../../shared/logging/url-converter-logger');
 const tfd = require('../../../shared/logging/tfd-logger');
+
+// 巴哈姆特 LOGO（footer 圖示用），來源：巴哈首頁 apple-touch-icon
+const BAHAMUT_LOGO_URL = 'https://i2.bahamut.com.tw/apple-touch-icon.png';
+// 每頁顯示張數（Discord 單則訊息圖庫上限 4 張）
+const IMAGES_PER_PAGE = 4;
+// 圖片總數上限（避免極端文章塞爆）
+const MAX_IMAGES = 40;
 
 class BahamutExtractor {
     constructor() {
         this.name = 'Bahamut';
         this.auth = new BahamutAuth();
+        this.cacheManager = new BahamutCacheManager();
         this.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -54,7 +63,7 @@ class BahamutExtractor {
                 } else {
                     // 無需認證，直接處理
                     const articleData = this.parseArticleData($, originalURL);
-                    return this.createSuccessResponse(articleData, false, originalURL, message, isSpoiler);
+                    return await this.createSuccessResponse(articleData, false, originalURL, message, isSpoiler);
                 }
             }
 
@@ -72,7 +81,7 @@ class BahamutExtractor {
                     }
 
                     const articleData = this.parseArticleData($, originalURL);
-                    return this.createSuccessResponse(articleData, true, originalURL, message, isSpoiler);
+                    return await this.createSuccessResponse(articleData, true, originalURL, message, isSpoiler);
                 }
             }
 
@@ -385,38 +394,41 @@ class BahamutExtractor {
             dislikeCount = parseInt(postBP);
         }
 
-        // 圖片提取 - 取得文章中的第一張圖片
-        let firstImageURL = null;
+        // 圖片提取 - 取得文章中的圖片（最多 MAX_IMAGES 張，供分頁顯示）
+        const images = [];
+        const pushImg = (u) => {
+            if (!u) return;
+            // 排除論壇貼圖/表情（im.bahamut.com.tw/sticker、emotion 圖示）
+            if (/im\.bahamut\.com\.tw\/(sticker|emotion)/i.test(u)) return;
+            if (!images.includes(u) && images.length < MAX_IMAGES) images.push(u);
+        };
 
-        // 方法1: 從 JSON-LD 結構中提取
-        try {
-            const jsonLD = $('script[type="application/ld+json"]').html();
-            if (jsonLD) {
-                const parsed = JSON.parse(jsonLD);
-                if (Array.isArray(parsed)) {
-                    const article = parsed.find(item => item['@type'] === 'Article');
-                    if (article && article.image && Array.isArray(article.image) && article.image.length > 0) {
-                        firstImageURL = article.image[0];
-                    }
+        // 方法1: 文章內容圖片（巴哈用 data-src 延遲載入，優先取 data-src）
+        $('.c-article__content img').each((i, el) => {
+            pushImg($(el).attr('data-src') || $(el).attr('src'));
+        });
+
+        // 方法2: 內容無圖則補 JSON-LD 圖片
+        if (images.length === 0) {
+            try {
+                const jsonLD = $('script[type="application/ld+json"]').html();
+                if (jsonLD) {
+                    const parsed = JSON.parse(jsonLD);
+                    const arr = Array.isArray(parsed) ? parsed : [parsed];
+                    const article = arr.find(item => item['@type'] === 'Article');
+                    if (article && Array.isArray(article.image)) article.image.forEach(pushImg);
                 }
-            }
-        } catch (e) {
-            tfd.sys('Bahamut', 'JSON-LD 圖片解析失敗');
-        }
-
-        // 方法2: 從文章內容中找圖片
-        if (!firstImageURL) {
-            const articleImages = $('.c-article__content img');
-            if (articleImages.length > 0) {
-                const firstImg = articleImages.first();
-                firstImageURL = firstImg.attr('src') || firstImg.attr('data-src');
+            } catch (e) {
+                tfd.sys('Bahamut', 'JSON-LD 圖片解析失敗');
             }
         }
 
-        // 方法3: 從 OG image 提取
-        if (!firstImageURL) {
-            firstImageURL = $('meta[property="og:image"]').attr('content');
+        // 方法3: 仍無圖則用 OG image
+        if (images.length === 0) {
+            pushImg($('meta[property="og:image"]').attr('content'));
         }
+
+        const firstImageURL = images[0] || null;
 
         // URL 參數
         const urlMatch = url.match(/bsn=(\d+)&snA=(\d+)/);
@@ -432,6 +444,7 @@ class BahamutExtractor {
             likeCount,
             dislikeCount,
             firstImageURL,
+            images,
             url,
             bsn,
             snA
@@ -439,83 +452,120 @@ class BahamutExtractor {
     }
 
     /**
-     * 建立成功回應
+     * 建立成功回應（多圖時走分頁，每頁 4 張）
      */
-    createSuccessResponse(data, authUsed, originalURL, message, isSpoiler = false) {
-        tfd.sys('Bahamut', `成功提取文章: ${data.title}`);
+    async createSuccessResponse(data, authUsed, originalURL, message, isSpoiler = false) {
+        const imgCount = Array.isArray(data.images) ? data.images.length : 0;
+        tfd.sys('Bahamut', `成功提取文章: ${data.title}（圖片 ${imgCount} 張）`);
 
         // 記錄網址轉換
         if (message) {
             URLConverterLogger.logConversion('bahamut', message, originalURL);
         }
 
+        // 圖片數 > 每頁張數 → 需要翻頁，先存快取供按鈕翻頁讀取
+        if (!isSpoiler && imgCount > IMAGES_PER_PAGE) {
+            await this.cacheManager.saveToCache(originalURL, data);
+        }
+
+        const page = this.buildPageResponse(data, originalURL, isSpoiler, 0);
+
         return {
             success: true,
-            embed: this.createArticleEmbed(data, isSpoiler),
+            embed: page.embed,
+            embeds: page.embeds,
+            components: page.components,
             siteName: 'bahamut',
             contentType: 'forum_post',
             data: data,
-            authUsed: authUsed
+            authUsed: authUsed,
+            originalURL: originalURL
         };
     }
 
     /**
-     * 建立文章 Embed
+     * 從快取建立指定頁回應（供翻頁按鈕使用）
      */
-    createArticleEmbed(data, isSpoiler = false) {
-        // 🛡️ 如果是防爆雷內容，在描述前面加上防爆雷標記
+    createArticleResponseFromCache(cachedData, originalURL, pageIndex = 0) {
+        const page = this.buildPageResponse(cachedData.data, originalURL, false, pageIndex);
+        return {
+            success: true,
+            embed: page.embed,
+            embeds: page.embeds,
+            components: page.components,
+            siteName: 'bahamut',
+            contentType: 'forum_post',
+            data: cachedData.data,
+            originalURL: originalURL
+        };
+    }
+
+    /**
+     * 建立某一頁的 embeds + 翻頁按鈕
+     * @param {Object} data parseArticleData 結果
+     * @param {string} url 原始 URL
+     * @param {boolean} isSpoiler 防爆雷
+     * @param {number} pageIndex 頁碼（0-based）
+     * @returns {{embed: EmbedBuilder, embeds: EmbedBuilder[], components: ActionRowBuilder[]}}
+     */
+    buildPageResponse(data, url, isSpoiler, pageIndex) {
+        const allImages = (data.images || []).filter(u => typeof u === 'string' && u.startsWith('http'));
+        const totalImages = allImages.length;
+        const totalPages = Math.max(1, Math.ceil(totalImages / IMAGES_PER_PAGE));
+        const safePage = Math.min(Math.max(0, pageIndex), totalPages - 1);
+        const needPaging = !isSpoiler && totalImages > IMAGES_PER_PAGE;
+        const pageImages = isSpoiler
+            ? allImages.slice(0, 1)
+            : allImages.slice(safePage * IMAGES_PER_PAGE, safePage * IMAGES_PER_PAGE + IMAGES_PER_PAGE);
+
+        // 主 embed（標題/內文/作者/footer）
         let description = data.description;
-        if (isSpoiler) {
-            description = `||${description}||`;
-        }
+        if (isSpoiler) description = `||${description}||`;
 
         const embed = new EmbedBuilder()
             .setColor('#1976D2') // 巴哈藍色
             .setTitle(data.title)
-            .setURL(data.url)
+            .setURL(url)
             .setDescription(description);
 
-        // 作者資訊
         if (data.authorName && data.authorName !== '未知使用者') {
-            embed.setAuthor({
-                name: data.authorName,
-                iconURL: data.avatarURL,
-                url: data.homeURL
-            });
+            embed.setAuthor({ name: data.authorName, iconURL: data.avatarURL, url: data.homeURL });
         }
 
-        // 文章圖片
-        if (data.firstImageURL) {
-            // 🛡️ 如果是防爆雷內容，圖片URL加上 SPOILER_ 前綴
-            const imageUrl = isSpoiler ? `SPOILER_${data.firstImageURL}` : data.firstImageURL;
-            embed.setImage(imageUrl);
+        // 主圖（當頁第一張）
+        if (pageImages[0]) {
+            const img = isSpoiler ? `SPOILER_${pageImages[0]}` : pageImages[0];
+            embed.setImage(img);
         }
 
-        // 推噓數欄位
-        const fields = [];
-
-        fields.push({
-            name: '👍 推',
-            value: data.likeCount.toString(),
-            inline: true
-        });
-
-        fields.push({
-            name: '👎 噓',
-            value: data.dislikeCount.toString(),
-            inline: true
-        });
-
-        embed.addFields(fields);
-
-        // Footer
-        embed.setFooter({
-            text: isSpoiler ? 'Peko Embed 🔒 防爆雷模式' : 'Peko Embed'
-        });
-
+        // Footer：推噓 + 圖片數/頁碼 + 巴哈 LOGO
+        let footerText = `👍 ${data.likeCount}　👎 ${data.dislikeCount}`;
+        if (totalImages > 0) footerText += `　•　共 ${totalImages} 張圖`;
+        if (needPaging) footerText += `　•　第 ${safePage + 1}/${totalPages} 頁`;
+        if (isSpoiler) footerText += '　🔒 防爆雷模式';
+        embed.setFooter({ text: footerText, iconURL: BAHAMUT_LOGO_URL });
         embed.setTimestamp();
 
-        return embed;
+        // 當頁其餘圖片 → 額外 embed（共用同一 URL，Discord 合併成圖庫）
+        const embeds = [embed];
+        for (let i = 1; i < pageImages.length; i++) {
+            embeds.push(new EmbedBuilder().setURL(url).setImage(pageImages[i]));
+        }
+
+        // 翻頁按鈕（圖片數 > 每頁張數才出現）
+        const components = [];
+        if (needPaging) {
+            const hash = this.cacheManager.extractArticleHash(url);
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`baha_first_${hash}_0`).setLabel('⏪').setStyle(ButtonStyle.Secondary).setDisabled(safePage === 0),
+                new ButtonBuilder().setCustomId(`baha_prev_${hash}_${Math.max(0, safePage - 1)}`).setLabel('◀️').setStyle(ButtonStyle.Secondary).setDisabled(safePage === 0),
+                new ButtonBuilder().setCustomId(`baha_next_${hash}_${Math.min(totalPages - 1, safePage + 1)}`).setLabel('▶️').setStyle(ButtonStyle.Secondary).setDisabled(safePage === totalPages - 1),
+                new ButtonBuilder().setCustomId(`baha_last_${hash}_${totalPages - 1}`).setLabel('⏩').setStyle(ButtonStyle.Secondary).setDisabled(safePage === totalPages - 1)
+            );
+            components.push(row);
+        }
+
+        return { embed, embeds, components };
     }
 
     /**
