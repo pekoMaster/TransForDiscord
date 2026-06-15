@@ -120,17 +120,29 @@ class InstagramExtractor {
         const convertedURL = this.convertInstagramURL(originalURL);
         URLConverterLogger.logConversion('instagram', message, convertedURL);
 
-        const embedData = await this.fetchInstagramEmbedData(originalURL, convertedURL, {
-            contentType: 'story',
-            shortcode: storyId,
-            username
-        });
-
-        if (embedData) {
+        // 限動為登入牆 + 24h 即時內容：匿名代理(vx/kk)全失敗、機房 IP 會被風控擋。
+        // 集中回家機(住宅 IP + IG cookie + yt-dlp)擷取並上傳 Discord 取得 CDN URL，
+        // 本機透過 ngrok 同源的 /embed/ig-story 端點取回，CDN URL 直接塞 MediaGallery。
+        const story = await this.fetchStoryViaHomeProxy(originalURL);
+        if (story && story.mediaUrl) {
+            const embedData = {
+                originalURL,
+                convertedURL,
+                contentType: 'story',
+                shortcode: storyId,
+                authorName: story.authorHandle || username,
+                caption: null,
+                description: null,
+                title: null,
+                imageUrl: story.mediaType === 'image' ? story.mediaUrl : null,
+                videoUrl: story.mediaType === 'video' ? story.mediaUrl : null,
+                stats: {}
+            };
             return this.createInstagramV2Response(embedData, message);
         }
 
-        const storyMessage = this.createStoriesFormattedMessage(message, convertedURL);
+        // 降級：家機不可用 / cookie 失效 / 限動過期 → 不空白，給清楚訊息
+        const storyMessage = this.createStoriesFormattedMessage(message, convertedURL, story && story.reason);
         return {
             success: true,
             siteName: 'instagram',
@@ -141,6 +153,47 @@ class InstagramExtractor {
             content: storyMessage.content,
             data: { originalURL, convertedURL, username, storyId, type: 'story' }
         };
+    }
+
+    /**
+     * 透過家機代抓端點取得限動媒體（家機 yt-dlp+cookie 抓好上傳 Discord，回 CDN URL）。
+     * env：HOME_IG_STORY_URL（端點完整 URL）+ HOME_FETCH_PROXY_TOKEN（與 4.0 同一把）。
+     * @param {string} originalURL
+     * @returns {Promise<{mediaUrl?:string, mediaType?:string, authorHandle?:string, reason?:string}>}
+     */
+    async fetchStoryViaHomeProxy(originalURL) {
+        const base = (process.env.HOME_IG_STORY_URL || '').trim();
+        const token = (process.env.HOME_FETCH_PROXY_TOKEN || '').trim();
+        if (!base || !token) {
+            tfd.sys('TFD-Instagram', '限動家機端點未設定(HOME_IG_STORY_URL/HOME_FETCH_PROXY_TOKEN)，降級');
+            return { reason: 'unconfigured' };
+        }
+        try {
+            const res = await axios.get(base, {
+                params: { url: originalURL },
+                timeout: 45000,
+                maxRedirects: 5,
+                headers: {
+                    'x-proxy-token': token,
+                    'accept': 'application/json',
+                    'ngrok-skip-browser-warning': '1'
+                },
+                validateStatus: () => true
+            });
+            if (res.status === 401) return { reason: 'cookie_expired' };
+            if (res.status === 404) return { reason: 'expired' };
+            if (res.status !== 200 || !res.data || !res.data.ok || !res.data.mediaUrl) {
+                return { reason: 'error' };
+            }
+            return {
+                mediaUrl: res.data.mediaUrl,
+                mediaType: res.data.mediaType === 'image' ? 'image' : 'video',
+                authorHandle: res.data.authorHandle || null
+            };
+        } catch (error) {
+            tfd.sys('TFD-Instagram', '限動家機端點呼叫失敗: ' + (error.code || error.message));
+            return { reason: 'error' };
+        }
     }
     async fetchInstagramEmbedData(originalURL, convertedURL, options = {}) {
         const contentType = options.contentType || 'post';
@@ -300,7 +353,7 @@ class InstagramExtractor {
      * @param {string} convertedURL - 轉換後的 URL
      * @returns {Object} - 包含 embed 和 content 的物件
      */
-    createStoriesFormattedMessage(message, convertedURL) {
+    createStoriesFormattedMessage(message, convertedURL, reason = null) {
         const embed = new EmbedBuilder()
             .setColor(0xE4405F)  // Instagram 品牌色
             .setTitle('📱 Instagram Story')
@@ -310,6 +363,15 @@ class InstagramExtractor {
                 iconURL: 'https://www.instagram.com/static/images/ico/favicon-192.png/68d99ba29cc8.png'
             })
             .setTimestamp();
+
+        // 降級原因（不空白，讓使用者知道發生什麼）
+        const reasonText = {
+            cookie_expired: '⚠️ 限動需要登入態，IG cookie 可能已失效，請稍後再試。',
+            expired: '⏳ 這則限時動態已過期或無法取得（限動僅保留 24 小時）。',
+            unconfigured: '⚠️ 限動擷取服務尚未設定，暫時無法預覽。',
+            error: '❌ 限時動態擷取失敗，請稍後再試。'
+        }[reason];
+        if (reasonText) embed.setDescription(reasonText);
 
         // 如果有用戶資訊，設定作者欄位
         if (message && message.author) {
