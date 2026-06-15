@@ -12,7 +12,10 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent, // 特權 Intent，需在 Developer Portal 開啟
         GatewayIntentBits.GuildWebhooks,
-    ]
+    ],
+    // 全域安全網：預設一律不 ping。Webhook 送出/編輯各自有設定；故意要 ping
+    // 的地方需顯式帶 allowedMentions: { users: [...] }（會覆寫此預設）。
+    allowedMentions: { parse: [] }
 });
 
 // 初始化 TFD 訊息處理器

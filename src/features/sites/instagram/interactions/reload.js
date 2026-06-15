@@ -56,11 +56,13 @@ async function handleInstagramReloadInteraction(interaction) {
             await interaction.editReply({
                 components: [result.v2Container],
                 flags: MessageFlags.IsComponentsV2,
+                allowedMentions: { parse: [] },
             });
         } else if (result.embed) {
             await interaction.editReply({
                 embeds: [result.embed],
                 components: result.components || [],
+                allowedMentions: { parse: [] },
             });
         } else {
             return interaction.followUp({ content: '❌ 重整後無可用內容', flags: MessageFlags.Ephemeral });
