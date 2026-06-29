@@ -79,11 +79,15 @@ function isV2ContainerMessage(message) {
     if (!message) return false;
     // Check flags bit 32768 (IsComponentsV2)
     if (message.flags?.bitfield && (message.flags.bitfield & 32768)) return true;
-    // Heuristic: components[0].components exists with TextDisplay/MediaGallery items
+    // Heuristic: components[0] is a Container holding V2 items (Section/TextDisplay/MediaGallery/Separator).
+    // 注意：type 1=ActionRow、2=Button 是傳統訊息（PTT/一般 embed）的元件，不能當成 V2 判斷，
+    // 否則帶按鈕的傳統 embed 會被誤判成 V2，導致防爆雷時整篇 embed 內文遺失。
+    const V2_ITEM_TYPES = new Set([9, 10, 12, 14]);
     const comps = message.components;
     if (comps && comps.length > 0 && comps[0].components && comps[0].components.length > 0) {
         for (const c of comps[0].components) {
-            if (c.type === 1 || c.type === 2 || c.data?.type === 1 || c.data?.type === 2) return true;
+            const t = c.type ?? c.data?.type;
+            if (V2_ITEM_TYPES.has(t)) return true;
         }
     }
     return false;
