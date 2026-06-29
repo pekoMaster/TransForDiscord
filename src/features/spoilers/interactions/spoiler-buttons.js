@@ -11,6 +11,7 @@ const {
     MediaGalleryBuilder, MediaGalleryItemBuilder
 } = require('discord.js');
 const { sendWithWebhook, canUseWebhook, hasWebhookPermission } = require('../../../../utils/webhook-manager.js');
+const { truncateText } = require('../../../shared/text/text-truncator');
 const db = require('../../../../db');
 const tlog = require('../../../../utils/tfd-logger');
 
@@ -62,7 +63,9 @@ function embedToPlainText(embed) {
         lines.push(`__${titleLine}__`);
     }
     if (embed.description) {
-        lines.push(embed.description);
+        // 截成精簡預覽，避免把全文（PTT 長文/已展開的文章）整段搬進 spoiler，
+        // 收合的灰塊高度等於全文高度 → 洗頻。標題已連到原文，要看全文點標題即可。
+        lines.push(truncateText(embed.description, { placeholder: '\n\n-# ⬇️ 內文較長，點上方標題看原文' }).displayText);
     }
     if (embed.fields && embed.fields.length > 0) {
         for (const field of embed.fields) {
